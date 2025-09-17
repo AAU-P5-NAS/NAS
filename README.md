@@ -24,7 +24,7 @@ Clone the repo, then:
     then run: 
     - uv run pre-commit install
 
-    You should also install the pylance extension from vscode for type checking in your vscode language server.
+    Next, you should install the ruff extension and the pylance extension from vscode.
 
 3. Run programs
 
