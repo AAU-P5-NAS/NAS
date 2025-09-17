@@ -1,0 +1,18 @@
+[project]
+name = "nas"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pre-commit>=4.3.0",
+    "pydantic>=2.11.9",
+    "pytest>=8.4.2",
+    "torch>=2.8.0",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.3.0",
+    "ruff>=0.13.0",
+]

@@ -1,0 +1,9 @@
+repos:
+- repo: https://github.com/astral-sh/ruff-pre-commit # repo with predefined hooks
+  rev: v0.13.0 # ruff version
+  hooks:
+    - id: ruff-check # use predefined linter
+    - id: ruff-format # use predefined formatter
+
+# this pre commit package basically ensures that when we commit code,
+# it is formatted and linted according to the rules defined with ruff.
