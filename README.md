@@ -14,8 +14,13 @@ Neural architecture search
 
 2. Install packages: 
 
+    simply run 'uv sync'
+
+    or manually do:
     - uv add pydantic torch pytest
     - uv add -- dev ruff pre-commit
+
+    then run: 
     - uv run pre-commit install
 
     You should also install the pylance extension from vscode for type checking in your vscode language server.
