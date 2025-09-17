@@ -2,6 +2,7 @@
 Neural architecture search
 
 ## Installation guide
+Clone the repo, then:
 1. Install 'uv' if not done already: 
     - MacOS / Linux: 
     curl -LsSf https://astral.sh/uv/install.sh | sh
