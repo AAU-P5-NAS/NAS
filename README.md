@@ -18,7 +18,7 @@ Neural architecture search
 
     or manually do:
     - uv add pydantic torch pytest
-    - uv add -- dev ruff pre-commit
+    - uv add --dev ruff pre-commit
 
     then run: 
     - uv run pre-commit install
