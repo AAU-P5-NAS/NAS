@@ -23,8 +23,6 @@ class DataImporter:
 
         data_frame = pd.read_csv(filepath, header=None)
         data = data_frame.values.astype("float32")[:, 1:] / 255.0
-        print("Raw data shape:", data.shape)
-        print("raw data", data)
         h, w = img_size
         if color_mode == ColorMode.GRAYSCALE:
             self.channels = 1
