@@ -15,6 +15,7 @@ _ACTIVATIONS = {
 def make_ffn(layer_config):
     """
     Build a feed-forward network (FFN) from a given config list.
+    
 
     layer_config: list of tuples as shown here:
         (in_features, units, activation)
