@@ -9,8 +9,9 @@ _ACTIVATIONS = {
     "sigmoid": nn.Sigmoid(),
     "tanh": nn.Tanh(),
     "softmax": lambda: nn.Softmax(dim=1),
-    None: lambda: nn.Identity # no activation
+    None: lambda: nn.Identity,  # no activation
 }
+
 
 def make_ffn(layer_config):
     """
@@ -30,7 +31,8 @@ def make_ffn(layer_config):
             layers.append(act_fn)
     return nn.Sequential(*layers)
 
-def export_ffn_to_onnx(model, input_size, filename="ffn.onnx", opset = 17):
+
+def export_ffn_to_onnx(model, input_size, filename="ffn.onnx", opset=17):
     """
     This will export a PyTorch FFN model to a ONNX format.
 
@@ -40,7 +42,7 @@ def export_ffn_to_onnx(model, input_size, filename="ffn.onnx", opset = 17):
     if isinstance(input_size, int):
         input_size = (1, input_size)
 
-    test = "test"
+    test = "tests"
 
     dummy_input = torch.randn(*input_size)
 
@@ -48,10 +50,10 @@ def export_ffn_to_onnx(model, input_size, filename="ffn.onnx", opset = 17):
         model,
         dummy_input,
         filename,
-        input_names = ["input"],
-        output_names = ["output"],
-        dynamic_axes = {"input": {0: "batch"}, "output": {0: "batch"}},
-        opset_version = opset
+        input_names=["input"],
+        output_names=["output"],
+        dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
+        opset_version=opset,
     )
 
     # Verify the ONNX model
