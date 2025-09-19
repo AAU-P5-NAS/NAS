@@ -1,5 +1,5 @@
 # NAS
-Neural architecture search
+Neural Architecture Search.
 
 ## Installation guide
 Clone the repo, then:
