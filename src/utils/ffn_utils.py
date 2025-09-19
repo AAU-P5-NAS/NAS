@@ -51,6 +51,7 @@ def export_ffn_to_onnx(model, input_size, filename="ffn.onnx", opset = 17):
         opset_version = opset
     )
 
+    # Verify the ONNX model
     onnx_model = onnx.load(filename)
     onnx.checker.check.model(onnx_model)
     return filename
