@@ -15,7 +15,7 @@ _ACTIVATIONS = {
 def make_ffn(layer_config):
     """
     Build a feed-forward network (FFN) from a given config list.
-    
+
 
     layer_config: list of tuples as shown here:
         (in_features, units, activation)
@@ -39,6 +39,8 @@ def export_ffn_to_onnx(model, input_size, filename="ffn.onnx", opset = 17):
     """
     if isinstance(input_size, int):
         input_size = (1, input_size)
+
+    test = "test"
 
     dummy_input = torch.randn(*input_size)
 
