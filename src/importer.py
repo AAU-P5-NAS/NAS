@@ -20,7 +20,6 @@ class DataImporter:
     ):
         self.img_size = img_size
         self.color_mode = color_mode
-
         data_frame = pd.read_csv(filepath, header=None)
         data = data_frame.values.astype("float32")[:, 1:] / 255.0
         h, w = img_size
