@@ -19,7 +19,7 @@ def make_ffn(layer_config):
     layer_config: list of tuples as shown here:
         (in_features, units, activation)
     Example:
-        [(10, 0, "relu"), (20, 5, "softmax")]
+        [(10, 20, "relu"), (20, 5, "softmax")]
     """
     layers = []
     for in_f, units, act in layer_config:
