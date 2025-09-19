@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from src.importer import DataImporter
 
 
 class ExampleTypeStruct(BaseModel):
@@ -13,17 +14,10 @@ example_instance = ExampleTypeStruct(
 
 
 def main():
-    print("example_instance", example_instance)
-    print("example_instance.json()", example_instance.model_dump())
-    print("example_field", example_instance.example_field)
-    print("another_field", example_instance.another_field)
-    print("yet_another_field", example_instance.yet_another_field)
-    print("type of example_instance.example_field", type(example_instance.example_field))
-    print("type of example_instance.another_field", type(example_instance.another_field))
-    print(
-        "type of example_instance.yet_another_field",
-        type(example_instance.yet_another_field),
-    )
+    importer = DataImporter(filepath="src/az_images_data.csv")
+    importer.show_random_sample(8)
+    importer.show_random_sample(200000)
+    importer.show_random_sample(678)
 
 
 if __name__ == "__main__":
