@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from rich.console import Console
 from pydantic import BaseModel, ConfigDict
 
-CSV_DEFAULT_PATH = "./az_images_data.csv"
+CSV_DEFAULT_PATH = "src/az_images_data.csv"
 GRAYSCALE_NUM_CHANNELS = 1
 
 
@@ -26,20 +26,41 @@ class ConvolutionalArguments(BaseModel):
 
 
 class DataImporter:
+    """
+     Imports data from a CSV file and provides methods to reshape it for FFNN or CNN input
+
+     :Arguments:
+     - filepath: Path to the CSV file containing the data. Default is "src/az_images_data.csv".
+     - img_size: Tuple specifying the height and width of the images. Default is (28, 28).
+
+    :Methods:
+     - get_as_ffnn(): Returns the data as a 2D tensor suitable for FFNN input.
+     - get_as_cnn(batch_size=None, conv_args=None): Returns the data reshaped for CNN input, optionally split into batches. If conv_args is provided, also returns a Conv2d layer initialized with those arguments.
+     - show_random_ffn_sample(index=None): Displays a random sample from the FFNN data as a 2D image.
+     - show_random_conv_sample(conv_data, index=0, channel=0): Displays a sample from the convoluted data as a 2D image.
+
+    """
+
     def __init__(
         self,
         filepath: str = CSV_DEFAULT_PATH,
         img_size: tuple[int, int] = (28, 28),
     ):
         console = Console()
-        with console.status(f"[bold green]Loading data from {filepath}..."):
+        with console.status(f"[bold blue]Loading data from {filepath}..."):
             self.img_size = img_size
             data_frame = pd.read_csv(filepath, header=None)
             data = data_frame.values.astype("float32")[:, 1:] / 255.0
             self.data = torch.tensor(data)  # always store internally as [N, features]
+
+            if len(self.data) <= 783:
+                raise ValueError(f"Data has too few features: {len(self.data)} < 784")
         console.print("[bold green]Data loaded ✔[/bold green]")
 
     def get_as_ffnn(self):
+        """
+        :Returns: The data as a 2D tensor suitable for FFNN input.
+        """
         return self.data
 
     # Correctly typed overloads for get_as_cnn as return types differ depending on arguments
@@ -67,17 +88,17 @@ class DataImporter:
         Returns the data reshaped for CNN input, optionally split into batches.\n
         If conv_args is provided, also returns a Conv2d layer initialized with those arguments.\n
         \n
-        How to use:
+        How to use (scroll down):
         1. Without batching and without Conv2d layer:\n
             cnn_data = importer.get_as_cnn()
         2. With batching and without Conv2d layer:\n
             batched_cnn_data = importer.get_as_cnn(batch_size=32)
         3. Without batching and with Conv2d layer:\n
-            cnn_data, conv_layer = importer.get_as_cnn(conv_args=conv_args)
-            convoluted_data = conv_layer(cnn_data)
+            raw_data, conv_layer = importer.get_as_cnn(conv_args=conv_args)
+            convoluted_data = conv_layer(raw_data)
         4. With batching and with Conv2d layer:\n
-            batched_cnn_data, conv_layer = importer.get_as_cnn(batch_size=32, conv_args=conv_args)
-            convoluted_batches = [conv_layer(batch) for batch in batched_cnn_data]
+            batched_raw_data, conv_layer = importer.get_as_cnn(batch_size=32, conv_args=conv_args)
+            convoluted_batches = [conv_layer(batch) for batch in batched_raw_data]
         """
         h, w = self.img_size
         reshaped = self.data.view(-1, GRAYSCALE_NUM_CHANNELS, h, w)
@@ -102,24 +123,46 @@ class DataImporter:
         )
         return reshaped, conv
 
-    def show_random_ffn_sample(self, index: int = 66):
+    def show_random_ffn_sample(self, index: int | None = None):
+        """
+        Displays a random sample from the FFNN data as a 2D image.
+
+        :Arguments:
+        - index (optional): Index of the sample to display. If None, a random sample is chosen.
+
+        :Returns: None. Displays the image using matplotlib.
+        """
         h, w = self.img_size
-        img = self.data[index].view(h, w)
+        rand_num = int(torch.randint(0, len(self.data), (1,)).item())
+        if index is None:
+            index = rand_num
+        if index is None or index >= len(self.data):
+            index = len(self.data) - 1
+        img = self.data[index if index > 0 else 0].view(h, w)
         plt.imshow(img, cmap="gray")
         plt.show()
 
-    def show_random_conv_sample(self, conv_data: torch.Tensor, index: int = 0, channel: int = 0):
+    def show_random_conv_sample(
+        self, conv_data: torch.Tensor, index: int | None = None, channel: int | None = None
+    ):
         """
-        conv_data: [N, C_out, H, W] or [C_out, H, W] for a single sample
-        index: which sample in the batch to visualize
-        channel: which output channel (feature map) to visualize
+        Displays a sample from the convoluted data as a 2D image.
+
+        :Arguments:
+        - conv_data:  The output tensor from a convolutional layer.
+        - index (optional): Index of the sample in the batch to display.
+        - channel (optional): Channel of the convoluted data to display.
+
+        :Returns: None. Displays the image using matplotlib.
         """
         # If input is [C_out, H, W], add a fake batch dimension
         if conv_data.ndim == 3:
             conv_data = conv_data.unsqueeze(0)  # [1, C_out, H, W]
-
+        if index is None or index >= conv_data.shape[0]:
+            index = int(torch.randint(0, conv_data.shape[0], (1,)).item())
+        if channel is None or channel >= conv_data.shape[1]:
+            channel = int(torch.randint(0, conv_data.shape[1], (1,)).item())
         img = conv_data[index, channel].detach().cpu()
-
         plt.imshow(img, cmap="gray")
         plt.title(f"Sample {index}, Channel {channel}")
         plt.axis("off")
