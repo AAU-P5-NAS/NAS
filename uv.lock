@@ -190,8 +190,8 @@ name = "nas"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "onnx" },
     { name = "numpy" },
+    { name = "onnx" },
     { name = "pre-commit" },
     { name = "pydantic" },
     { name = "pytest" },
@@ -206,6 +206,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "numpy", specifier = ">=2.3.3" },
+    { name = "onnx", specifier = ">=1.19.0" },
     { name = "pre-commit", specifier = ">=4.3.0" },
     { name = "pydantic", specifier = ">=2.11.9" },
     { name = "pytest", specifier = ">=8.4.2" },
