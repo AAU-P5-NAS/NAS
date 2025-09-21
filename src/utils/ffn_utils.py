@@ -4,7 +4,7 @@ import torch.onnx
 import onnx
 
 # Mapping for string activations to PyTorch modules
-_ACTIVATIONS = {
+ACTIVATIONS = {
     "relu": nn.ReLU(),
     "sigmoid": nn.Sigmoid(),
     "tanh": nn.Tanh(),
@@ -26,7 +26,7 @@ def make_ffn(layer_config):
     for in_f, units, act in layer_config:
         layers.append(nn.Linear(in_f, units))
         if act is not None:
-            act_fn = _ACTIVATIONS[act.lower()]()
+            act_fn = ACTIVATIONS[act.lower()]()
             layers.append(act_fn)
     return nn.Sequential(*layers)
 
@@ -55,5 +55,5 @@ def export_ffn_to_onnx(model, input_size, filename="ffn.onnx", opset=17):
 
     # Verify the ONNX model
     onnx_model = onnx.load(filename)
-    onnx.checker.check.model(onnx_model)
+    onnx.checker.check_model(onnx_model)
     return filename
