@@ -5,9 +5,9 @@ import onnx
 
 # Mapping for string activations to PyTorch modules
 _ACTIVATIONS = {
-    "relu": nn.ReLU(),
-    "sigmoid": nn.Sigmoid(),
-    "tanh": nn.Tanh(),
+    "relu": nn.ReLU,
+    "sigmoid": nn.Sigmoid,
+    "tanh": nn.Tanh,
     "softmax": lambda: nn.Softmax(dim=1),
     None: lambda: nn.Identity,  # no activation
 }
@@ -55,5 +55,5 @@ def export_ffn_to_onnx(model, input_size, filename="ffn.onnx", opset=17):
 
     # Verify the ONNX model
     onnx_model = onnx.load(filename)
-    onnx.checker.check.model(onnx_model)
+    onnx.checker.check_model(onnx_model)
     return filename
