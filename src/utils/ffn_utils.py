@@ -5,9 +5,9 @@ import onnx
 
 # Mapping for string activations to PyTorch modules
 ACTIVATIONS = {
-    "relu": nn.ReLU(),
-    "sigmoid": nn.Sigmoid(),
-    "tanh": nn.Tanh(),
+    "relu": nn.ReLU,
+    "sigmoid": nn.Sigmoid,
+    "tanh": nn.Tanh,
     "softmax": lambda: nn.Softmax(dim=1),
     None: lambda: nn.Identity,  # no activation
 }
