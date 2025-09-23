@@ -2,6 +2,29 @@ import torch
 import torch.nn as nn
 import torch.onnx
 import onnx
+from typing import Literal, Tuple
+
+
+# Custom exceptions for FFN construction
+class InvalidLayerConfigError(Exception):
+    pass
+
+
+class UnknownActivationError(Exception):
+    pass
+
+
+class LayerConnectionError(Exception):
+    pass
+
+
+# Custom exception for ONNX export
+class ExportFFNToONNXError(Exception):
+    pass
+
+
+activation = Literal["relu", "sigmoid", "tanh", "softmax", None]
+Layer = Tuple[int, int, activation]
 
 # Mapping for string activations to PyTorch modules
 ACTIVATIONS = {
@@ -13,7 +36,7 @@ ACTIVATIONS = {
 }
 
 
-def make_ffn(layer_config):
+def make_ffn(layer_config: list[Layer]) -> nn.Sequential:
     """
     Build a feed-forward network (FFN) from a given config list.
 
@@ -23,15 +46,42 @@ def make_ffn(layer_config):
         [(10, 20, "relu"), (20, 5, "softmax")]
     """
     layers = []
-    for in_f, units, act in layer_config:
+
+    for index, layer in enumerate(layer_config):
+        # Validate layer config
+        if not (isinstance(layer, tuple) and len(layer) == 3):
+            raise InvalidLayerConfigError(
+                f"Layer config at index {index} is not a tuple of (in_features, units, activation): {layer}"
+            )
+
+        in_f, units, act = layer
+
+        # Check connection to next layer (if any)
+        if index < len(layer_config) - 1:
+            next_in_f = layer_config[index + 1][0]
+            if units != next_in_f:
+                raise LayerConnectionError(
+                    f"Layer {index} output features ({units}) do not match next layer's input features ({next_in_f})"
+                )
+
         layers.append(nn.Linear(in_f, units))
+
         if act is not None:
-            act_fn = ACTIVATIONS[act.lower()]()
+            try:
+                act_fn = ACTIVATIONS[act.lower()]()
+            except Exception:
+                raise UnknownActivationError(f"Unknown activation '{act}' at layer {index}")
             layers.append(act_fn)
+
     return nn.Sequential(*layers)
 
 
-def export_ffn_to_onnx(model, input_size, filename="ffn.onnx", opset=17):
+def export_ffn_to_onnx(
+    model: nn.Sequential,
+    input_size: int | Tuple[int, int],
+    filename: str = "ffn.onnx",
+    opset: int = 17,
+):
     """
     This will export a PyTorch FFN model to a ONNX format.
 
@@ -43,17 +93,23 @@ def export_ffn_to_onnx(model, input_size, filename="ffn.onnx", opset=17):
 
     dummy_input = torch.randn(*input_size)
 
-    torch.onnx.export(
-        model,
-        dummy_input,
-        filename,
-        input_names=["input"],
-        output_names=["output"],
-        dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
-        opset_version=opset,
-    )
+    try:
+        torch.onnx.export(
+            model,
+            (dummy_input,),
+            filename,
+            input_names=["input"],
+            output_names=["output"],
+            dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
+            opset_version=opset,
+        )
+    except Exception as e:
+        raise ExportFFNToONNXError(f"Failed to export model to ONNX: {e}")
 
-    # Verify the ONNX model
-    onnx_model = onnx.load(filename)
-    onnx.checker.check_model(onnx_model)
+    try:
+        onnx_model = onnx.load(filename)
+        onnx.checker.check_model(onnx_model)
+    except Exception as e:
+        raise ExportFFNToONNXError(f"Exported ONNX model verification failed: {e}")
+
     return filename
