@@ -3,14 +3,15 @@ import os
 import pytest
 import torch.nn as nn
 
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.utils.ffn_utils import (
     make_ffn,
+    export_ffn_to_onnx,
     InvalidLayerConfigError,
     UnknownActivationError,
     LayerConnectionError,
+    Layer,
 )
 
 
@@ -64,3 +65,17 @@ def test_layer_connections(layer_config):
 def test_invalid_architectures(invalid_config):
     with pytest.raises((InvalidLayerConfigError, UnknownActivationError, LayerConnectionError)):
         make_ffn(invalid_config)
+
+
+def test_export_ffn_to_onnx():
+    # Create a simple FFN model
+    layer_config: list[Layer] = [(10, 5, "relu"), (5, 2, "softmax")]
+    model = make_ffn(layer_config)
+
+    # Export to ONNX
+    result = export_ffn_to_onnx(model, 10)
+
+    # Check that the file was created
+    assert os.path.exists(result)
+    assert result.endswith(".onnx")
+    os.remove(result)  # Clean up
