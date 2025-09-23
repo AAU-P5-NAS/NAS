@@ -17,19 +17,25 @@ pipeline {
                 sh """
                 python3 -m venv ${VENV_DIR}
                 source ${VENV_DIR}/bin/activate
-                curl -LsSf https://astral.sh/uv/install.sh | sh
-                uv install --upgrade
-                uv install -r requirements.txt
-                uv sync
+                python -m pip install --upgrade pip
                 """
             }
         }
 
-        stage('Test') {
+        stage('Install Dependencies') {
             steps {
                 sh """
                 source ${VENV_DIR}/bin/activate
-                pytest --junitxml=results.xml
+                uv install
+                """
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh """
+                source ${VENV_DIR}/bin/activate
+                pytest tests/  # adjust the path to your test directory if needed
                 """
             }
         }
@@ -38,7 +44,7 @@ pipeline {
             steps {
                 sh """
                 source ${VENV_DIR}/bin/activate
-                uv build
+                uv build  # or replace with your build command if different
                 """
             }
         }
@@ -46,8 +52,13 @@ pipeline {
 
     post {
         always {
-            junit 'results.xml'
-            archiveArtifacts artifacts: 'dist/*', allowEmptyArchive: true
+            sh "rm -rf ${VENV_DIR}"
+        }
+        success {
+            echo "Pipeline succeeded."
+        }
+        failure {
+            echo "Pipeline failed."
         }
     }
 }
