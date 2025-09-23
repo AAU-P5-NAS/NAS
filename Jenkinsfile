@@ -48,7 +48,7 @@ pipeline {
             steps {
                 sh """
                 source ${VENV_DIR}/bin/activate
-                pytest tests/  # adjust path if needed
+                pytest
                 """
             }
         }
