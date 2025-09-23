@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         VENV_DIR = "${WORKSPACE}/venv"
-        PATH = "${VENV_DIR}/bin:${env.PATH}" // Ensure venv binaries are always on PATH
+        PATH = "${VENV_DIR}/bin:${env.PATH}"
     }
 
     stages {
@@ -29,7 +29,7 @@ pipeline {
                 source ${VENV_DIR}/bin/activate
                 export UV_INSTALL_DIR=${VENV_DIR}/bin
                 curl -LsSf https://astral.sh/uv/install.sh | sh
-                uv --version  # verify installation
+                uv --version
                 """
             }
         }
@@ -38,7 +38,8 @@ pipeline {
             steps {
                 sh """
                 source ${VENV_DIR}/bin/activate
-                uv install --upgrade
+                uv pip install --upgrade pip
+                uv pip install -e .
                 """
             }
         }
@@ -47,7 +48,7 @@ pipeline {
             steps {
                 sh """
                 source ${VENV_DIR}/bin/activate
-                pytest tests/  # adjust path to your test directory
+                pytest tests/  # adjust path if needed
                 """
             }
         }
@@ -56,7 +57,7 @@ pipeline {
             steps {
                 sh """
                 source ${VENV_DIR}/bin/activate
-                uv build  # or replace with your build command if different
+                uv build
                 """
             }
         }
