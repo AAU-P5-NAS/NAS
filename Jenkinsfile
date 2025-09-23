@@ -26,7 +26,9 @@ pipeline {
             steps {
                 sh """
                 source ${VENV_DIR}/bin/activate
-                uv install
+                curl -LsSf https://astral.sh/uv/install.sh | sh
+                export PATH=${VENV_DIR}/bin:$PATH
+                uv install --upgrade
                 """
             }
         }
