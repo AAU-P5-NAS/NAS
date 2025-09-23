@@ -16,7 +16,7 @@ pipeline {
             steps {
                 sh """
                 python3 -m venv ${VENV_DIR}
-                source .${VENV_DIR}/bin/activate
+                source ${VENV_DIR}/bin/activate
                 curl -LsSf https://astral.sh/uv/install.sh | sh
                 uv install --upgrade
                 uv install -r requirements.txt
@@ -28,7 +28,7 @@ pipeline {
         stage('Test') {
             steps {
                 sh """
-                source .${VENV_DIR}/bin/activate
+                source ${VENV_DIR}/bin/activate
                 pytest --junitxml=results.xml
                 """
             }
@@ -37,7 +37,7 @@ pipeline {
         stage('Build') {
             steps {
                 sh """
-                source .${VENV_DIR}/bin/activate
+                source ${VENV_DIR}/bin/activate
                 uv build
                 """
             }
