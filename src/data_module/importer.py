@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from rich.console import Console
 from pydantic import BaseModel, ConfigDict
 
-CSV_DEFAULT_PATH = "src/az_images_data.csv"
+CSV_DEFAULT_PATH = "src/data_module/az_images_data.csv"
 GRAYSCALE_NUM_CHANNELS = 1
 
 
