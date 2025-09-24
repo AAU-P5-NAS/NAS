@@ -27,7 +27,7 @@ pipeline {
             steps {
                 sh """
                 curl -LsSf https://astral.sh/uv/install.sh | sh
-                export PATH="$HOME/.local/bin:$PATH"
+                export PATH="\$HOME/.local/bin:\$PATH"
                 uv --version
                 """
             }
@@ -36,7 +36,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh """
-                export PATH="$HOME/.local/bin:$PATH"
+                export PATH="\$HOME/.local/bin:\$PATH"
                 uv sync
                 """
             }
@@ -45,7 +45,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh """
-                export PATH="$HOME/.local/bin:$PATH"
+                export PATH="\$HOME/.local/bin:\$PATH"
                 uv run pytest
                 """
             }
