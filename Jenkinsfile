@@ -26,31 +26,31 @@ pipeline {
         stage('Install uv') {
             steps {
                 sh """
-                source ${VENV_DIR}/bin/activate
-                export UV_INSTALL_DIR=${VENV_DIR}/bin
                 curl -LsSf https://astral.sh/uv/install.sh | sh
+                export PATH="$HOME/.local/bin:$PATH"
                 uv --version
                 """
             }
         }
-
+        
         stage('Install Dependencies') {
             steps {
                 sh """
-                source ${VENV_DIR}/bin/activate
+                export PATH="$HOME/.local/bin:$PATH"
                 uv sync
                 """
             }
         }
-
+        
         stage('Run Tests') {
             steps {
                 sh """
-                source ${VENV_DIR}/bin/activate
-                pytest
+                export PATH="$HOME/.local/bin:$PATH"
+                uv run pytest
                 """
             }
         }
+
 
         stage('Build') {
             steps {
