@@ -38,8 +38,7 @@ pipeline {
             steps {
                 sh """
                 source ${VENV_DIR}/bin/activate
-                uv pip install --upgrade pip
-                uv pip install -e .
+                uv sync
                 """
             }
         }
