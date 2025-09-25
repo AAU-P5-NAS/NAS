@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.onnx
 import onnx
 import os
+import warnings
 
 """
 NOTE: 
@@ -53,7 +54,7 @@ Hence, the RL config must have the structure:
 ACTIVATIONS = {
     "relu": nn.ReLU,
     "tanh": nn.Tanh,
-    "softmax": lambda: nn.Softmax(dim=1),  # lambda to pass dim argument
+    "softmax": lambda: nn.Softmax(dim=1),
     "none": lambda: nn.Identity(),
 }
 
@@ -94,6 +95,7 @@ class CNNBuilder:
         current_in_channels = self.in_channels
         h, w = self.input_size
         flatten_added = False
+        last_linear_out_features = None
 
         for idx, cfg in enumerate(self.layer_config):
             t = cfg.get("layer_type")
@@ -109,8 +111,7 @@ class CNNBuilder:
                     )
                 )
                 act = cfg.get("activation", "none")
-                if act.lower() != "none":
-                    layers.append(ACTIVATIONS[act.lower()]())
+                layers.append(ACTIVATIONS[act.lower()]())
 
                 current_in_channels = cfg["out_channels"]
                 # Update spatial size, because Linear layers later need the flattened feature map size, so we keep track of spatial dimensions dynamically.
@@ -134,21 +135,24 @@ class CNNBuilder:
                 h = (h - kernel) // stride + 1
                 w = (w - kernel) // stride + 1
 
-            elif (
-                t == "linear"
-            ):  # this assumes that there will be not conv or pool layers after a linear layer. meaning flatening should only occur once.
+            elif t == "linear":
+                # Flatten before first linear
                 if not flatten_added:
                     layers.append(nn.Flatten())
                     flatten_added = True
-                    # Compute flattened input size
                     in_features = current_in_channels * h * w
                 else:
-                    in_features = layers[-1].out_features
+                    # Use the last linear output size, not layers[-1]
+                    if last_linear_out_features is None:
+                        raise InvalidLayerConfigError(
+                            "No previous linear layer to infer in_features from."
+                        )
+                    in_features = last_linear_out_features
 
                 layers.append(nn.Linear(in_features, cfg["linear_units"]))
+                last_linear_out_features = cfg["linear_units"]  # update last linear output
                 act = cfg.get("activation", "none")
-                if act.lower() != "none":
-                    layers.append(ACTIVATIONS[act.lower()]())
+                layers.append(ACTIVATIONS[act.lower()]())
 
             else:
                 raise InvalidLayerConfigError(f"Unknown layer type '{t}' at index {idx}")
@@ -158,10 +162,12 @@ class CNNBuilder:
             layers.append(nn.Flatten())
             in_features = current_in_channels * h * w
         else:
-            in_features = layers[-1].out_features
+            if last_linear_out_features is None:
+                # If there was a linear layer, use its output
+                raise InvalidLayerConfigError("Cannot determine input size for final classifier")
+            in_features = last_linear_out_features
 
         layers.append(nn.Linear(in_features, self.num_classes))
-
         self.model = nn.Sequential(*layers)
         return self.model
 
@@ -190,17 +196,34 @@ class CNNBuilder:
         full_path = os.path.join("saved_models", filename)
 
         dummy_input = torch.randn(1, *input_size)
-        torch.onnx.export(
-            self.model,
-            (dummy_input,),
-            full_path,
-            input_names=["input"],
-            output_names=["output"],
-            dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
-            opset_version=opset,
-        )
+        # Suppress deprecation warnings for ONNX export. smthn about a new version of onnx exporter, but the current one still work
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=DeprecationWarning)
+            torch.onnx.export(
+                self.model,
+                (dummy_input,),  # tuple of inputs
+                full_path,
+                input_names=["input"],
+                output_names=["output"],
+                dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
+                opset_version=opset,
+                export_params=True,
+                training=torch.onnx.TrainingMode.EVAL,  # export in inference mode
+            )
 
         # Verify ONNX model
         onnx_model = onnx.load(filename)
         onnx.checker.check_model(onnx_model)
         return full_path
+
+
+if __name__ == "__main__":
+    config = [
+        {"layer_type": "conv", "out_channels": 16, "kernel_size": 3, "activation": "relu"},
+        {"layer_type": "pool", "pool_mode": "max", "kernel_size": 2},
+        {"layer_type": "linear", "linear_units": 32, "activation": "tanh"},
+    ]
+
+    cnn = CNNBuilder(config, in_channels=1, input_size=(28, 28), num_classes=26)
+    model = cnn.build()
+    print(model)

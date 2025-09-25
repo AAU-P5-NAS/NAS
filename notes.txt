@@ -1,0 +1,17 @@
+made a change in this package: .venv\Lib\site-packages\onnx\__init__.py:163: 
+
+to make the loader look inside saved_models when checkig the onnx file
+
+the code below is what is replaced the original code with
+
+def _load_bytes(f: IO[bytes] | str | os.PathLike) -> bytes:
+    if hasattr(f, "read") and callable(typing.cast("IO[bytes]", f).read):
+        content = typing.cast("IO[bytes]", f).read()
+    else:
+        f_path = typing.cast("Union[str, os.PathLike]", f)
+        full_path = os.path.join("saved_models", f_path)  # look inside saved_models
+        if not os.path.exists(full_path):
+            raise FileNotFoundError(f"No such file: {full_path}")
+        with open(full_path, "rb") as readable:
+            content = readable.read()
+    return content
