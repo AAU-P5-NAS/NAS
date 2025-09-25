@@ -10,11 +10,9 @@ from src.utils.ffn_utils import make_ffn
 def main():
     importer = DataImporter()
     console = Console()
-    model = make_ffn([(28 * 28, 16, "relu"), (16, 26, None)])
+    model = make_ffn([(28 * 28, 32, "relu"), (32, 26, None)])
     network = Network(model)
     train_dataloader, test_dataloader = importer.get_as_ffnn(batch_size=1, test_split=0.1)
-    for X, y in train_dataloader:
-        print("y ", y.shape)
     for epoch in range(25):
         with console.status(f"[bold blue] Training model, epoch {epoch} / 25"):
             train(
