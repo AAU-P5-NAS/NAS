@@ -110,8 +110,10 @@ class CNNBuilder:
                         padding=cfg["kernel_size"] // 2,
                     )
                 )
-                act = cfg.get("activation", "none")
-                layers.append(ACTIVATIONS[act.lower()]())
+                act = cfg.get("activation", "none").lower()
+                if act not in ACTIVATIONS:
+                    raise InvalidLayerConfigError(f"Unknown activation '{act}' at index {idx}")
+                layers.append(ACTIVATIONS[act]())
 
                 current_in_channels = cfg["out_channels"]
                 # Update spatial size, because Linear layers later need the flattened feature map size, so we keep track of spatial dimensions dynamically.
@@ -151,8 +153,10 @@ class CNNBuilder:
 
                 layers.append(nn.Linear(in_features, cfg["linear_units"]))
                 last_linear_out_features = cfg["linear_units"]  # update last linear output
-                act = cfg.get("activation", "none")
-                layers.append(ACTIVATIONS[act.lower()]())
+                act = cfg.get("activation", "none").lower()
+                if act not in ACTIVATIONS:
+                    raise InvalidLayerConfigError(f"Unknown activation '{act}' at index {idx}")
+                layers.append(ACTIVATIONS[act]())
 
             else:
                 raise InvalidLayerConfigError(f"Unknown layer type '{t}' at index {idx}")
@@ -212,16 +216,16 @@ class CNNBuilder:
             )
 
         # Verify ONNX model
-        onnx_model = onnx.load(filename)
+        onnx_model = onnx.load(full_path)
         onnx.checker.check_model(onnx_model)
         return full_path
 
 
 if __name__ == "__main__":
     config = [
-        {"layer_type": "conv", "out_channels": 16, "kernel_size": 3, "activation": "relu"},
+        {"layer_type": "conv", "out_channels": 16, "kernel_size": 3, "activation": "reLu"},
         {"layer_type": "pool", "pool_mode": "max", "kernel_size": 2},
-        {"layer_type": "linear", "linear_units": 32, "activation": "tanh"},
+        {"layer_type": "linear", "linear_units": 32, "activation": "tah"},
     ]
 
     cnn = CNNBuilder(config, in_channels=1, input_size=(28, 28), num_classes=26)
