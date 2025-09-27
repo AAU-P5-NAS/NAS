@@ -3,175 +3,207 @@ import torch.onnx
 import onnx
 import os
 import warnings
-
-"""
-NOTE: 
-in standard CNN design, conv and linear layers are not usually mixed. The typical structure is:
-Input → Conv/Pool layers → Flatten → Linear (fully connected) layers → Output
-
-
-If the RL-generated config were something like:
-[
-    {"layer_type": "conv", "out_channels": 32, "kernel_size": 3},
-    {"layer_type": "linear", "linear_units": 128},
-    {"layer_type": "conv", "out_channels": 64, "kernel_size": 3}
-]
-
-then the below code would run into problems:
-
-After the first linear layer, nn.Flatten() has already been applied.
-- The next conv layer expects a 3D input [batch, channels, height, width], but it now receives a 1D vector [batch, features].
-- This mismatch will cause a runtime error when building or running the model.
-
-Hence, the RL config must have the structure:
-[conv/pool layers ...] → [linear layers ...] → final classifier
-
-"""
-
-
-# the RL sohuld use this action space to make a layer_config
-# CNN_ACTION_SPACE = {
-#     "layer_type": ["conv", "pool", "linear"],
-#     "out_channels": [16, 32, 64, 128],
-#     "kernel_size": [1, 3, 5],
-#     "stride": [1, 2],
-#     "pool_mode": ["max", "avg"],
-#     "activation": ["relu", "tanh", softmax, "none"],
-#     "linear_units": [64, 128, 256, 512],
-# }
-
-# the cofig from the RL should look like this
-
-# Example layer_config (from CNN_ACTION_SPACE):
-#     [
-#         {"layer_type": "conv", "out_channels": 32, "kernel_size": 3, "stride": 1, "activation": "relu"},
-#         {"layer_type": "pool", "pool_mode": "max", "kernel_size": 2},
-#         {"layer_type": "linear", "linear_units": 128, "activation": "tanh"},
-#     ]
-
-
-# Activation mapping
-ACTIVATIONS = {
-    "relu": nn.ReLU,
-    "tanh": nn.Tanh,
-    "softmax": lambda: nn.Softmax(dim=1),
-    "none": lambda: nn.Identity(),
-}
+import enum
+from enum import IntEnum
+from typing import List, Optional, Tuple
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class InvalidLayerConfigError(Exception):
-    """Raised for any error in build() method"""
+    """Raised when a single CNN layer has invalid parameters."""
+
+    pass
+
+
+class InvalidLayerOrderError(Exception):
+    """Raised when CNN layers are in an invalid order (e.g. Conv after Linear)."""
 
     pass
 
 
 class CNNExportError(Exception):
-    """Raised for any error during CNN ONNX export."""
+    """Raised when CNN layers are in an invalid order (e.g. Conv after Linear)."""
 
     pass
 
 
-class CNNBuilder:
-    """
-    Build CNN models from an RL-sampled layer configuration.
-    """
+class LayerType(enum.Enum):
+    CONV = "conv"
+    LINEAR = "linear"
+    POOL = "pool"
 
-    def __init__(self, layer_config, in_channels=1, input_size=(28, 28), num_classes=26):
-        """
-        Args:
-            layer_config: list of dicts, each describing a layer (conv, pool, linear)
-            in_channels: input channels (1=grayscale, 3=RGB)
-            input_size: spatial size of input images (height, width)
-            num_classes: number of output classes (26 letters)
-        """
-        self.layer_config = layer_config
-        self.in_channels = in_channels
+
+class LinearUnits(IntEnum):
+    LU_64 = 64
+    LU_128 = 128
+    LU_256 = 256
+    LU_512 = 512
+
+
+class OutChannels(IntEnum):
+    CH_16 = 16
+    CH_32 = 32
+    CH_64 = 64
+    CH_128 = 128
+
+
+class KernelSize(IntEnum):
+    KS_1 = 1
+    KS_3 = 3
+    KS_5 = 5
+
+
+class Stride(IntEnum):
+    S_1 = 1
+    S_2 = 2
+
+
+class PoolMode(enum.Enum):
+    MAX = "max"
+    AVG = "avg"
+
+
+class ActivationFunction(enum.Enum):
+    RELU = "relu"
+    TANH = "tanh"
+    SOFTMAX = "softmax"
+    NONE = "none"
+
+    def to_module(self) -> nn.Module:
+        """Map enum -> actual nn.Module instance."""
+        mapping = {
+            "relu": lambda: nn.ReLU(),
+            "tanh": lambda: nn.Tanh(),
+            "softmax": lambda: nn.Softmax(dim=1),
+            "none": lambda: nn.Identity(),
+        }
+        return mapping[self.value]()
+
+
+class CNNActionSpace(BaseModel):
+    layer_type: LayerType
+    out_channels: Optional[OutChannels] = None
+    kernel_size: Optional[KernelSize] = None
+    stride: Optional[Stride] = None
+    pool_mode: Optional[PoolMode] = None
+    activation: Optional[ActivationFunction] = ActivationFunction.NONE
+    linear_units: Optional[LinearUnits] = None
+
+    @model_validator(mode="after")
+    def validate_params(self):
+        lt = self.layer_type
+        if lt == LayerType.CONV:
+            if self.out_channels is None or self.kernel_size is None:
+                raise InvalidLayerConfigError("Conv layer must define out_channels and kernel_size")
+        elif lt == LayerType.POOL:
+            if self.pool_mode is None or self.kernel_size is None:
+                raise InvalidLayerConfigError("Pool layer must define pool_mode and kernel_size")
+        elif lt == LayerType.LINEAR:
+            if self.linear_units is None:
+                raise InvalidLayerConfigError("Linear layer must define linear_units")
+        return self
+
+
+class RLConfig(BaseModel):
+    layers: List[CNNActionSpace]
+
+    @field_validator("layers")
+    def check_layer_order(cls, v: List[CNNActionSpace]) -> List[CNNActionSpace]:
+        """Enforce conv/pool layers cannot appear after a linear layer."""
+        seen_linear = False
+        for i, layer in enumerate(v):
+            if seen_linear and layer.layer_type in (LayerType.CONV, LayerType.POOL):
+                raise InvalidLayerOrderError(
+                    f"Conv/Pool layer at position {i} after a linear layer is not allowed"
+                )
+            if layer.layer_type == LayerType.LINEAR:
+                seen_linear = True
+        return v
+
+
+def update_spatial_dims(
+    h: int, w: int, kernel: int, stride: int, padding: int = 0
+) -> Tuple[int, int]:
+    h_new = (h + 2 * padding - kernel) // stride + 1
+    w_new = (w + 2 * padding - kernel) // stride + 1
+    return h_new, w_new
+
+
+class CNNBuilder:
+    def __init__(
+        self, rl_config: RLConfig, input_size: Tuple[int, int] = (28, 28), num_classes: int = 26
+    ):
+        self.rl_config = rl_config
         self.input_size = input_size
         self.num_classes = num_classes
-        self.model = None
+        self.model: Optional[nn.Sequential] = None
 
     def build(self):
         layers = []
-        current_in_channels = self.in_channels
+        current_in_channels = 1
         h, w = self.input_size
-        flatten_added = False
-        last_linear_out_features = None
 
-        for idx, cfg in enumerate(self.layer_config):
-            t = cfg.get("layer_type")
+        conv_pool_layers = [
+            layer
+            for layer in self.rl_config.layers
+            if layer.layer_type in (LayerType.CONV, LayerType.POOL)
+        ]
+        linear_layers = [
+            layer for layer in self.rl_config.layers if layer.layer_type is LayerType.LINEAR
+        ]
 
-            if t == "conv":
+        for layer in conv_pool_layers:
+            if layer.layer_type is LayerType.CONV:
+                stride = layer.stride or 1
+                kernel = layer.kernel_size
+                assert kernel is not None  #
+                padding = kernel // 2
+
+                out_ch = layer.out_channels
+                assert out_ch is not None
+                assert current_in_channels is not None
+
                 layers.append(
                     nn.Conv2d(
                         in_channels=current_in_channels,
-                        out_channels=cfg["out_channels"],
-                        kernel_size=cfg["kernel_size"],
-                        stride=cfg.get("stride", 1),
-                        padding=cfg["kernel_size"] // 2,
+                        out_channels=out_ch,
+                        kernel_size=kernel,
+                        stride=stride,
+                        padding=padding,
                     )
                 )
-                act = cfg.get("activation", "none").lower()
-                if act not in ACTIVATIONS:
-                    raise InvalidLayerConfigError(f"Unknown activation '{act}' at index {idx}")
-                layers.append(ACTIVATIONS[act]())
+                assert layer.activation is not None
+                layers.append(layer.activation.to_module())
+                current_in_channels = layer.out_channels
+                h, w = update_spatial_dims(h, w, kernel, stride, padding)
 
-                current_in_channels = cfg["out_channels"]
-                # Update spatial size, because Linear layers later need the flattened feature map size, so we keep track of spatial dimensions dynamically.
-                stride = cfg.get("stride", 1)
-                h = (h + 2 * (cfg["kernel_size"] // 2) - cfg["kernel_size"]) // stride + 1
-                w = (w + 2 * (cfg["kernel_size"] // 2) - cfg["kernel_size"]) // stride + 1
-
-            elif t == "pool":
-                mode = cfg.get("pool_mode", "max")
-                kernel = cfg["kernel_size"]
-                stride = cfg.get("stride", kernel)  # default stride = kernel size
-
-                if mode == "max":
+            elif layer.layer_type is LayerType.POOL:
+                stride = layer.stride or layer.kernel_size
+                kernel = layer.kernel_size
+                assert kernel is not None
+                if layer.pool_mode is PoolMode.MAX:
                     layers.append(nn.MaxPool2d(kernel, stride))
-                elif mode == "avg":
+                else:
                     layers.append(nn.AvgPool2d(kernel, stride))
-                else:
-                    raise InvalidLayerConfigError(f"Unknown pool mode '{mode}' at index {idx}")
 
-                # Update spatial size
-                h = (h - kernel) // stride + 1
-                w = (w - kernel) // stride + 1
+                assert stride is not None
+                h, w = update_spatial_dims(h, w, kernel, stride)
 
-            elif t == "linear":
-                # Flatten before first linear
-                if not flatten_added:
-                    layers.append(nn.Flatten())
-                    flatten_added = True
-                    in_features = current_in_channels * h * w
-                else:
-                    # Use the last linear output size, not layers[-1]
-                    if last_linear_out_features is None:
-                        raise InvalidLayerConfigError(
-                            "No previous linear layer to infer in_features from."
-                        )
-                    in_features = last_linear_out_features
+        layers.append(nn.Flatten())
+        assert current_in_channels is not None
 
-                layers.append(nn.Linear(in_features, cfg["linear_units"]))
-                last_linear_out_features = cfg["linear_units"]  # update last linear output
-                act = cfg.get("activation", "none").lower()
-                if act not in ACTIVATIONS:
-                    raise InvalidLayerConfigError(f"Unknown activation '{act}' at index {idx}")
-                layers.append(ACTIVATIONS[act]())
+        in_features = current_in_channels * h * w
 
-            else:
-                raise InvalidLayerConfigError(f"Unknown layer type '{t}' at index {idx}")
-
-        # Final classifier, ensures that the features are flatened at the end if the layer_config does not include a linear layer at the end.
-        if not flatten_added:
-            layers.append(nn.Flatten())
-            in_features = current_in_channels * h * w
-        else:
-            if last_linear_out_features is None:
-                # If there was a linear layer, use its output
-                raise InvalidLayerConfigError("Cannot determine input size for final classifier")
-            in_features = last_linear_out_features
+        for layer in linear_layers:
+            assert in_features is not None
+            assert layer.linear_units is not None
+            layers.append(nn.Linear(in_features, layer.linear_units))
+            assert layer.activation is not None
+            layers.append(layer.activation.to_module())
+            in_features = layer.linear_units
 
         layers.append(nn.Linear(in_features, self.num_classes))
+
         self.model = nn.Sequential(*layers)
         return self.model
 
@@ -222,12 +254,36 @@ class CNNBuilder:
 
 
 if __name__ == "__main__":
-    config = [
-        {"layer_type": "conv", "out_channels": 16, "kernel_size": 3, "activation": "reLu"},
-        {"layer_type": "pool", "pool_mode": "max", "kernel_size": 2},
-        {"layer_type": "linear", "linear_units": 32, "activation": "tah"},
-    ]
+    # Define a sample RL-generated config
+    config = RLConfig(
+        layers=[
+            CNNActionSpace(
+                layer_type=LayerType.CONV,
+                out_channels=OutChannels.CH_16,
+                kernel_size=KernelSize.KS_3,
+                activation=ActivationFunction.RELU,
+            ),
+            CNNActionSpace(
+                layer_type=LayerType.POOL, pool_mode=PoolMode.MAX, kernel_size=KernelSize.KS_1
+            ),
+            CNNActionSpace(
+                layer_type=LayerType.LINEAR,
+                linear_units=LinearUnits.LU_64,
+                activation=ActivationFunction.TANH,
+            ),
+        ]
+    )
 
-    cnn = CNNBuilder(config, in_channels=1, input_size=(28, 28), num_classes=26)
-    model = cnn.build()
+    # Instantiate the CNN builder
+    cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
+
+    # Build the PyTorch model
+    model = cnn_builder.build()
+
+    # Print the model architecture
+    print("Built CNN model:")
     print(model)
+
+    # Optional: export to ONNX
+    # onnx_path = cnn_builder.export_to_onnx(input_size=(1, 28, 28))
+    # print(f"ONNX model saved at: {onnx_path}")
