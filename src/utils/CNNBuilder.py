@@ -207,26 +207,23 @@ class CNNBuilder:
         self.model = nn.Sequential(*layers)
         return self.model
 
-    def export_to_onnx(self, input_size=(1, 28, 28), filename=None, opset=17):
+    def export_to_onnx(self, save_in_seperate_file: bool = False, opset=17):
         """
         Export the built CNN to ONNX format and save it a seperate file.
-
         Note, ONNX just mirrors the PyTorch model at the time of export.
 
-        Args:
-            input_size: tuple (C, H, W) of the input image (excluding batch size)
-            filename: ONNX file name
-            opset: ONNX opset version
         """
+
         if self.model is None:
             raise CNNExportError("Build the model first with .build() before exporting.")
 
-        if not isinstance(input_size, tuple):
-            raise CNNExportError("input_size must be a tuple (C, H, W)")
-
-        if filename is None:
+        if save_in_seperate_file is True:
             # Auto-generate filename
             filename = f"cnn_model_{id(self)}.onnx"
+        else:
+            filename = "cnn.onnx"
+
+        input_size = (1, 28, 28)
 
         os.makedirs("saved_models", exist_ok=True)
         full_path = os.path.join("saved_models", filename)
@@ -252,6 +249,13 @@ class CNNBuilder:
         onnx.checker.check_model(onnx_model)
         return full_path
 
+
+# ------------------------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------------------------#
 
 if __name__ == "__main__":
     # Define a sample RL-generated config
@@ -285,5 +289,5 @@ if __name__ == "__main__":
     print(model)
 
     # Optional: export to ONNX
-    # onnx_path = cnn_builder.export_to_onnx(input_size=(1, 28, 28))
-    # print(f"ONNX model saved at: {onnx_path}")
+    onnx_path = cnn_builder.export_to_onnx(False)
+    print(f"ONNX model saved at: {onnx_path}")
