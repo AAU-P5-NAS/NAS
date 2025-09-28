@@ -131,12 +131,11 @@ def test_invalid_batch_sizes(importer, batch_size):
         assert "batch_size must be a positive integer" in str(e)
 
 
-@pytest.mark.parametrize("batch_size", [0, -5])
-def test_invalid_test_split(importer, batch_size):
-    test_split = 1.5
+@pytest.mark.parametrize("test_split", [0, -5])
+def test_invalid_test_split(importer, test_split):
     try:
         train_loader, test_loader = importer.get_as_cnn(
-            batch_size=batch_size, test_split=test_split, seed=42
+            batch_size=16, test_split=test_split, seed=42
         )
     except ValueError as e:
         assert "test_split must be between 0 and 1 (exclusive)" in str(e)
