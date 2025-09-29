@@ -19,11 +19,10 @@ from src.utils.CNNBuilder import (
 def main():
     # 1. Load data
     importer = DataImporter()
-    train_loader = importer.get_as_cnn(batch_size=512)
-    test_loader = importer.get_as_cnn(batch_size=512)
-
+    train_loader, test_loader = importer.get_as_cnn(batch_size=512)
+   
     console = Console()
-
+    
     # 2. Define CNN configuration using CNNActionSpace
     config = RLConfig(
         layers=[
