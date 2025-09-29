@@ -18,11 +18,11 @@ from src.utils.CNNBuilder import (
 
 def main():
     # 1. Load data
-    importer = DataImporter()
-    train_loader, test_loader = importer.get_as_cnn(batch_size=512)
-   
+    importer = DataImporter(max_per_class=10)
+    train_loader, test_loader = importer.get_as_cnn(batch_size=512, test_split=0.2)
+
     console = Console()
-    
+
     # 2. Define CNN configuration using CNNActionSpace
     config = RLConfig(
         layers=[
@@ -65,7 +65,7 @@ def main():
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
     # 5. Training loop
-    num_epochs = 1
+    num_epochs = 5000
     for epoch in range(num_epochs):
         with console.status(f"[bold blue]Training CNN, epoch {epoch + 1}/{num_epochs}"):
             train(train_loader, model, loss_fn, optimizer)

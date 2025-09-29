@@ -37,31 +37,46 @@ class CSVFilepathDoesntExist(Exception):
 
 class DataImporter:
     """
-     Imports data from a CSV file and provides DataLoaders for training and testing CNNs.
-
-    :Methods:
-     - get_as_cnn(batch_size=int, test_split=float, seed=Optional[int] = None):
+    Imports data from a CSV file and provides DataLoaders for training and testing CNNs.
+    Can optionally limit the number of samples per class.
     """
 
     def __init__(
         self,
         filepath: str = CSV_DEFAULT_PATH,
+        max_per_class: int | None = None,  # new argument
     ):
         with console.status(f"[bold blue]Loading data from {filepath}..."):
             try:
                 data_file = pd.read_csv(filepath, header=None)
             except FileNotFoundError:
                 raise CSVFilepathDoesntExist(filepath) from None
-            data = data_file.values.astype("float32")
 
-            labels = torch.tensor(data[:, 0], dtype=torch.long)  # [N]
-            values = torch.tensor(data[:, 1:] / 255.0)  # [N, features]
-            values = values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W)  # [N, 1, H, W]
+            data = data_file.values.astype("float32")
+            labels = torch.tensor(data[:, 0], dtype=torch.long)
+            values = torch.tensor(data[:, 1:] / 255.0)
+            values = values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W)
+
+            if max_per_class is not None:
+                # Limit the number of samples per class
+                selected_indices = []
+                for label in labels.unique():
+                    label_indices = torch.where(labels == label)[0]
+                    n_select = min(max_per_class, len(label_indices))
+                    selected_indices.append(label_indices[:n_select])
+                selected_indices = torch.cat(selected_indices)
+
+                values = values[selected_indices]
+                labels = labels[selected_indices]
 
             self.data = values
             self.labels = labels
             self.dataset = torch.utils.data.TensorDataset(values, labels)
-        console.print("[bold green]Data loaded ✔[/bold green]")
+        console.print(
+            f"[bold green]Data loaded ✔ (classes limited to {max_per_class} samples each)[/bold green]"
+            if max_per_class
+            else "[bold green]Data loaded ✔[/bold green]"
+        )
 
     def get_as_cnn(
         self, batch_size: int, test_split: float, seed: Optional[int] = None, shuffle: bool = True
