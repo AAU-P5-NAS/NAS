@@ -167,7 +167,7 @@ class CustomEnv(gym.Env):
 
         return observation, info
 
-    def step(self, action: Any) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
+    def step(self, action: list[int]) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
 
         Args:
@@ -177,10 +177,14 @@ class CustomEnv(gym.Env):
             tuple: (observation, reward, terminated, truncated, info)
         """
 
-        operation: Operation = Operation(action[0])
-        layer_index: int = action[1]
+        operation = Operation(action[0])
+        layer_index = action[1]
 
-        stepReturn: AgentABC.StepReturn = self.other_agent.on_step_from_parent_environment(action)
+        other_agent_action = Action(operation, layer_index)
+
+        stepReturn: AgentABC.StepReturn = self.other_agent.on_step_from_parent_environment(
+            other_agent_action
+        )
 
         terminated = self._should_terminate()
         truncated = self._has_truncated()
