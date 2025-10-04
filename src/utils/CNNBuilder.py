@@ -311,4 +311,5 @@ if __name__ == "__main__":
     print(f"ONNX model saved at: {onnx_path}")
 
     print("CNN config to flat array")
+    print(config.layers[0])  # this is why 7 slots per layer is choosen
     print(cnn_config_to_flatt(config))
