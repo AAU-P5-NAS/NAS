@@ -8,3 +8,13 @@ repos:
         args: [--line-length=100] # must be synced with pyproject.toml
 # this pre commit package basically ensures that when we commit code,
 # it is formatted and linted according to the rules defined with ruff.
+
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: Run pytest
+        entry: pytest
+        language: system
+        types: [python]
+        pass_filenames: false
