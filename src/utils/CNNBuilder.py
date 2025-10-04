@@ -28,9 +28,9 @@ class CNNExportError(Exception):
 
 
 class LayerType(enum.Enum):
-    CONV = "conv"
-    LINEAR = "linear"
-    POOL = "pool"
+    CONV = 0  # "conv"
+    LINEAR = 1
+    POOL = 2  # "pool"
 
 
 class LinearUnits(IntEnum):
@@ -59,23 +59,23 @@ class Stride(IntEnum):
 
 
 class PoolMode(enum.Enum):
-    MAX = "max"
-    AVG = "avg"
+    MAX = 0  # "max"
+    AVG = 1  # "avg"
 
 
 class ActivationFunction(enum.Enum):
-    RELU = "relu"
-    TANH = "tanh"
-    SOFTMAX = "softmax"
-    NONE = "none"
+    RELU = 0  # "relu"
+    TANH = 1  # "tanh"
+    SOFTMAX = 2  # "softmax"
+    NONE = 3  # "none"
 
     def to_module(self) -> nn.Module:
         """Map enum -> actual nn.Module instance."""
         mapping = {
-            "relu": lambda: nn.ReLU(),
-            "tanh": lambda: nn.Tanh(),
-            "softmax": lambda: nn.Softmax(dim=1),
-            "none": lambda: nn.Identity(),
+            0: lambda: nn.ReLU(),
+            1: lambda: nn.Tanh(),
+            2: lambda: nn.Softmax(dim=1),
+            3: lambda: nn.Identity(),
         }
         return mapping[self.value]()
 
@@ -250,6 +250,24 @@ class CNNBuilder:
         return full_path
 
 
+def cnn_config_to_flatt(rlconfig: RLConfig) -> list[int]:
+    # each layer has 7 slots, -1 for  unused slots
+    flat_config = []
+    for layer in rlconfig.layers:
+        data = layer.model_dump()
+        flat_layer_config = []
+        for key, item in data.items():
+            if item is not None:
+                flat_layer_config.append(item.value)
+            else:
+                flat_layer_config.append(-1)
+        while len(flat_layer_config) < 7:
+            flat_layer_config.append(-1)
+
+        flat_config.extend(flat_layer_config)
+    return flat_config
+
+
 # ------------------------------------------------------------------------------------------------#
 # ------------------------------------------------------------------------------------------------#
 # ------------------------------------------------------------------------------------------------#
@@ -291,3 +309,6 @@ if __name__ == "__main__":
     # Optional: export to ONNX
     onnx_path = cnn_builder.export_to_onnx(False)
     print(f"ONNX model saved at: {onnx_path}")
+
+    print("CNN config to flat array")
+    print(cnn_config_to_flatt(config))
