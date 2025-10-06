@@ -66,7 +66,7 @@ class MetrcicsEvaluator:
     def update_predictoins_and_targets(self, predictions: Tensor, targets: Tensor):
         predictions = predictions.to(self.device)
         targets = targets.to(self.device)
-        for module in self.matrics_modules.__dict__.values():
+        for module in self.modules.model_dump().values():
             module.update(predictions, targets)
 
     def compute_metrics(
@@ -82,7 +82,7 @@ class MetrcicsEvaluator:
             "architecture_size",
         ],
     ):
-        for metric_name, module in self.modules.__dict__.items():
+        for metric_name, module in self.modules.model_dump().items():
             value = module.compute().item()
             self.metrics.__setattr__(metric_name, value)
         return self.metrics
