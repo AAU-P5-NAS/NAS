@@ -1,87 +1,29 @@
+from __future__ import annotations
+
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
-from enum import Enum
-from typing import Any, Dict, Tuple, Optional
-from abc import ABC, abstractmethod
+from typing import Any, Dict, Tuple, Optional, List
+from pydantic import BaseModel as type_check
+from utils.CNNBuilder import (
+    LayerType,
+    OutChannels,
+    KernelSize,
+    Stride,
+    LinearUnits,
+    PoolMode,
+    ActivationFunction,
+)
 
-from utils import CNNBuilder
-
-N_LAYER_TYPES = CNNBuilder.LayerType.__len__()
-N_LINEAR_UNITS = CNNBuilder.LinearUnits.__len__()
-N_OUT_CHANNELS = CNNBuilder.OutChannels.__len__()
-N_KERNAL_SIZES = CNNBuilder.KernelSize.__len__()
-N_STRIDES = CNNBuilder.Stride.__len__()
-N_POOL_MODES = CNNBuilder.PoolMode.__len__()
-N_ACTIVATION_FUNCTIONS = CNNBuilder.ActivationFunction.__len__()
-IS_PRESENT = 2
-
-LAYER_FIELDS = [
-    N_LAYER_TYPES,
-    N_LINEAR_UNITS,
-    N_OUT_CHANNELS,
-    N_KERNAL_SIZES,
-    N_STRIDES,
-    N_POOL_MODES,
-    N_ACTIVATION_FUNCTIONS,
-    IS_PRESENT,  # Binary value
-]
+standard_actions = {
+    "REMOVE_LAYER",
+    "MODIFY_LAYER",
+    "ADD_LAYER",
+    "DO_NOTHING",
+}
 
 
-# CONSIDER MAKING THIS A FLAG ENUM TO ALLOW THE MODEL TO DO MULTIPLE ACTIONS AT ONCE ?
-class Operation(Enum):
-    NO_OP = 0
-    ADD_LAYER = 1
-    REMOVE_LAYER = 2
-    CHANGE_LAYER_TYPE = 3
-    CHANGE_LINEAR_UNITS = 4
-    CHANGE_OUT_CHANNELS = 5
-    CHANGE_KERNAL_SIZE = 6
-    CHANGE_STRIDE = 7
-    CHANGE_POOL_MODE = 8
-    CHANGE_ACTIVATION_FUNCTION = (9,)
-    CHANGE_LEARNING_RATE = (10,)
-
-
-N_OPERATIONS = Operation.__len__()
-
-
-class Action:
-    operation: Operation
-    layer_index: int
-
-    def __init__(self, operation: Operation, layer_index: int):
-        self.operation = operation
-        self.layer_index = layer_index
-
-
-class AgentABC(ABC):
-    class StepReturn:
-        class Performance:
-            accuracy: float
-            training_epochs: int
-
-        took_illegal_action: bool
-        performance: Optional[Performance]
-
-    @abstractmethod
-    def on_step_from_parent_environment(self, action: Action) -> StepReturn:
-        pass
-
-    @abstractmethod
-    def get_observation_for_parent_environment(self) -> Any:
-        pass
-
-    @abstractmethod
-    def get_info_for_parent_environment(self) -> Dict[str, Any]:
-        pass
-
-    @abstractmethod
-    def on_reset_from_parent_environment(self):
-        pass
-
-
-class CustomEnv(gym.Env):
+class CustomEnv(gym.Env, type_check):
     """
     🎯 What skill should the agent learn?
         Training other agents.
@@ -100,36 +42,39 @@ class CustomEnv(gym.Env):
     """
 
     metadata = {"render.modes": ["human"]}
+    render_mode: str
+    max_layers: int
 
-    def __init__(self, other_agent: AgentABC, render_mode: str = "console", max_layers: int = 10):
+    def __init__(self, render_mode: str = "console", max_layers: int = 10):
         super().__init__()
 
         self.check_validation()
 
         self.render_mode = render_mode
         self.max_layers = max_layers
-        self.other_agent = other_agent
 
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
 
     def _get_action_space(self) -> spaces.Space:
-        return spaces.MultiDiscrete([N_OPERATIONS, self.max_layers])
+        output_actions = (
+            len(standard_actions)
+            + len(LayerType)
+            + (self.max_layers - 1)  # One for each index
+            + len(OutChannels)
+            + len(KernelSize)
+            + len(Stride)
+            + len(LinearUnits)
+            + len(PoolMode)
+            + len(ActivationFunction)
+        )
+
+        return spaces.Box(low=0, high=1, shape=(output_actions,), dtype=np.float32)
 
     def _get_observation_space(self) -> spaces.Space:
         nvec = []
-        for _ in range(self.max_layers):
-            for layer_field in LAYER_FIELDS:
-                nvec.append(layer_field)
 
-        nvec = np.array(nvec, dtype=np.int64)
-
-        return spaces.Dict(
-            {
-                "layers": spaces.MultiDiscrete(nvec),
-                "accuracy": spaces.Box(low=0.0, high=1.0, shape=(1,), dtype=np.float32),
-            }
-        )
+        return spaces.MultiDiscrete(nvec)
 
     def _get_observation(self):
         """Retrieve state from other agent.
@@ -177,10 +122,13 @@ class CustomEnv(gym.Env):
             tuple: (observation, reward, terminated, truncated, info)
         """
 
-        operation: Operation = Operation(action[0])
-        layer_index: int = action[1]
+        operation = Operation(action[0])
+        layer_index = action[1]
+        other_agent_action = Action(operation=operation, layer_index=layer_index)
 
-        stepReturn: AgentABC.StepReturn = self.other_agent.on_step_from_parent_environment(action)
+        stepReturn: StepReturn = self.other_agent.on_step_from_parent_environment(
+            other_agent_action
+        )
 
         terminated = self._should_terminate()
         truncated = self._has_truncated()
@@ -198,11 +146,15 @@ class CustomEnv(gym.Env):
     def _has_truncated(self) -> bool:
         raise NotImplementedError
 
-    def _calculate_reward(self, other_agent_step_return: AgentABC.StepReturn) -> float:
-        raise NotImplementedError
+    def _calculate_reward(self, step_return: StepReturn) -> float:
+        reward: float = 0
+        reward += -1 if step_return.took_illegal_action else 0
+        if step_return.performance is not None:
+            reward += step_return.performance.accuracy
+        return reward
 
     def render(self):
-        raise NotImplementedError
+        self.other_agent.on_render_from_parent_environment()
 
     def close(self):
         if self.render_mode == "console":
