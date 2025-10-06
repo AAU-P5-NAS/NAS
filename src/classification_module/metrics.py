@@ -2,7 +2,7 @@ import torch
 from pydantic import BaseModel
 from torch import Tensor
 from torchmetrics import Accuracy, Precision, Recall, F1Score
-from typing import Literal, List, Optional
+from typing import Literal, List, Optional, cast
 
 
 class Metrics(BaseModel):
@@ -46,10 +46,18 @@ class MetrcicsEvaluator:
         self.device = device
 
         self.modules: Metrics_modules = Metrics_modules(
-            accuracy=Accuracy(task=task, average=average, num_classes=num_classes).to(device),
-            precision=Precision(task=task, average=average, num_classes=num_classes).to(device),
-            recall=Recall(task=task, average=average, num_classes=num_classes).to(device),
-            f1_score=F1Score(task=task, average=average, num_classes=num_classes).to(device),
+            accuracy=cast(
+                Accuracy, Accuracy(task=task, average=average, num_classes=num_classes).to(device)
+            ),
+            precision=cast(
+                Precision, Precision(task=task, average=average, num_classes=num_classes).to(device)
+            ),
+            recall=cast(
+                Recall, Recall(task=task, average=average, num_classes=num_classes).to(device)
+            ),
+            f1_score=cast(
+                F1Score, F1Score(task=task, average=average, num_classes=num_classes).to(device)
+            ),
         )
 
         self.metrics: Metrics = Metrics(
