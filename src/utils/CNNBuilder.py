@@ -293,7 +293,8 @@ def cnn_config_to_flatt(rlconfig: RLConfig, nt_size: int) -> list[int]:
             flat_layer_config.append(-1)
 
         flat_config.extend(flat_layer_config)
-
+    if nt_size * 7 < len(flat_config):
+        raise ValueError("flat_config is larger than allowed size")
     flat_config.extend((nt_size * 7 - len(flat_config)) * [-1])
 
     return flat_config
@@ -343,4 +344,4 @@ if __name__ == "__main__":
 
     print("CNN config to flat array")
     print(config.layers[0])  # this shows why 7 slots per layer is choosen
-    print(cnn_config_to_flatt(config, 5))
+    print(cnn_config_to_flatt(config, 4))
