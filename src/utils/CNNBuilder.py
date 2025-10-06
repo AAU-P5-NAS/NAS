@@ -278,7 +278,7 @@ class CNNBuilder:
         return full_path
 
 
-def cnn_config_to_flatt(rlconfig: RLConfig, nt_size: int) -> list[int]:
+def cnn_config_to_flatt(rlconfig: RLConfig, max_layers: int) -> list[int]:
     # each layer has 7 slots, -1 for  unused slots
     flat_config = []
     for layer in rlconfig.layers:
@@ -293,9 +293,9 @@ def cnn_config_to_flatt(rlconfig: RLConfig, nt_size: int) -> list[int]:
             flat_layer_config.append(-1)
 
         flat_config.extend(flat_layer_config)
-    if nt_size * 7 < len(flat_config):
+    if max_layers * 7 < len(flat_config):
         raise ValueError("flat_config is larger than allowed size")
-    flat_config.extend((nt_size * 7 - len(flat_config)) * [-1])
+    flat_config.extend((max_layers * 7 - len(flat_config)) * [-1])
 
     return flat_config
 
