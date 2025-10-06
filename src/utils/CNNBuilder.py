@@ -34,33 +34,56 @@ class LayerType(enum.Enum):
 
 
 class LinearUnits(IntEnum):
-    LU_64 = 64
-    LU_128 = 128
-    LU_256 = 256
-    LU_512 = 512
+    LU_8 = 0  # 8
+    LU_16 = 1  # 16
+    LU_32 = 2  # 32
+    LU_64 = 3  # 64
+    LU_128 = 4  # 128
+    LU_256 = 5  # 256
+    LU_512 = 6  # 512
+
+    def to_units(self):
+        mapping = [8, 16, 32, 64, 128, 256, 512]
+        return mapping[self.value]
 
 
 class OutChannels(IntEnum):
-    CH_16 = 16
-    CH_32 = 32
-    CH_64 = 64
-    CH_128 = 128
+    CH_16 = 0  # 16
+    CH_32 = 1  # 32
+    CH_64 = 2  # 64
+    CH_128 = 3  # 128
+
+    def to_chanels(self):
+        mapping = [16, 32, 64, 128]
+        return mapping[self.value]
 
 
 class KernelSize(IntEnum):
-    KS_1 = 1
-    KS_3 = 3
-    KS_5 = 5
+    KS_1 = 0  # 1
+    KS_3 = 1  # 3
+    KS_5 = 2  # 5
+
+    def to_kernel(self):
+        mapping = [1, 3, 5]
+        return mapping[self.value]
 
 
 class Stride(IntEnum):
-    S_1 = 1
-    S_2 = 2
+    S_1 = 0  # 1
+    S_2 = 1  # 2
+
+    def to_stride(self):
+        mapping = [1, 2]
+        return mapping[self.value]
 
 
 class PoolMode(enum.Enum):
     MAX = 0  # "max"
     AVG = 1  # "avg"
+
+    def to_pmode(self):
+        mapping = ["max", "avg"]
+        return mapping[self.value]
 
 
 class ActivationFunction(enum.Enum):
@@ -70,7 +93,6 @@ class ActivationFunction(enum.Enum):
     NONE = 3  # "none"
 
     def to_module(self) -> nn.Module:
-        """Map enum -> actual nn.Module instance."""
         mapping = {
             0: lambda: nn.ReLU(),
             1: lambda: nn.Tanh(),
@@ -154,12 +176,13 @@ class CNNBuilder:
 
         for layer in conv_pool_layers:
             if layer.layer_type is LayerType.CONV:
-                stride = layer.stride or 1
-                kernel = layer.kernel_size
+                stride = layer.stride.to_stride() if layer.stride is not None else 1
+                assert layer.kernel_size is not None
+                kernel = layer.kernel_size.to_kernel()
                 assert kernel is not None  #
                 padding = kernel // 2
-
-                out_ch = layer.out_channels
+                assert layer.out_channels is not None
+                out_ch = layer.out_channels.to_chanels()
                 assert out_ch is not None
                 assert current_in_channels is not None
 
@@ -174,12 +197,17 @@ class CNNBuilder:
                 )
                 assert layer.activation is not None
                 layers.append(layer.activation.to_module())
-                current_in_channels = layer.out_channels
+                current_in_channels = out_ch
                 h, w = update_spatial_dims(h, w, kernel, stride, padding)
 
             elif layer.layer_type is LayerType.POOL:
-                stride = layer.stride or layer.kernel_size
-                kernel = layer.kernel_size
+                assert layer.kernel_size is not None
+                stride = (
+                    layer.stride.to_stride()
+                    if layer.stride is not None
+                    else layer.kernel_size.to_kernel()
+                )
+                kernel = layer.kernel_size.to_kernel()
                 assert kernel is not None
                 if layer.pool_mode is PoolMode.MAX:
                     layers.append(nn.MaxPool2d(kernel, stride))
@@ -197,10 +225,10 @@ class CNNBuilder:
         for layer in linear_layers:
             assert in_features is not None
             assert layer.linear_units is not None
-            layers.append(nn.Linear(in_features, layer.linear_units))
+            layers.append(nn.Linear(in_features, layer.linear_units.to_units()))
             assert layer.activation is not None
             layers.append(layer.activation.to_module())
-            in_features = layer.linear_units
+            in_features = layer.linear_units.to_units()
 
         layers.append(nn.Linear(in_features, self.num_classes))
 
@@ -250,7 +278,7 @@ class CNNBuilder:
         return full_path
 
 
-def cnn_config_to_flatt(rlconfig: RLConfig) -> list[int]:
+def cnn_config_to_flatt(rlconfig: RLConfig, nt_size: int) -> list[int]:
     # each layer has 7 slots, -1 for  unused slots
     flat_config = []
     for layer in rlconfig.layers:
@@ -265,6 +293,9 @@ def cnn_config_to_flatt(rlconfig: RLConfig) -> list[int]:
             flat_layer_config.append(-1)
 
         flat_config.extend(flat_layer_config)
+
+    flat_config.extend((nt_size * 7 - len(flat_config)) * [-1])
+
     return flat_config
 
 
@@ -311,5 +342,5 @@ if __name__ == "__main__":
     print(f"ONNX model saved at: {onnx_path}")
 
     print("CNN config to flat array")
-    print(config.layers[0])  # this is why 7 slots per layer is choosen
-    print(cnn_config_to_flatt(config))
+    print(config.layers[0])  # this shows why 7 slots per layer is choosen
+    print(cnn_config_to_flatt(config, 5))
