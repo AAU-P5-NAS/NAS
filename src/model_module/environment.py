@@ -82,7 +82,7 @@ class CustomEnv(gym.Env, type_check):
         Returns:
 
         """
-        return self.other_agent.get_observation_for_parent_environment()
+        return self
 
     def _get_info(self) -> Dict[str, Any]:
         """Compute auxiliary information for debugging.
@@ -90,7 +90,7 @@ class CustomEnv(gym.Env, type_check):
         Returns:
 
         """
-        return self.other_agent.get_info_for_parent_environment()
+        return {}
 
     def reset(
         self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None
