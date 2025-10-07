@@ -3,20 +3,136 @@ import torch.onnx
 import onnx
 import os
 import warnings
-from typing import Optional, Tuple
+import enum
+from enum import IntEnum
+from typing import List, Optional, Tuple
+from pydantic import BaseModel, field_validator, model_validator
 
-from src.utils.network_utils import (
-    ActivationFunction,
-    CNNActionSpace,
-    CNNExportError,
-    KernelSize,
-    LayerType,
-    LinearUnits,
-    OutChannels,
-    PoolMode,
-    RLConfig,
-    update_spatial_dims,
-)
+from src.utils.network_utils import InvalidLayerConfigError, InvalidLayerOrderError, CNNExportError
+
+
+class LayerType(enum.Enum):
+    CONV = 0  # "conv"
+    LINEAR = 1
+    POOL = 2  # "pool"
+
+
+class LinearUnits(IntEnum):
+    LU_8 = 0  # 8
+    LU_16 = 1  # 16
+    LU_32 = 2  # 32
+    LU_64 = 3  # 64
+    LU_128 = 4  # 128
+    LU_256 = 5  # 256
+    LU_512 = 6  # 512
+
+    def to_units(self):
+        mapping = [8, 16, 32, 64, 128, 256, 512]
+        return mapping[self.value]
+
+
+class OutChannels(IntEnum):
+    CH_16 = 0  # 16
+    CH_32 = 1  # 32
+    CH_64 = 2  # 64
+    CH_128 = 3  # 128
+
+    def to_chanels(self):
+        mapping = [16, 32, 64, 128]
+        return mapping[self.value]
+
+
+class KernelSize(IntEnum):
+    KS_1 = 0  # 1
+    KS_3 = 1  # 3
+    KS_5 = 2  # 5
+
+    def to_kernel(self):
+        mapping = [1, 3, 5]
+        return mapping[self.value]
+
+
+class Stride(IntEnum):
+    S_1 = 0  # 1
+    S_2 = 1  # 2
+
+    def to_stride(self):
+        mapping = [1, 2]
+        return mapping[self.value]
+
+
+class PoolMode(enum.Enum):
+    MAX = 0  # "max"
+    AVG = 1  # "avg"
+
+    def to_pmode(self):
+        mapping = ["max", "avg"]
+        return mapping[self.value]
+
+
+class ActivationFunction(enum.Enum):
+    RELU = 0  # "relu"
+    TANH = 1  # "tanh"
+    SOFTMAX = 2  # "softmax"
+    NONE = 3  # "none"
+
+    def to_module(self) -> nn.Module:
+        mapping = {
+            0: lambda: nn.ReLU(),
+            1: lambda: nn.Tanh(),
+            2: lambda: nn.Softmax(dim=1),
+            3: lambda: nn.Identity(),
+        }
+        return mapping[self.value]()
+
+
+class CNNActionSpace(BaseModel):
+    layer_type: LayerType
+    out_channels: Optional[OutChannels] = None
+    kernel_size: Optional[KernelSize] = None
+    stride: Optional[Stride] = None
+    pool_mode: Optional[PoolMode] = None
+    activation: Optional[ActivationFunction] = ActivationFunction.NONE
+    linear_units: Optional[LinearUnits] = None
+
+    @model_validator(mode="after")
+    def validate_params(self):
+        lt = self.layer_type
+        if lt == LayerType.CONV:
+            if self.out_channels is None or self.kernel_size is None:
+                raise InvalidLayerConfigError("Conv layer must define out_channels and kernel_size")
+        elif lt == LayerType.POOL:
+            if self.pool_mode is None or self.kernel_size is None:
+                raise InvalidLayerConfigError("Pool layer must define pool_mode and kernel_size")
+        elif lt == LayerType.LINEAR:
+            if self.linear_units is None:
+                raise InvalidLayerConfigError("Linear layer must define linear_units")
+        return self
+
+
+class RLConfig(BaseModel):
+    layers: List[CNNActionSpace]
+
+    @field_validator("layers")
+    def check_layer_order(cls, v: List[CNNActionSpace]) -> List[CNNActionSpace]:
+        """Enforce conv/pool layers cannot appear after a linear layer."""
+        seen_linear = False
+        for i, layer in enumerate(v):
+            if seen_linear and layer.layer_type in (LayerType.CONV, LayerType.POOL):
+                raise InvalidLayerOrderError(
+                    f"Conv/Pool layer at position {i} after a linear layer is not allowed"
+                )
+            if layer.layer_type == LayerType.LINEAR:
+                seen_linear = True
+        return v
+
+
+def update_spatial_dims(
+    h: int, w: int, kernel: int, stride: int, padding: int = 0
+) -> Tuple[int, int]:
+    h_new = (h + 2 * padding - kernel) // stride + 1
+    w_new = (w + 2 * padding - kernel) // stride + 1
+    return h_new, w_new
 
 
 class CNNBuilder:
@@ -44,13 +160,13 @@ class CNNBuilder:
 
         for layer in conv_pool_layers:
             if layer.layer_type is LayerType.CONV:
-                stride = layer.stride or 1
-                kernel = layer.kernel_size
-                print(f"Conv layer: kernel={kernel}, stride={stride}, h={h}, w={w}")
+                stride = layer.stride.to_stride() if layer.stride is not None else 1
+                assert layer.kernel_size is not None
+                kernel = layer.kernel_size.to_kernel()
                 assert kernel is not None  #
                 padding = kernel // 2
-
-                out_ch = layer.out_channels
+                assert layer.out_channels is not None
+                out_ch = layer.out_channels.to_chanels()
                 assert out_ch is not None
                 assert current_in_channels is not None
 
@@ -65,12 +181,17 @@ class CNNBuilder:
                 )
                 assert layer.activation is not None
                 layers.append(layer.activation.to_module())
-                current_in_channels = layer.out_channels
+                current_in_channels = out_ch
                 h, w = update_spatial_dims(h, w, kernel, stride, padding)
 
             elif layer.layer_type is LayerType.POOL:
-                stride = layer.stride or layer.kernel_size
-                kernel = layer.kernel_size
+                assert layer.kernel_size is not None
+                stride = (
+                    layer.stride.to_stride()
+                    if layer.stride is not None
+                    else layer.kernel_size.to_kernel()
+                )
+                kernel = layer.kernel_size.to_kernel()
                 assert kernel is not None
                 if layer.pool_mode is PoolMode.MAX:
                     layers.append(nn.MaxPool2d(kernel, stride))
@@ -88,10 +209,10 @@ class CNNBuilder:
         for layer in linear_layers:
             assert in_features is not None
             assert layer.linear_units is not None
-            layers.append(nn.Linear(in_features, layer.linear_units.value))  # Add .value here
+            layers.append(nn.Linear(in_features, layer.linear_units.to_units()))
             assert layer.activation is not None
             layers.append(layer.activation.to_module())
-            in_features = layer.linear_units.value
+            in_features = layer.linear_units.to_units()
 
         layers.append(nn.Linear(in_features, self.num_classes))
 
@@ -104,7 +225,7 @@ class CNNBuilder:
         Note, ONNX just mirrors the PyTorch model at the time of export.
 
         """
-
+        print("Exporting model to ONNX format... with model: ", self.model)
         if self.model is None:
             raise CNNExportError("Build the model first with .build() before exporting.")
 
@@ -139,6 +260,28 @@ class CNNBuilder:
         onnx_model = onnx.load(full_path)
         onnx.checker.check_model(onnx_model)
         return full_path
+
+
+def cnn_config_to_flatt(rlconfig: RLConfig, max_layers: int) -> list[int]:
+    # each layer has 7 slots, -1 for  unused slots
+    flat_config = []
+    for layer in rlconfig.layers:
+        data = layer.model_dump()
+        flat_layer_config = []
+        for key, item in data.items():
+            if item is not None:
+                flat_layer_config.append(item.value)
+            else:
+                flat_layer_config.append(-1)
+        while len(flat_layer_config) < 7:
+            flat_layer_config.append(-1)
+
+        flat_config.extend(flat_layer_config)
+    if max_layers * 7 < len(flat_config):
+        raise ValueError("flat_config is larger than allowed size")
+    flat_config.extend((max_layers * 7 - len(flat_config)) * [-1])
+
+    return flat_config
 
 
 # ------------------------------------------------------------------------------------------------#
@@ -182,3 +325,7 @@ if __name__ == "__main__":
     # Optional: export to ONNX
     onnx_path = cnn_builder.export_to_onnx(False)
     print(f"ONNX model saved at: {onnx_path}")
+
+    print("CNN config to flat array")
+    print(config.layers[0])  # this shows why 7 slots per layer is choosen
+    print(cnn_config_to_flatt(config, 4))

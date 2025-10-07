@@ -26,6 +26,8 @@ from src.utils.network_utils import (
 
 
 class MaxLayersReachedException(Exception):
+    """Raised when the maximum number of layers is reached."""
+
     pass
 
 
@@ -92,7 +94,7 @@ class MaskContext(BaseModel):
     logits: np.ndarray
     observation: list[int]
     slices: LogitSlices
-    action_strategy: ActionStrategy
+    action_strategy: str
     sampling_strategy: Callable[[np.ndarray], int]
     max_layers: int
     decisions: list[int] = []  # store sampled choice for each head
@@ -158,15 +160,19 @@ def get_logits_for_slice(ctx: MaskContext, slice_name: str) -> np.ndarray:
 
 def sample_action_from_slice(ctx: MaskContext, slice_name: str) -> int:
     logits = get_logits_for_slice(ctx, slice_name)
-    choice = ctx.sampling_strategy(logits)
+    choice = int(ctx.sampling_strategy(logits))
     return choice
 
 
 def mask_action_type_sequential(ctx: MaskContext):
     """Mask action types based on current observation and strategy. Raises MaxLayersReachedException if max layers reached."""
     new_logits = ctx.logits.copy()
-
-    if get_latest_layer_index(ctx.observation) == ctx.max_layers - 1:
+    latest_layer_index = get_latest_layer_index(ctx.observation)
+    """ print("Observation  :", ctx.observation)
+    print("LATEST LAYER INDEX", latest_layer_index)
+    print("MAX LAYERS", ctx.max_layers)
+    print("MAX LAYERS MINUS ONE ", ctx.max_layers - 1) """
+    if latest_layer_index == ctx.max_layers - 1:
         raise MaxLayersReachedException("Maximum number of layers reached.")
 
     modify_layer_index = ctx.slices.standard_actions.get_index(StandardAction.MODIFY_LAYER)
@@ -196,16 +202,14 @@ def mask_indexes_sequential(ctx: MaskContext):
 def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
     linear_layer_exists = any(
-        ctx.observation[i] == LayerType.LINEAR.value for i in range(2, len(ctx.observation), 7)
+        ctx.observation[i] == LayerType.LINEAR.value for i in range(0, len(ctx.observation), 7)
     )
-
     if linear_layer_exists:
         layer_type_start = ctx.slices.layer_type.start
         layer_type_end = ctx.slices.layer_type.stop
         new_logits[layer_type_start:layer_type_end] = -np.inf
         linear_index = ctx.slices.layer_type.get_index(LayerType.LINEAR)
         new_logits[linear_index] = 1  # only linear is valid
-
     return new_logits
 
 

@@ -109,5 +109,5 @@ def test_onnx_export(valid_rl_config, tmp_path, save_separate):
 def test_onnx_export_raises_CNNExportError(valid_rl_config):
     builder = CNNBuilder(valid_rl_config)
 
-    with pytest.raises(CNNExportError):
+    with pytest.raises(CNNExportError, match="Build the model first"):
         builder.export_to_onnx()

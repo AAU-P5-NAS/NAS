@@ -73,9 +73,10 @@ class KernelSize(enum.IntEnum):
 class Stride(enum.IntEnum):
     S_1 = 0  # 1
     S_2 = 1  # 2
+    S_3 = 2  # 3
 
     def to_stride(self):
-        mapping = [1, 2]
+        mapping = [1, 2, 3]
         return mapping[self.value]
 
 
@@ -148,18 +149,26 @@ class RLConfig(BaseModel):
 def update_spatial_dims(
     h: int, w: int, kernel: int, stride: int, padding: int = 0
 ) -> Tuple[int, int]:
+    print("H, W, KERNEL, STRIDE, PADDING", h, w, kernel, stride, padding)
+    stride = Stride.to_stride(Stride(stride))
+    print("STRIDE", stride)
     h_new = (h + 2 * padding - kernel) // stride + 1
     w_new = (w + 2 * padding - kernel) // stride + 1
     return h_new, w_new
 
 
-def get_latest_layer_index(observation: list[int]) -> int | None:
+def get_latest_layer_index(observation: list[int]):
     """Look for the first occurrence of -1 in the observation array with form index 7, 14, 21 ..."""
     for i in range(0, len(observation), 7):
+        print("Index: ", i)
+        print("Observation[i]: ", observation[i])
         if observation[i] == -1 and i != 0:
             return i // 7
         elif observation[i] == -1 and i == 0:
+            print("Index: ", i)
+            print("Observation[i]: ", observation[i])
             return None  # No layers defined yet
+    return (len(observation) // 7) - 1  # All layers defined
 
 
 def get_layer_from_index(observation: list[int], index: int) -> CNNActionSpace:
@@ -167,7 +176,7 @@ def get_layer_from_index(observation: list[int], index: int) -> CNNActionSpace:
     start = index * 7
     if start >= len(observation) or observation[start] == -1:
         raise ValueError(f"Layer index {index} is out of bounds or undefined in the observation.")
-
+    print("HALAHALA", observation[start : start + 7])
     return CNNActionSpace(
         layer_type=LayerType(observation[start]),
         out_channels=OutChannels(observation[start + 1]) if observation[start + 1] != -1 else None,
