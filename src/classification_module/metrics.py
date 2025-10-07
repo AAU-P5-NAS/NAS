@@ -1,26 +1,27 @@
 import torch
+import time
 from pydantic import BaseModel
-from torch import Tensor
+from torch import Tensor, nn
 from torchmetrics import Accuracy, Precision, Recall, F1Score
-from typing import Literal, List, Optional, cast
+from typing import Literal, List, Optional, Callable, Union, cast
+from fvcore.nn import FlopCountAnalysis
+from src.data_module.importer import IMG_DEFAULT_SIZE, NUM_CLASSES
+
+
+class InvalidMetricError(Exception):
+    pass
 
 
 class Metrics(BaseModel):
-    accuracy: float
-    precision: float
-    recall: float
-    f1_score: float
-    flops: float
-    runtime: float
-    test_loss: float
-    architecture_size: int
-
-
-class Metrics_modules(BaseModel):
-    accuracy: Accuracy
-    precision: Precision
-    recall: Recall
-    f1_score: F1Score
+    accuracy: Optional[float] = None
+    precision: Optional[float] = None
+    recall: Optional[float] = None
+    f1_score: Optional[float] = None
+    flops: Optional[float] = None
+    runtime: Optional[float] = None
+    test_loss: Optional[float] = None
+    architecture_size: Optional[int] = None
+    training_time: Optional[float] = None
 
 
 Metric_literal = Literal[
@@ -34,77 +35,121 @@ Metric_literal = Literal[
     "architecture_size",
 ]
 
+Metric_literal_no_test_loss = Literal[
+    "accuracy",
+    "precision",
+    "recall",
+    "f1_score",
+    "flops",
+    "runtime",
+    "architecture_size",
+]
+
 
 class MetrcicsEvaluator:
     def __init__(
         self,
         device: torch.device = torch.device("cpu"),
-        num_classes: int = 26,
         average: Optional[Literal["micro", "macro", "weighted", "none"]] = "macro",
     ):
         task: str = "multiclass"
         self.device = device
+        self.image_dimensions = (1, *IMG_DEFAULT_SIZE)
 
-        self.modules: Metrics_modules = Metrics_modules(
-            accuracy=cast(
-                Accuracy, Accuracy(task=task, average=average, num_classes=num_classes).to(device)
-            ),
-            precision=cast(
-                Precision, Precision(task=task, average=average, num_classes=num_classes).to(device)
-            ),
-            recall=cast(
-                Recall, Recall(task=task, average=average, num_classes=num_classes).to(device)
-            ),
-            f1_score=cast(
-                F1Score, F1Score(task=task, average=average, num_classes=num_classes).to(device)
-            ),
+        self.accuracy: Accuracy = cast(
+            Accuracy, Accuracy(task=task, average=average, num_classes=NUM_CLASSES).to(device)
+        )
+        self.precision: Precision = cast(
+            Precision, Precision(task=task, average=average, num_classes=NUM_CLASSES).to(device)
+        )
+        self.recall: Recall = cast(
+            Recall, Recall(task=task, average=average, num_classes=NUM_CLASSES).to(device)
+        )
+        self.f1_score: F1Score = cast(
+            F1Score, F1Score(task=task, average=average, num_classes=NUM_CLASSES).to(device)
         )
 
-        self.metrics: Metrics = Metrics(
-            accuracy=0.0,
-            precision=0.0,
-            recall=0.0,
-            f1_score=0.0,
-            test_loss=0.0,
-            flops=0.0,
-            runtime=0.0,
-            architecture_size=0,
-        )
-
-    def update_predictoins_and_targets(self, predictions: Tensor, targets: Tensor):
-        predictions = predictions.to(self.device)
-        targets = targets.to(self.device)
-        for module in self.modules.model_dump().values():
-            module.update(predictions, targets)
-
-    def compute_metrics(
+    def calculate_metrics(
         self,
-        metrics: List[Metric_literal] = [
+        model: nn.Module,
+        predictions: Tensor,
+        targets: Tensor,
+        metrics: List[Metric_literal_no_test_loss] = [
             "accuracy",
             "precision",
             "recall",
             "f1_score",
-            "test_loss",
             "flops",
             "runtime",
             "architecture_size",
         ],
-    ):
-        for metric_name, module in self.modules.model_dump().items():
-            value = module.compute().item()
-            self.metrics.__setattr__(metric_name, value)
-        return self.metrics
+    ) -> Metrics:
+        computed_metrics: Metrics = Metrics()
 
-    def compute_flops(self, model, input_size):
-        # Placeholder for FLOPs calculation
-        pass
+        for metric in metrics:
+            method_name = f"compute_{metric}"
+            try:
+                method: Callable[..., Union[int, float]] = self.__getattribute__(method_name)
+            except AttributeError:
+                raise InvalidMetricError(f"Metric '{metric}' is not supported.")
 
-    def compute_runtime(self, model, input_data, iterations=100):
-        # Placeholder for runtime calculation
-        pass
+            value: Union[int, float]
+            if metric in ["flops", "runtime", "architecture_size"]:
+                value = method(model)
+            elif metric == "test_loss":
+                pass
+            else:
+                value = method(predictions, targets)
 
-    def compute_architecture_size(self, model):
+            computed_metrics.__setattr__(metric, value)
+
+        return computed_metrics
+
+    def compute_flops(self, model: nn.Module, batch_size: int = 1) -> float:
+        dummy_input: Tensor = torch.randn(batch_size, *self.image_dimensions).to(self.device)
+        total_flops: float = FlopCountAnalysis(model, dummy_input).total()
+        return total_flops
+
+    def compute_runtime(self, model: nn.Module, iterations: int = 50, batch_size: int = 1) -> float:
+        warmup_iterations: int = 10
+
+        model.eval()
+        dummy_input: Tensor = torch.randn(batch_size, *self.image_dimensions).to(self.device)
+
+        # Warm-up cold GPU
+        with torch.no_grad():
+            for _ in range(warmup_iterations):
+                _ = model(dummy_input)
+
+        # Measure runtime
+        if self.device.type == "cuda":
+            torch.cuda.synchronize()  # Ensure GPU is ready (wait until prior scheduled tasks are done)
+            start_time: float = time.time()
+            with torch.no_grad():
+                for _ in range(iterations):
+                    _ = model(dummy_input)
+            torch.cuda.synchronize()  # Wait for GPU to finish all itterations
+        else:
+            start_time: float = time.time()
+            with torch.no_grad():
+                for _ in range(iterations):
+                    _ = model(dummy_input)
+
+        end_time: float = time.time()
+        avg_runtime: float = (end_time - start_time) / iterations
+        return avg_runtime
+
+    def compute_architecture_size(self, model) -> int:
         return sum(p.numel() for p in model.parameters())
 
-    def calculate_all_metrics(self, model, predictions, targets):
-        pass
+    def compute_accuracy(self, predictions: Tensor, targets: Tensor) -> float:
+        return self.accuracy(predictions, targets).item()
+
+    def compute_precision(self, predictions: Tensor, targets: Tensor) -> float:
+        return self.precision(predictions, targets).item()
+
+    def compute_recall(self, predictions: Tensor, targets: Tensor) -> float:
+        return self.recall(predictions, targets).item()
+
+    def compute_f1_score(self, predictions: Tensor, targets: Tensor) -> float:
+        return self.f1_score(predictions, targets).item()
