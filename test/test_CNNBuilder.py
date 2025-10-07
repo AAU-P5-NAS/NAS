@@ -4,13 +4,13 @@ import pytest
 import torch.nn as nn
 import onnx
 
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.utils.CNNBuilder import (
-    CNNBuilder,
-    InvalidLayerConfigError,
+
+from src.utils.CNNBuilder import CNNBuilder
+from src.utils.network_utils import (
     CNNExportError,
+    InvalidLayerConfigError,
     InvalidLayerOrderError,
     RLConfig,
     CNNActionSpace,
@@ -21,6 +21,9 @@ from src.utils.CNNBuilder import (
     ActivationFunction,
     PoolMode,
 )
+
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 @pytest.fixture
@@ -52,6 +55,8 @@ def test_valid_cnn_build(valid_rl_config):
     """Test a valid RLConfig builds correctly"""
     cnn_builder = CNNBuilder(valid_rl_config, input_size=(28, 28), num_classes=26)
     model = cnn_builder.build()
+
+    print("YAYAYA", model)
 
     assert isinstance(model, nn.Sequential)
     assert isinstance(model[-1], nn.Linear)
