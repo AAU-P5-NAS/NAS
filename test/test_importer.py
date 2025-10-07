@@ -1,30 +1,49 @@
+import random
 import sys
 import os
 import torch
 import pytest
+import math
+import matplotlib.pyplot as plt
 
-# Ensure the project root is in sys.path so 'src' can be imported
+# Fixes import issues when running tests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.data_module.importer import (
     DataImporter,
+    CSVFilepathDoesntExist,
 )
 
 
+def print_image_grid(image_tensor):
+    """
+    Display a 28x28 image tensor using matplotlib.
+    image_tensor: torch.Tensor of shape [1, 28, 28] or [28, 28]
+    """
+    if image_tensor.dim() == 3:
+        image_tensor = image_tensor.squeeze(0)
+    plt.imshow(image_tensor.numpy(), cmap="gray")
+    plt.axis("off")
+    plt.show()
+
+
 def generate_single_image_data():
-    # Generate a single 28x28 grayscale image with a simple pattern
+    # Generate a single 28x28 grayscale image with a white square at a random location
     img_size = (28, 28)
+    square_size = 8
     img = torch.zeros(img_size, dtype=torch.float32)
-    img[10:18, 10:18] = 1.0  # white square in the center
-    img = img.view(1, -1)  # flatten to [1, 784]
+    max_pos = img_size[0] - square_size
+    top = random.randint(0, max_pos)
+    left = random.randint(0, max_pos)
+    img[top : top + square_size, left : left + square_size] = 1.0  # white square at random position
+    img = img.view(1, -1)
     return img
 
 
-# Create a tiny in-memory CSV for testing
-def generate_csv_data(num_images=1):
+def generate_csv_data(num_images=1):  # tiny in-memory CSV for testing
     images = []
     for i in range(num_images):
-        label = 0  # or use i % 10 for multiple classes
+        label = 0
         img = generate_single_image_data().numpy()[0]
         row = str(label) + "," + ",".join(img.astype(str))
         images.append(row)
@@ -42,88 +61,148 @@ def importer(tmp_path):
     # write small CSV to temp file
     csv_file = tmp_path / "test.csv"
     csv_file.write_text(CSV_DATA)
-    return DataImporter(filepath=str(csv_file), img_size=(28, 28))
+    return DataImporter(filepath=str(csv_file))
 
 
-def test_ffnn_shape(importer):
-    train_dataloader, test_dataloader = importer.get_as_ffnn(batch_size=6, test_split=0.1)
-    batches = list(train_dataloader)
-    for i, (X, y) in enumerate(batches):
-        if i < len(batches) - 1:
-            assert X.shape == (6, 1, 28, 28)
-            assert y.shape == (6,)
-        else:
-            assert X.shape == (2, 1, 28, 28)
-            assert y.shape == (2,)
-
-    train_dataloader, test_dataloader = importer.get_as_ffnn(batch_size=20, test_split=0.2)
-    batches = list(test_dataloader)
-    for i, (X, y) in enumerate(batches):
-        if i < len(batches) - 1:
-            assert X.shape == (20, 1, 28, 28)
-            assert y.shape == (20,)
-        else:
-            assert X.shape == (5, 1, 28, 28)
-            assert y.shape == (5,)
-
-    train_dataloader, test_dataloader = importer.get_as_ffnn(batch_size=128, test_split=0.2)
-    batches = list(test_dataloader)
-    for i, (X, y) in enumerate(batches):
-        if i < len(batches) - 1:
-            assert X.shape == (128, 1, 28, 28)
-            assert y.shape == (128,)
-        else:
-            assert X.shape == (25, 1, 28, 28)
-            assert y.shape == (25,)
+def test_data_imports_correctly(importer):
+    assert hasattr(importer, "data")
+    assert isinstance(importer.data, torch.Tensor)
+    assert importer.data.shape == (128, 1, 28, 28)  # 128 images of shape [1, 28, 28]
 
 
-def test_ffnn_no_batch(importer):
-    train_dataloader, test_dataloader = importer.get_as_ffnn(batch_size=None, test_split=0.1)
-    for X, y in train_dataloader:
-        print("y ", y)
-        assert X.shape == (1, 1, 28, 28)
-        assert y.shape == (1,)
-
-    train_dataloader, test_dataloader = importer.get_as_ffnn(batch_size=-871263, test_split=0.1)
-    for X, y in test_dataloader:
-        assert X.shape == (1, 1, 28, 28)
-        assert y.shape == (1,)
+def test_invalid_filepath_raises_exception():
+    try:
+        DataImporter(filepath="non_existent_file.csv")
+    except CSVFilepathDoesntExist as e:
+        assert isinstance(e, CSVFilepathDoesntExist)
+        assert "The provided filepath" in str(e)
 
 
-""" def test_cnn_no_batch(importer):
-    cnn_data = importer.get_as_cnn()
-    assert isinstance(cnn_data, torch.Tensor)
-    assert cnn_data.shape[1:] == (GRAYSCALE_NUM_CHANNELS, 28, 28)
+def test_single_image_data(tmp_path):
+    # write single image CSV to temp file
+    csv_file = tmp_path / "single_image.csv"
+    csv_file.write_text(CSV_DATA_SINGLE_IMAGE)
+    importer = DataImporter(filepath=str(csv_file))
+    assert importer.data.shape == (1, 1, 28, 28)  # 1 image of shape [1, 28, 28]
 
 
-def test_cnn_with_batch(importer):
-    batch_size = 1
-    cnn_batches = importer.get_as_cnn(batch_size=batch_size)
-    assert isinstance(cnn_batches, tuple)
-    for batch in cnn_batches:
-        assert batch.shape[1:] == (GRAYSCALE_NUM_CHANNELS, 28, 28)
+@pytest.mark.parametrize("batch_size,test_split", [(16, 0.2), (32, 0.25)])
+def test_batch_sizes(importer, batch_size, test_split):
+    train_loader, test_loader = importer.get_as_cnn(
+        batch_size=batch_size, test_split=test_split, seed=42
+    )
+
+    expected_train = math.ceil(128 * (1 - test_split) / batch_size)
+    expected_test = math.ceil(128 * test_split / batch_size)
+
+    assert len(train_loader) == expected_train
+    assert len(test_loader) == expected_test
+
+    for batch in train_loader:
+        images, _ = batch
+        assert images.shape[1:] == (1, 28, 28)
 
 
-def test_cnn_with_conv(importer):
-    conv_args = ConvolutionalArguments(in_channels=1, out_channels=2, kernel_size=2)
-    cnn_data, conv = importer.get_as_cnn(conv_args=conv_args)
-    assert isinstance(cnn_data, torch.Tensor)
-    assert isinstance(conv, torch.nn.Conv2d)
+""" def test_batch_size_1(importer):
+    batch_size = 16
+    train_loader, test_loader = importer.get_as_cnn(batch_size=batch_size, test_split=0.2, seed=42)
+    assert len(train_loader) == math.ceil(128 * 0.8 / batch_size)
+    assert len(test_loader) == math.ceil(128 * 0.2 / batch_size)
+    for batch in train_loader:
+        images, _ = batch
+        assert images.shape[1:] == (1, 28, 28)
 
-    # sanity: convolve a small batch
-    out = conv(cnn_data)
-    assert out.shape[1] == conv_args.out_channels
+
+def test_batch_size_2(importer):
+    batch_size = 32
+    train_loader, test_loader = importer.get_as_cnn(batch_size=batch_size, test_split=0.25, seed=42)
+    assert len(train_loader) == math.ceil(128 * 0.75 / batch_size)
+    assert len(test_loader) == math.ceil(128 * 0.25 / batch_size)
+    for batch in train_loader:
+        images, _ = batch
+        assert images.shape[1:] == (1, 28, 28) """
 
 
-def test_cnn_with_batch_and_conv(importer):
-    conv_args = ConvolutionalArguments(in_channels=1, out_channels=2, kernel_size=2)
-    batched_data, conv = importer.get_as_cnn(batch_size=1, conv_args=conv_args)
-    all(isinstance(t, torch.Tensor) for t in batched_data)  # check each element
-    assert isinstance(conv, torch.nn.Conv2d)
-    out_batches = [conv(batch) for batch in batched_data]
-    print(out_batches[0].shape)
-    for out in out_batches:
-        assert (
-            out.shape[0] == conv_args.out_channels
-        )  # out channels is first index because data is only a single image
- """
+@pytest.mark.parametrize("batch_size", [0, -5])
+def test_invalid_batch_sizes(importer, batch_size):
+    try:
+        importer.get_as_cnn(batch_size=batch_size, test_split=0.2, seed=42)
+    except ValueError as e:
+        assert "batch_size must be a positive integer" in str(e)
+
+
+@pytest.mark.parametrize("test_split", [0, -5])
+def test_invalid_test_split(importer, test_split):
+    try:
+        train_loader, test_loader = importer.get_as_cnn(
+            batch_size=16, test_split=test_split, seed=42
+        )
+    except ValueError as e:
+        assert "test_split must be between 0 and 1 (exclusive)" in str(e)
+
+
+def test_random_seed_reproducibility(importer):
+    batch_size = 16
+    seed = 42
+    train_loader_1, _ = importer.get_as_cnn(
+        batch_size=batch_size, test_split=0.2, seed=seed, shuffle=False
+    )
+    train_loader_2, _ = importer.get_as_cnn(
+        batch_size=batch_size, test_split=0.2, seed=seed, shuffle=False
+    )
+
+    for images, _ in train_loader_1:
+        specific_image = images[14]  # 4th image in the batch
+        break
+    for images, _ in train_loader_2:
+        specific_image_2 = images[14]  # 4th image in the batch
+        break
+
+    assert torch.equal(specific_image, specific_image_2)
+
+
+def test_different_random_seeds(importer):
+    batch_size = 16
+    seed1 = 42
+    seed2 = 43
+    train_loader_1, _ = importer.get_as_cnn(
+        batch_size=batch_size, test_split=0.2, seed=seed1, shuffle=False
+    )
+    train_loader_2, _ = importer.get_as_cnn(
+        batch_size=batch_size, test_split=0.2, seed=seed2, shuffle=False
+    )
+
+    for images, _ in train_loader_1:
+        specific_image_1 = images[14]
+        break
+    for images, _ in train_loader_2:
+        specific_image_2 = images[14]
+        break
+
+    assert not torch.equal(specific_image_1, specific_image_2)
+
+
+def test_shuffle_effect(
+    importer,
+):  # this test can theoretically fail occasionally, but very unlikely
+    batch_size = 16
+    train_loader_1, _ = importer.get_as_cnn(
+        batch_size=batch_size, test_split=0.2, seed=42, shuffle=True
+    )
+    train_loader_2, _ = importer.get_as_cnn(
+        batch_size=batch_size, test_split=0.2, seed=42, shuffle=True
+    )
+
+    for images, _ in train_loader_1:
+        specific_image_1 = images[14]
+        break
+    for images, _ in train_loader_2:
+        specific_image_2 = images[14]
+        break
+
+    assert not torch.equal(specific_image_1, specific_image_2)
+
+
+# test batch size gives correct number of batches
+# test train/test split sizes
+# test random seed is working
