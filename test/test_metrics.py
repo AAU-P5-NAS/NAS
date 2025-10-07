@@ -12,7 +12,7 @@ def evaluator():
 
 @pytest.fixture
 def dummy_CNN_small():
-    return nn.Sequential(nn.ReLU(), nn.Flatten(), nn.Linear(26 * 26 * 8, NUM_CLASSES))
+    return nn.Sequential(nn.ReLU(), nn.Flatten(), nn.Linear(28 * 28, NUM_CLASSES))
 
 
 @pytest.fixture
@@ -38,9 +38,9 @@ def test_compute_flops(evaluator, dummy_CNN_small, dummy_CNN_large):
     small_flops = evaluator.compute_flops(dummy_CNN_small)
     large_flops = evaluator.compute_flops(dummy_CNN_large)
 
-    assert isinstance(small_flops, float)
+    assert isinstance(small_flops, int)
     assert small_flops > 0
-    assert isinstance(large_flops, float)
+    assert isinstance(large_flops, int)
     assert large_flops > 0
     assert small_flops < large_flops
 

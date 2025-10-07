@@ -17,7 +17,7 @@ class Metrics(BaseModel):
     precision: Optional[float] = None
     recall: Optional[float] = None
     f1_score: Optional[float] = None
-    flops: Optional[float] = None
+    flops: Optional[int] = None
     runtime: Optional[float] = None
     test_loss: Optional[float] = None
     architecture_size: Optional[int] = None
@@ -105,9 +105,9 @@ class MetrcicsEvaluator:
 
         return computed_metrics
 
-    def compute_flops(self, model: nn.Module, batch_size: int = 1) -> float:
+    def compute_flops(self, model: nn.Module, batch_size: int = 1) -> int:
         dummy_input: Tensor = torch.randn(batch_size, *self.image_dimensions).to(self.device)
-        total_flops: float = FlopCountAnalysis(model, dummy_input).total()
+        total_flops: int = FlopCountAnalysis(model, dummy_input).total()
         return total_flops
 
     def compute_runtime(self, model: nn.Module, iterations: int = 50, batch_size: int = 1) -> float:
@@ -122,7 +122,7 @@ class MetrcicsEvaluator:
                 _ = model(dummy_input)
 
         if iterations <= 0:
-            raise ValueError("Iterations must be positive")
+            raise ValueError("iterations must be positive")
 
         # Measure runtime
         if self.device.type == "cuda":
