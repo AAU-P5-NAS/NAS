@@ -14,7 +14,6 @@ def train(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.train()
     for X, y in dataloader:
-        # print("X batch shape:", X.shape)
         X = X.to(device)
         y = y.to(device)
 

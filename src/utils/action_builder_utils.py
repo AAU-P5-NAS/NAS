@@ -168,10 +168,6 @@ def mask_action_type_sequential(ctx: MaskContext):
     """Mask action types based on current observation and strategy. Raises MaxLayersReachedException if max layers reached."""
     new_logits = ctx.logits.copy()
     latest_layer_index = get_latest_layer_index(ctx.observation)
-    """ print("Observation  :", ctx.observation)
-    print("LATEST LAYER INDEX", latest_layer_index)
-    print("MAX LAYERS", ctx.max_layers)
-    print("MAX LAYERS MINUS ONE ", ctx.max_layers - 1) """
     if latest_layer_index == ctx.max_layers - 1:
         raise MaxLayersReachedException("Maximum number of layers reached.")
 

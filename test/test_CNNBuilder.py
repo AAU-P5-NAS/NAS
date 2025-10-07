@@ -56,8 +56,6 @@ def test_valid_cnn_build(valid_rl_config):
     cnn_builder = CNNBuilder(valid_rl_config, input_size=(28, 28), num_classes=26)
     model = cnn_builder.build()
 
-    print("YAYAYA", model)
-
     assert isinstance(model, nn.Sequential)
     assert isinstance(model[-1], nn.Linear)
     assert model[-1].out_features == 26
