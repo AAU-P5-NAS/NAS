@@ -121,6 +121,9 @@ class MetrcicsEvaluator:
             for _ in range(warmup_iterations):
                 _ = model(dummy_input)
 
+        if iterations <= 0:
+            raise ValueError("Iterations must be positive")
+
         # Measure runtime
         if self.device.type == "cuda":
             torch.cuda.synchronize()  # Ensure GPU is ready (wait until prior scheduled tasks are done)
