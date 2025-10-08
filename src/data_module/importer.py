@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 CSV_DEFAULT_PATH: str = "src/data_module/az_images_data.csv"
 GRAYSCALE_NUM_CHANNELS: int = 1
 IMG_DEFAULT_SIZE: tuple[int, int] = (28, 28)
+NUM_CLASSES: int = 26
 DEFAULT_H: int
 DEFAULT_W: int
 DEFAULT_H, DEFAULT_W = IMG_DEFAULT_SIZE
