@@ -5,8 +5,8 @@ from rich.console import Console
 from src.classification_module.test import test
 from src.utils.CNNBuilder import (
     CNNBuilder,
-    RLConfig,
-    CNNActionSpace,
+    NetworkConfig,
+    LayerConfig,
     LayerType,
     OutChannels,
     KernelSize,
@@ -20,35 +20,35 @@ def main():
     # 1. Load data
     importer = DataImporter()
     train_loader, test_loader = importer.get_as_cnn(batch_size=512)
-   
+
     console = Console()
-    
+
     # 2. Define CNN configuration using CNNActionSpace
-    config = RLConfig(
+    config = NetworkConfig(
         layers=[
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.CONV,
                 out_channels=OutChannels.CH_16,
                 kernel_size=KernelSize.KS_3,
                 activation=ActivationFunction.RELU,
             ),
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.POOL,
                 pool_mode=PoolMode.MAX,
                 kernel_size=KernelSize.KS_1,
             ),
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.CONV,
                 out_channels=OutChannels.CH_32,
                 kernel_size=KernelSize.KS_3,
                 activation=ActivationFunction.RELU,
             ),
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.POOL,
                 pool_mode=PoolMode.MAX,
                 kernel_size=KernelSize.KS_1,
             ),
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.LINEAR,
                 linear_units=LinearUnits.LU_64,
                 activation=ActivationFunction.RELU,

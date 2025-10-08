@@ -12,8 +12,8 @@ from src.utils.CNNBuilder import (
     InvalidLayerConfigError,
     CNNExportError,
     InvalidLayerOrderError,
-    RLConfig,
-    CNNActionSpace,
+    NetworkConfig,
+    LayerConfig,
     LayerType,
     OutChannels,
     KernelSize,
@@ -27,20 +27,20 @@ from src.utils.CNNBuilder import (
 @pytest.fixture
 def valid_rl_config():
     """Return a standard valid RLConfig."""
-    return RLConfig(
+    return NetworkConfig(
         layers=[
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.CONV,
                 out_channels=OutChannels.CH_16,
                 kernel_size=KernelSize.KS_3,
                 activation=ActivationFunction.RELU,
             ),
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.POOL,
                 pool_mode=PoolMode.MAX,
                 kernel_size=KernelSize.KS_1,
             ),
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.LINEAR,
                 linear_units=LinearUnits.LU_64,
                 activation=ActivationFunction.TANH,
@@ -62,7 +62,7 @@ def test_valid_cnn_build(valid_rl_config):
 def test_invalid_layer_config_raises_error():
     """Test CNNActionSpace raises InvalidLayerConfigError if conv layer missing kernel"""
     with pytest.raises(InvalidLayerConfigError):
-        CNNActionSpace(
+        LayerConfig(
             layer_type=LayerType.CONV,
             out_channels=OutChannels.CH_16,  # kernel_size is missing
         )
@@ -71,13 +71,13 @@ def test_invalid_layer_config_raises_error():
 def test_invalid_layer_order_raises_error():
     """Test RLConfig raises InvalidLayerOrderError if conv appears after linear"""
     with pytest.raises(InvalidLayerOrderError):
-        RLConfig(
+        NetworkConfig(
             layers=[
-                CNNActionSpace(
+                LayerConfig(
                     layer_type=LayerType.LINEAR,
                     linear_units=LinearUnits.LU_64,
                 ),
-                CNNActionSpace(
+                LayerConfig(
                     layer_type=LayerType.CONV,
                     out_channels=OutChannels.CH_16,
                     kernel_size=KernelSize.KS_3,
