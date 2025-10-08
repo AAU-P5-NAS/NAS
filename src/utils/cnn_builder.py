@@ -4,8 +4,11 @@ import onnx
 import os
 import warnings
 from typing import Optional, Tuple
+import sys
 
-from src.utils.network_utils import (
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from utils.network_utils import (
     ActivationFunction,
     CNNExportError,
     KernelSize,
