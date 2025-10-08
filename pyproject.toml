@@ -16,6 +16,9 @@ dependencies = [
     "torch>=2.8.0",
     "torchvision>=0.23.0",
     "stable-baselines3[extra]>=2.7.0",
+    "gymnasium>=1.2.1",
+    "torchmetrics>=1.8.2",
+    "fvcore>=0.1.5.post20221221",
 ]
 
 [dependency-groups]
