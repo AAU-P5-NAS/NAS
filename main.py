@@ -21,7 +21,7 @@ from src.utils.CNNBuilder import (
 def main():
     # 1. Load data
     importer = DataImporter()
-    train_loader, test_loader = importer.get_as_cnn(batch_size=512)
+    dataloader = importer.get_as_cnn(batch_size=512, test_split=0.2)
 
     console = Console()
 
