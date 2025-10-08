@@ -70,9 +70,17 @@ class CustomEnv(gym.Env, type_check):
         return spaces.Box(low=0, high=1, shape=(output_actions,), dtype=np.float32)
 
     def _get_observation_space(self) -> spaces.Space:
-        nvec = []
+        observation_space_vector: List[int] = []
+        observation_space_vector.append(len(LayerType))
+        observation_space_vector.append(len(OutChannels))
+        observation_space_vector.append(len(KernelSize))
+        observation_space_vector.append(len(Stride))
+        observation_space_vector.append(len(PoolMode))
+        observation_space_vector.append(len(ActivationFunction))
+        observation_space_vector.append(len(LinearUnits))
+        observation_space_vector *= self.max_layers
 
-        return spaces.MultiDiscrete(nvec)
+        return spaces.MultiDiscrete(observation_space_vector)
 
     def _get_observation(self):
         """Retrieve state from other agent.
@@ -80,7 +88,7 @@ class CustomEnv(gym.Env, type_check):
         Returns:
 
         """
-        return self
+        return []
 
     def _get_info(self) -> Dict[str, Any]:
         """Compute auxiliary information for debugging.
@@ -110,7 +118,7 @@ class CustomEnv(gym.Env, type_check):
 
         return observation, info
 
-    def step(self, action: Any):
+    def step(self, action: List[float]) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
 
         Args:
@@ -120,23 +128,15 @@ class CustomEnv(gym.Env, type_check):
             tuple: (observation, reward, terminated, truncated, info)
         """
 
-        """ operation = Operation(action[0])
-        layer_index = action[1]
-        other_agent_action = Action(operation=operation, layer_index=layer_index)
-
-        stepReturn: StepReturn = self.other_agent.on_step_from_parent_environment(
-            other_agent_action
-        )
-
         terminated = self._should_terminate()
         truncated = self._has_truncated()
 
-        reward = self._calculate_reward(stepReturn)
+        reward = self._calculate_reward()
 
-        observation = self.other_agent.get_observation_for_parent_environment()
-        info = self.other_agent.get_info_for_parent_environment()
+        observation = self._get_observation()
+        info = self._get_info()
 
-        return observation, reward, terminated, truncated, info """
+        return observation, reward, terminated, truncated, info
 
     def _should_terminate(self) -> bool:
         raise NotImplementedError
@@ -144,30 +144,18 @@ class CustomEnv(gym.Env, type_check):
     def _has_truncated(self) -> bool:
         raise NotImplementedError
 
-    """ def _calculate_reward(self, step_return: StepReturn) -> float:
+    def _calculate_reward(self) -> float:
         reward: float = 0
-        reward += -1 if step_return.took_illegal_action else 0
-        if step_return.performance is not None:
-            reward += step_return.performance.accuracy
-        return reward """
+        return reward
 
-    """ def render(self):
-        self.other_agent.on_render_from_parent_environment() """
+    def render(self):
+        print(self._get_observation())
 
     def close(self):
         if self.render_mode == "console":
             pass
         else:
             raise NotImplementedError
-
-
-""" 
-    def check_validation(self):
-        for layer_field in LAYER_FIELDS:
-            if layer_field <= 0:
-                raise ValueError(
-                    "Each entry in LAYER_FIELDS must be an integer >= 1 (a cardinality)."
-                ) """
 
 
 """ 
