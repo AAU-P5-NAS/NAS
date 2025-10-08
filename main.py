@@ -5,7 +5,7 @@ from src.classification_module.train import Trainer
 from src.classification_module.metrics import Metrics
 from rich.console import Console
 
-from utils.cnn_builder import (
+from src.utils.cnn_builder import (
     CNNBuilder,
     NetworkConfig,
     LayerConfig,
