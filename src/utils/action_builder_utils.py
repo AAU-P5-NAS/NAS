@@ -183,14 +183,14 @@ def mask_indexes_sequential(ctx: MaskContext):
     latest_layer_index = get_latest_layer_index(ctx.observation)
     if latest_layer_index == ctx.max_layers - 1:
         raise MaxLayersReachedException("Maximum number of layers reached.")
-    if latest_layer_index is None:
-        latest_layer_index = 0
+
+    next_layer_index = latest_layer_index + 1 if latest_layer_index is not None else 0
 
     layer_index_start = ctx.slices.layer_index.start
     layer_index_end = ctx.slices.layer_index.stop
 
     new_logits[layer_index_start:layer_index_end] = -np.inf
-    new_logits[layer_index_start + latest_layer_index] = 1  # only next index is valid
+    new_logits[layer_index_start + next_layer_index] = 1  # only next index is valid
 
     return new_logits
 
