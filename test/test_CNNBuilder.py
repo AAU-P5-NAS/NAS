@@ -20,6 +20,7 @@ from src.utils.CNNBuilder import (
     LinearUnits,
     ActivationFunction,
     PoolMode,
+    cnn_config_to_flatt,
 )
 
 
@@ -106,3 +107,18 @@ def test_onnx_export_raises_CNNExportError(valid_rl_config):
 
     with pytest.raises(CNNExportError):
         builder.export_to_onnx()
+
+
+@pytest.mark.parametrize("size", [3, 6])
+def test_cnn_config_to_flatt(valid_rl_config, size):
+    flatten = cnn_config_to_flatt(valid_rl_config, size)
+
+    assert len(flatten) == size * 7, f"Expected {size * 7}, got {len(flatten)}"
+    assert all(isinstance(x, int) for x in flatten)
+    assert all(x >= -1 for x in flatten)
+
+
+@pytest.mark.parametrize("size", [2])
+def test_cnn_config_to_flatt_fails(valid_rl_config, size):
+    with pytest.raises(ValueError):
+        cnn_config_to_flatt(valid_rl_config, size)
