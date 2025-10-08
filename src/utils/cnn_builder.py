@@ -102,6 +102,7 @@ class CNNBuilder:
 
         for layer in linear_layers:
             assert in_features is not None
+            assert layer.linear_units is not None
             layers.append(nn.Linear(in_features, layer.linear_units.to_units()))
             assert layer.activation is not None
             layers.append(layer.activation.to_module())
@@ -192,14 +193,43 @@ def arch_builder(actions: list[int], partial_arch: NetworkConfig) -> NetworkConf
     Also, currently it only append the layer at the end so it makes no use of "action" and "layerIdx"
 
     """
+    try:
+        lt = LayerType(actions[2])
+    except ValueError:
+        lt = None
+    try:
+        oc = OutChannels(actions[3])
+    except ValueError:
+        oc = None
+    try:
+        ks = KernelSize(actions[4])
+    except ValueError:
+        ks = None
+    try:
+        st = Stride(actions[5])
+    except ValueError:
+        st = None
+    try:
+        lu = LinearUnits(actions[6])
+    except ValueError:
+        lu = None
+    try:
+        pm = PoolMode(actions[7])
+    except ValueError:
+        pm = None
+    try:
+        act = ActivationFunction(actions[8])
+    except ValueError:
+        act = None
+
     layerConfig = LayerConfig(
-        layer_type=LayerType(actions[2]),
-        out_channels=OutChannels(actions[3]),
-        kernel_size=KernelSize(actions[4]),
-        stride=Stride(actions[5]),
-        linear_units=LinearUnits(actions[6]),
-        pool_mode=PoolMode(actions[7]),
-        activation=ActivationFunction(actions[8]),
+        layer_type=lt,
+        out_channels=oc,
+        kernel_size=ks,
+        stride=st,
+        linear_units=lu,
+        pool_mode=pm,
+        activation=act,
     )
 
     partial_arch.layers.append(layerConfig)

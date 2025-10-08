@@ -3,7 +3,7 @@ import os
 import pytest
 import torch.nn as nn
 import onnx
-
+import copy
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -21,7 +21,7 @@ from src.utils.network_utils import (
     CNNExportError,
 )
 
-from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
+from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config, arch_builder
 
 
 @pytest.fixture
@@ -122,3 +122,33 @@ def test_cnn_config_to_flatt(valid_rl_config, size):
 def test_cnn_config_to_flatt_fails(valid_rl_config, size):
     with pytest.raises(ValueError):
         flatten_cnn_config(valid_rl_config, size)
+
+
+# [action, layerIdx, layerType, outCh, kernelSize, stride, linearU,  poolMode, actFun]
+partial_arch1 = NetworkConfig(
+    layers=[
+        LayerConfig(
+            layer_type=LayerType.CONV,
+            out_channels=OutChannels.CH_16,
+            kernel_size=KernelSize.KS_3,
+            activation=ActivationFunction.RELU,
+        ),
+        LayerConfig(layer_type=LayerType.POOL, pool_mode=PoolMode.MAX, kernel_size=KernelSize.KS_1),
+    ]
+)
+
+empty_arch = NetworkConfig(layers=[])
+
+
+partial_arch1_actions = [1, 2, 1, -1, -1, -1, 3, -1, 1]
+empty_arch_actions = [1, 0, 0, 0, 1, -1, -1, -1, 0]
+
+
+@pytest.mark.parametrize(
+    "actions, partial_arch",
+    [(partial_arch1_actions, partial_arch1), (empty_arch_actions, empty_arch)],
+)
+def test_arch_builder_given_valid_input(actions: list[int], partial_arch: NetworkConfig):
+    old_arhc = copy.deepcopy(partial_arch)
+    new_arch = arch_builder(actions, partial_arch)
+    assert len(old_arhc.layers) + 1 == len(new_arch.layers)

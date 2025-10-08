@@ -36,7 +36,6 @@ class LayerType(enum.Enum):
 
 
 class LinearUnits(enum.IntEnum):
-    none = -1
     LU_8 = 0  # 8
     LU_16 = 1  # 16
     LU_32 = 2  # 32
@@ -46,86 +45,63 @@ class LinearUnits(enum.IntEnum):
     LU_512 = 6  # 512
 
     def to_units(self):
-        if self.value == -1:
-            return None
-        else:
-            mapping = [8, 16, 32, 64, 128, 256, 512]
-            return mapping[self.value]
+        mapping = [8, 16, 32, 64, 128, 256, 512]
+        return mapping[self.value]
 
 
 class OutChannels(enum.IntEnum):
-    none = -1
     CH_16 = 0  # 16
     CH_32 = 1  # 32
     CH_64 = 2  # 64
     CH_128 = 3  # 128
 
     def to_channels(self):
-        if self.value == -1:
-            return None
-        else:
-            mapping = [16, 32, 64, 128]
-            return mapping[self.value]
+        mapping = [16, 32, 64, 128]
+        return mapping[self.value]
 
 
 class KernelSize(enum.IntEnum):
-    none = -1
     KS_1 = 0  # 1
     KS_3 = 1  # 3
     KS_5 = 2  # 5
 
     def to_kernel(self):
-        if self.value == -1:
-            return None
-        else:
-            mapping = [1, 3, 5]
-            return mapping[self.value]
+        mapping = [1, 3, 5]
+        return mapping[self.value]
 
 
 class Stride(enum.IntEnum):
-    none = -1
     S_1 = 0  # 1
     S_2 = 1  # 2
 
     def to_stride(self):
-        if self.value == -1:
-            return None
-        else:
-            mapping = [1, 2]
-            return mapping[self.value]
+        mapping = [1, 2]
+        return mapping[self.value]
 
 
 class PoolMode(enum.Enum):
-    none = -1
     MAX = 0  # "max"
     AVG = 1  # "avg"
 
     def to_pmode(self):
-        if self.value == -1:
-            return None
-        else:
-            mapping = ["max", "avg"]
-            return mapping[self.value]
+        mapping = ["max", "avg"]
+        return mapping[self.value]
 
 
 class ActivationFunction(enum.Enum):
-    none = -1
     RELU = 0  # "relu"
     TANH = 1  # "tanh"
     SOFTMAX = 2  # "softmax"
     NONE = 3  # "none"
 
-    def to_module(self):
-        if self.value == -1:
-            return None
-        else:
-            mapping = {
-                0: lambda: nn.ReLU(),
-                1: lambda: nn.Tanh(),
-                2: lambda: nn.Softmax(dim=1),
-                3: lambda: nn.Identity(),
-            }
-            return mapping[self.value]()
+    def to_module(self) -> nn.Module:
+        mapping = {
+            0: lambda: nn.ReLU(),
+            1: lambda: nn.Tanh(),
+            2: lambda: nn.Softmax(dim=1),
+            3: lambda: nn.Identity(),
+        }
+        return mapping[self.value]()
 
 
 class LayerConfig(BaseModel):
