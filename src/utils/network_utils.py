@@ -201,7 +201,8 @@ def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig)
 
     h, w = input_dims
     if layer.layer_type == LayerType.CONV:
-        h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.to_stride())
+        padding = layer.kernel_size.value // 2  # assuming same padding
+        h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.to_stride(), padding)
     elif layer.layer_type == LayerType.POOL:
         h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.to_stride())
     return h, w

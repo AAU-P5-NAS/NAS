@@ -160,7 +160,10 @@ def get_logits_for_slice(ctx: MaskContext, slice_name: str) -> np.ndarray:
 
 def sample_action_from_slice(ctx: MaskContext, slice_name: str) -> int:
     logits = get_logits_for_slice(ctx, slice_name)
-    choice = int(ctx.sampling_strategy(logits))
+    if np.all(logits == -np.inf):
+        choice = -1  # No valid actions available
+    else:
+        choice = int(ctx.sampling_strategy(logits))
     return choice
 
 
@@ -210,7 +213,16 @@ def mask_layer_type_sequential(ctx: MaskContext):
 
 
 def mask_out_channels_sequential(ctx: MaskContext):
-    return ctx.logits  # do nothing for now
+    if ctx.decisions[2] != LayerType.LINEAR.value:
+        return ctx.logits
+
+    start = ctx.slices.out_channels.start
+    end = ctx.slices.out_channels.stop
+    new_logits = ctx.logits.copy()
+    new_logits[start:end] = -np.inf
+    return new_logits
+
+    # do nothing for now
 
 
 def mask_kernel_size_sequential(ctx: MaskContext):
