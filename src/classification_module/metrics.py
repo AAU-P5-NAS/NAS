@@ -127,18 +127,18 @@ class MetrcicsEvaluator:
         # Measure runtime
         if self.device.type == "cuda":
             torch.cuda.synchronize()  # Ensure GPU is ready (wait until prior scheduled tasks are done)
-            start_time: float = time.time()
+            start_time: float = time.perf_counter()  # Start timing
             with torch.no_grad():
                 for _ in range(iterations):
                     _ = model(dummy_input)
             torch.cuda.synchronize()  # Wait for GPU to finish all itterations
         else:
-            start_time: float = time.time()
+            start_time: float = time.perf_counter()
             with torch.no_grad():
                 for _ in range(iterations):
                     _ = model(dummy_input)
 
-        end_time: float = time.time()
+        end_time: float = time.perf_counter()
         avg_runtime: float = (end_time - start_time) / iterations
         return avg_runtime
 
