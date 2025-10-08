@@ -53,7 +53,7 @@ class OutChannels(IntEnum):
     CH_64 = 2  # 64
     CH_128 = 3  # 128
 
-    def to_chanels(self):
+    def to_channels(self):
         mapping = [16, 32, 64, 128]
         return mapping[self.value]
 
@@ -102,7 +102,7 @@ class ActivationFunction(enum.Enum):
         return mapping[self.value]()
 
 
-class CNNActionSpace(BaseModel):
+class LayerConfig(BaseModel):
     layer_type: LayerType
     out_channels: Optional[OutChannels] = None
     kernel_size: Optional[KernelSize] = None
@@ -126,11 +126,11 @@ class CNNActionSpace(BaseModel):
         return self
 
 
-class RLConfig(BaseModel):
-    layers: List[CNNActionSpace]
+class NetworkConfig(BaseModel):
+    layers: List[LayerConfig]
 
     @field_validator("layers")
-    def check_layer_order(cls, v: List[CNNActionSpace]) -> List[CNNActionSpace]:
+    def check_layer_order(cls, v: List[LayerConfig]) -> List[LayerConfig]:
         """Enforce conv/pool layers cannot appear after a linear layer."""
         seen_linear = False
         for i, layer in enumerate(v):
@@ -153,7 +153,10 @@ def update_spatial_dims(
 
 class CNNBuilder:
     def __init__(
-        self, rl_config: RLConfig, input_size: Tuple[int, int] = (28, 28), num_classes: int = 26
+        self,
+        rl_config: NetworkConfig,
+        input_size: Tuple[int, int] = (28, 28),
+        num_classes: int = 26,
     ):
         self.rl_config = rl_config
         self.input_size = input_size
@@ -182,7 +185,7 @@ class CNNBuilder:
                 assert kernel is not None  #
                 padding = kernel // 2
                 assert layer.out_channels is not None
-                out_ch = layer.out_channels.to_chanels()
+                out_ch = layer.out_channels.to_channels()
                 assert out_ch is not None
                 assert current_in_channels is not None
 
@@ -278,7 +281,7 @@ class CNNBuilder:
         return full_path
 
 
-def cnn_config_to_flatt(rlconfig: RLConfig, max_layers: int) -> list[int]:
+def cnn_config_to_flatt(rlconfig: NetworkConfig, max_layers: int) -> list[int]:
     # each layer has 7 slots, -1 for  unused slots
     flat_config = []
     for layer in rlconfig.layers:
@@ -309,18 +312,18 @@ def cnn_config_to_flatt(rlconfig: RLConfig, max_layers: int) -> list[int]:
 
 if __name__ == "__main__":
     # Define a sample RL-generated config
-    config = RLConfig(
+    config = NetworkConfig(
         layers=[
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.CONV,
                 out_channels=OutChannels.CH_16,
                 kernel_size=KernelSize.KS_3,
                 activation=ActivationFunction.RELU,
             ),
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.POOL, pool_mode=PoolMode.MAX, kernel_size=KernelSize.KS_1
             ),
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.LINEAR,
                 linear_units=LinearUnits.LU_64,
                 activation=ActivationFunction.TANH,
