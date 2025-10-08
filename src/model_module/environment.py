@@ -3,9 +3,9 @@ from __future__ import annotations
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
-from typing import Any, Dict, Tuple, Optional, List
+from typing import Any, Dict, Tuple, Optional
 from pydantic import BaseModel as type_check
-from utils.CNNBuilder import (
+from utils.network_utils import (
     LayerType,
     OutChannels,
     KernelSize,
@@ -48,8 +48,6 @@ class CustomEnv(gym.Env, type_check):
     def __init__(self, render_mode: str = "console", max_layers: int = 10):
         super().__init__()
 
-        self.check_validation()
-
         self.render_mode = render_mode
         self.max_layers = max_layers
 
@@ -60,7 +58,7 @@ class CustomEnv(gym.Env, type_check):
         output_actions = (
             len(standard_actions)
             + len(LayerType)
-            + (self.max_layers - 1)  # One for each index
+            + (self.max_layers - 1)  # One for each index (which index to apply action on)
             + len(OutChannels)
             + len(KernelSize)
             + len(Stride)
@@ -112,7 +110,7 @@ class CustomEnv(gym.Env, type_check):
 
         return observation, info
 
-    def step(self, action: Any) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
+    def step(self, action: Any):
         """Execute one timestep within the environment.
 
         Args:
@@ -122,7 +120,7 @@ class CustomEnv(gym.Env, type_check):
             tuple: (observation, reward, terminated, truncated, info)
         """
 
-        operation = Operation(action[0])
+        """ operation = Operation(action[0])
         layer_index = action[1]
         other_agent_action = Action(operation=operation, layer_index=layer_index)
 
@@ -138,7 +136,7 @@ class CustomEnv(gym.Env, type_check):
         observation = self.other_agent.get_observation_for_parent_environment()
         info = self.other_agent.get_info_for_parent_environment()
 
-        return observation, reward, terminated, truncated, info
+        return observation, reward, terminated, truncated, info """
 
     def _should_terminate(self) -> bool:
         raise NotImplementedError
@@ -146,15 +144,15 @@ class CustomEnv(gym.Env, type_check):
     def _has_truncated(self) -> bool:
         raise NotImplementedError
 
-    def _calculate_reward(self, step_return: StepReturn) -> float:
+    """ def _calculate_reward(self, step_return: StepReturn) -> float:
         reward: float = 0
         reward += -1 if step_return.took_illegal_action else 0
         if step_return.performance is not None:
             reward += step_return.performance.accuracy
-        return reward
+        return reward """
 
-    def render(self):
-        self.other_agent.on_render_from_parent_environment()
+    """ def render(self):
+        self.other_agent.on_render_from_parent_environment() """
 
     def close(self):
         if self.render_mode == "console":
@@ -162,12 +160,14 @@ class CustomEnv(gym.Env, type_check):
         else:
             raise NotImplementedError
 
+
+""" 
     def check_validation(self):
         for layer_field in LAYER_FIELDS:
             if layer_field <= 0:
                 raise ValueError(
                     "Each entry in LAYER_FIELDS must be an integer >= 1 (a cardinality)."
-                )
+                ) """
 
 
 """ 

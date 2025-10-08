@@ -3,152 +3,20 @@ import torch.onnx
 import onnx
 import os
 import warnings
-import enum
-from enum import IntEnum
-from typing import List, Optional, Tuple
-from pydantic import BaseModel, field_validator, model_validator
+from typing import Optional, Tuple
 
-
-class InvalidLayerConfigError(Exception):
-    """Raised when a single CNN layer has invalid parameters."""
-
-    pass
-
-
-class InvalidLayerOrderError(Exception):
-    """Raised when CNN layers are in an invalid order (e.g. Conv after Linear)."""
-
-    pass
-
-
-class CNNExportError(Exception):
-    """Raised when CNN layers are in an invalid order (e.g. Conv after Linear)."""
-
-    pass
-
-
-class LayerType(enum.Enum):
-    CONV = 0  # "conv"
-    LINEAR = 1
-    POOL = 2  # "pool"
-
-
-class LinearUnits(IntEnum):
-    LU_8 = 0  # 8
-    LU_16 = 1  # 16
-    LU_32 = 2  # 32
-    LU_64 = 3  # 64
-    LU_128 = 4  # 128
-    LU_256 = 5  # 256
-    LU_512 = 6  # 512
-
-    def to_units(self):
-        mapping = [8, 16, 32, 64, 128, 256, 512]
-        return mapping[self.value]
-
-
-class OutChannels(IntEnum):
-    CH_16 = 0  # 16
-    CH_32 = 1  # 32
-    CH_64 = 2  # 64
-    CH_128 = 3  # 128
-
-    def to_channels(self):
-        mapping = [16, 32, 64, 128]
-        return mapping[self.value]
-
-
-class KernelSize(IntEnum):
-    KS_1 = 0  # 1
-    KS_3 = 1  # 3
-    KS_5 = 2  # 5
-
-    def to_kernel(self):
-        mapping = [1, 3, 5]
-        return mapping[self.value]
-
-
-class Stride(IntEnum):
-    S_1 = 0  # 1
-    S_2 = 1  # 2
-
-    def to_stride(self):
-        mapping = [1, 2]
-        return mapping[self.value]
-
-
-class PoolMode(enum.Enum):
-    MAX = 0  # "max"
-    AVG = 1  # "avg"
-
-    def to_pmode(self):
-        mapping = ["max", "avg"]
-        return mapping[self.value]
-
-
-class ActivationFunction(enum.Enum):
-    RELU = 0  # "relu"
-    TANH = 1  # "tanh"
-    SOFTMAX = 2  # "softmax"
-    NONE = 3  # "none"
-
-    def to_module(self) -> nn.Module:
-        mapping = {
-            0: lambda: nn.ReLU(),
-            1: lambda: nn.Tanh(),
-            2: lambda: nn.Softmax(dim=1),
-            3: lambda: nn.Identity(),
-        }
-        return mapping[self.value]()
-
-
-class LayerConfig(BaseModel):
-    layer_type: LayerType
-    out_channels: Optional[OutChannels] = None
-    kernel_size: Optional[KernelSize] = None
-    stride: Optional[Stride] = None
-    pool_mode: Optional[PoolMode] = None
-    activation: Optional[ActivationFunction] = ActivationFunction.NONE
-    linear_units: Optional[LinearUnits] = None
-
-    @model_validator(mode="after")
-    def validate_params(self):
-        lt = self.layer_type
-        if lt == LayerType.CONV:
-            if self.out_channels is None or self.kernel_size is None:
-                raise InvalidLayerConfigError("Conv layer must define out_channels and kernel_size")
-        elif lt == LayerType.POOL:
-            if self.pool_mode is None or self.kernel_size is None:
-                raise InvalidLayerConfigError("Pool layer must define pool_mode and kernel_size")
-        elif lt == LayerType.LINEAR:
-            if self.linear_units is None:
-                raise InvalidLayerConfigError("Linear layer must define linear_units")
-        return self
-
-
-class NetworkConfig(BaseModel):
-    layers: List[LayerConfig]
-
-    @field_validator("layers")
-    def check_layer_order(cls, v: List[LayerConfig]) -> List[LayerConfig]:
-        """Enforce conv/pool layers cannot appear after a linear layer."""
-        seen_linear = False
-        for i, layer in enumerate(v):
-            if seen_linear and layer.layer_type in (LayerType.CONV, LayerType.POOL):
-                raise InvalidLayerOrderError(
-                    f"Conv/Pool layer at position {i} after a linear layer is not allowed"
-                )
-            if layer.layer_type == LayerType.LINEAR:
-                seen_linear = True
-        return v
-
-
-def update_spatial_dims(
-    h: int, w: int, kernel: int, stride: int, padding: int = 0
-) -> Tuple[int, int]:
-    h_new = (h + 2 * padding - kernel) // stride + 1
-    w_new = (w + 2 * padding - kernel) // stride + 1
-    return h_new, w_new
+from src.utils.network_utils import (
+    ActivationFunction,
+    CNNExportError,
+    KernelSize,
+    LayerConfig,
+    LayerType,
+    LinearUnits,
+    NetworkConfig,
+    OutChannels,
+    PoolMode,
+    update_spatial_dims,
+)
 
 
 class CNNBuilder:
@@ -220,6 +88,8 @@ class CNNBuilder:
                 assert stride is not None
                 h, w = update_spatial_dims(h, w, kernel, stride)
 
+            print("current dimensions", h, w)
+
         layers.append(nn.Flatten())
         assert current_in_channels is not None
 
@@ -232,6 +102,8 @@ class CNNBuilder:
             assert layer.activation is not None
             layers.append(layer.activation.to_module())
             in_features = layer.linear_units.to_units()
+
+            print("current dimensions", in_features)
 
         layers.append(nn.Linear(in_features, self.num_classes))
 
@@ -258,7 +130,7 @@ class CNNBuilder:
 
         os.makedirs("saved_models", exist_ok=True)
         full_path = os.path.join("saved_models", filename)
-
+        print("self.model", self.model)
         dummy_input = torch.randn(1, *input_size)
         # Suppress deprecation warnings for ONNX export. smthn about a new version of onnx exporter, but the current one still work
         with warnings.catch_warnings():
@@ -281,7 +153,7 @@ class CNNBuilder:
         return full_path
 
 
-def cnn_config_to_flatt(rlconfig: NetworkConfig, max_layers: int) -> list[int]:
+def flatten_cnn_config(rlconfig: NetworkConfig, max_layers: int) -> list[int]:
     # each layer has 7 slots, -1 for  unused slots
     flat_config = []
     for layer in rlconfig.layers:
@@ -347,4 +219,4 @@ if __name__ == "__main__":
 
     print("CNN config to flat array")
     print(config.layers[0])  # this shows why 7 slots per layer is choosen
-    print(cnn_config_to_flatt(config, 4))
+    print(flatten_cnn_config(config, 4))

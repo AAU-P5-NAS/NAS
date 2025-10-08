@@ -35,7 +35,7 @@ class LayerType(enum.Enum):
     POOL = 2  # "pool"
 
 
-class LinearUnits(enum.Enum):
+class LinearUnits(enum.IntEnum):
     LU_8 = 0  # 8
     LU_16 = 1  # 16
     LU_32 = 2  # 32
@@ -55,7 +55,7 @@ class OutChannels(enum.IntEnum):
     CH_64 = 2  # 64
     CH_128 = 3  # 128
 
-    def to_chanels(self):
+    def to_channels(self):
         mapping = [16, 32, 64, 128]
         return mapping[self.value]
 
@@ -73,10 +73,9 @@ class KernelSize(enum.IntEnum):
 class Stride(enum.IntEnum):
     S_1 = 0  # 1
     S_2 = 1  # 2
-    S_3 = 2  # 3
 
     def to_stride(self):
-        mapping = [1, 2, 3]
+        mapping = [1, 2]
         return mapping[self.value]
 
 
@@ -105,7 +104,7 @@ class ActivationFunction(enum.Enum):
         return mapping[self.value]()
 
 
-class CNNActionSpace(BaseModel):
+class LayerConfig(BaseModel):
     layer_type: LayerType
     out_channels: Optional[OutChannels] = None
     kernel_size: Optional[KernelSize] = None
@@ -129,11 +128,11 @@ class CNNActionSpace(BaseModel):
         return self
 
 
-class RLConfig(BaseModel):
-    layers: List[CNNActionSpace]
+class NetworkConfig(BaseModel):
+    layers: List[LayerConfig]
 
     @field_validator("layers")
-    def check_layer_order(cls, v: List[CNNActionSpace]) -> List[CNNActionSpace]:
+    def check_layer_order(cls, v: List[LayerConfig]) -> List[LayerConfig]:
         """Enforce conv/pool layers cannot appear after a linear layer."""
         seen_linear = False
         for i, layer in enumerate(v):
@@ -165,12 +164,12 @@ def get_latest_layer_index(observation: list[int]):
     return (len(observation) // 7) - 1  # All layers defined
 
 
-def get_layer_from_index(observation: list[int], index: int) -> CNNActionSpace:
-    """Retrieve the CNNActionSpace corresponding to a given layer index in the observation."""
+def get_layer_from_index(observation: list[int], index: int) -> LayerConfig:
+    """Retrieve the LayerConfig corresponding to a given layer index in the observation."""
     start = index * 7
     if start >= len(observation) or observation[start] == -1:
         raise ValueError(f"Layer index {index} is out of bounds or undefined in the observation.")
-    return CNNActionSpace(
+    return LayerConfig(
         layer_type=LayerType(observation[start]),
         out_channels=OutChannels(observation[start + 1]) if observation[start + 1] != -1 else None,
         kernel_size=KernelSize(observation[start + 2]) if observation[start + 2] != -1 else None,
@@ -197,9 +196,7 @@ def get_valid_kernel_sizes(
     return valid_kernels
 
 
-def calculate_output_dimensions(
-    input_dims: tuple[int, int], layer: CNNActionSpace
-) -> tuple[int, int]:
+def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig) -> tuple[int, int]:
     if layer.kernel_size is None or layer.stride is None:
         return input_dims  # No change if kernel_size or stride is not defined
 
@@ -242,7 +239,7 @@ def get_latest_layer(observation: list[int]):
     """Look for the first occurrence of -1 in the observation array with form index 7, 14, 21 ..."""
     for i in range(0, len(observation), 7):
         if observation[i] == -1 and i != 0:
-            return CNNActionSpace(
+            return LayerConfig(
                 layer_type=LayerType(observation[i]),
                 out_channels=OutChannels(observation[i + 1]) if observation[i + 1] != -1 else None,
                 kernel_size=KernelSize(observation[i + 2]) if observation[i + 2] != -1 else None,
