@@ -16,6 +16,7 @@ from src.utils.network_utils import (
     OutChannels,
     PoolMode,
     update_spatial_dims,
+    Stride,
 )
 
 
@@ -48,7 +49,7 @@ class CNNBuilder:
         for layer in conv_pool_layers:
             if layer.layer_type is LayerType.CONV:
                 stride = layer.stride.to_stride() if layer.stride is not None else 1
-                print("STRIDESTRIDE", stride)
+                # print("STRIDESTRIDE", stride)
                 assert layer.kernel_size is not None
                 kernel = layer.kernel_size.to_kernel()
                 assert kernel is not None  #
@@ -57,7 +58,6 @@ class CNNBuilder:
                 out_ch = layer.out_channels.to_channels()
                 assert out_ch is not None
                 assert current_in_channels is not None
-
                 layers.append(
                     nn.Conv2d(
                         in_channels=current_in_channels,
@@ -70,8 +70,8 @@ class CNNBuilder:
                 assert layer.activation is not None
                 layers.append(layer.activation.to_module())
                 current_in_channels = out_ch
-                print("type of layer is Conv", type(layer))
-                print("h, w, kernel, stride", h, w, kernel, stride)
+                # print("type of layer is Conv", type(layer))
+                # print("h, w, kernel, stride", h, w, kernel, stride)
                 h, w = update_spatial_dims(h, w, kernel, stride, padding)
 
             elif layer.layer_type is LayerType.POOL:
@@ -89,11 +89,11 @@ class CNNBuilder:
                     layers.append(nn.AvgPool2d(kernel, stride))
 
                 assert stride is not None
-                print("type of layer is Pool", type(layer))
-                print("h, w, kernel, stride", h, w, kernel, stride)
+                # print("type of layer is Pool", type(layer))
+                # print("h, w, kernel, stride", h, w, kernel, stride)
                 h, w = update_spatial_dims(h, w, kernel, stride)
 
-            print("current dimensions", h, w)
+            # print("current dimensions", h, w)
 
         layers.append(nn.Flatten())
         assert current_in_channels is not None
@@ -102,13 +102,12 @@ class CNNBuilder:
 
         for layer in linear_layers:
             assert in_features is not None
-            assert layer.linear_units is not None
             layers.append(nn.Linear(in_features, layer.linear_units.to_units()))
             assert layer.activation is not None
             layers.append(layer.activation.to_module())
             in_features = layer.linear_units.to_units()
-            print("type of layer is Linear", type(layer))
-            print("current dimensions", in_features)
+            # print("type of layer is Linear", type(layer))
+            # print("current dimensions", in_features)
 
         layers.append(nn.Linear(in_features, self.num_classes))
 
@@ -135,7 +134,7 @@ class CNNBuilder:
 
         os.makedirs("saved_models", exist_ok=True)
         full_path = os.path.join("saved_models", filename)
-        print("self.model", self.model)
+        # print("self.model", self.model)
         dummy_input = torch.randn(1, *input_size)
         # Suppress deprecation warnings for ONNX export. smthn about a new version of onnx exporter, but the current one still work
         with warnings.catch_warnings():
@@ -180,6 +179,33 @@ def flatten_cnn_config(rlconfig: NetworkConfig, max_layers: int) -> list[int]:
     return flat_config
 
 
+def arch_builder(actions: list[int], partial_arch: NetworkConfig) -> NetworkConfig:
+    """
+    Input: Takes a list of action and partialy build arch
+
+    Output: Return the partually build with the new layer appended to it
+
+    Note:
+    the actions must be in the following order, otherwise, the method will fail when calling .build() on the constructed Network
+    [action, layerIdx, layerType, outCh, kernelSize, stride, linearU,  poolMode, actFun]
+
+    Also, currently it only append the layer at the end so it makes no use of "action" and "layerIdx"
+
+    """
+    layerConfig = LayerConfig(
+        layer_type=LayerType(actions[2]),
+        out_channels=OutChannels(actions[3]),
+        kernel_size=KernelSize(actions[4]),
+        stride=Stride(actions[5]),
+        linear_units=LinearUnits(actions[6]),
+        pool_mode=PoolMode(actions[7]),
+        activation=ActivationFunction(actions[8]),
+    )
+
+    partial_arch.layers.append(layerConfig)
+    return partial_arch
+
+
 # ------------------------------------------------------------------------------------------------#
 # ------------------------------------------------------------------------------------------------#
 # ------------------------------------------------------------------------------------------------#
@@ -200,28 +226,53 @@ if __name__ == "__main__":
             LayerConfig(
                 layer_type=LayerType.POOL, pool_mode=PoolMode.MAX, kernel_size=KernelSize.KS_1
             ),
-            LayerConfig(
-                layer_type=LayerType.LINEAR,
-                linear_units=LinearUnits.LU_64,
-                activation=ActivationFunction.TANH,
-            ),
+            #     LayerConfig(
+            #         layer_type=LayerType.LINEAR,
+            #         linear_units=LinearUnits.LU_64,
+            #         activation=ActivationFunction.TANH,
+            #     ),
         ]
     )
 
-    # Instantiate the CNN builder
+    # # Instantiate the CNN builder
+    # cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
+
+    # # Build the PyTorch model
+    # model = cnn_builder.build()
+
+    # # Print the model architecture
+    # print("Built CNN model:")
+    # print(model)
+
+    # # Optional: export to ONNX
+    # onnx_path = cnn_builder.export_to_onnx(False)
+    # print(f"ONNX model saved at: {onnx_path}")
+
+    # print("CNN config to flat array")
+    # print(config.layers[0])  # this shows why 7 slots per layer is choosen
+    # print(flatten_cnn_config(config, 4))
+    # actions = flatten_cnn_config(config, 4)
+
+    # print(actions)
+
+    for layer in config.layers:
+        print(layer)
     cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
-
-    # Build the PyTorch model
     model = cnn_builder.build()
-
     # Print the model architecture
     print("Built CNN model:")
     print(model)
 
-    # Optional: export to ONNX
-    onnx_path = cnn_builder.export_to_onnx(False)
-    print(f"ONNX model saved at: {onnx_path}")
+    actions = [1, 2, 1, -1, -1, -1, 3, -1, 1]
+    arch_builder(actions, config)
 
-    print("CNN config to flat array")
-    print(config.layers[0])  # this shows why 7 slots per layer is choosen
-    print(flatten_cnn_config(config, 4))
+    print("the new config")
+
+    for layer in config.layers:
+        print(layer)
+
+    cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
+    model = cnn_builder.build()
+    # Print the model architecture
+    print("Built CNN model:")
+    print(model)
