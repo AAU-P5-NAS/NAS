@@ -138,7 +138,7 @@ class MetrcicsEvaluator:
                 for _ in range(iterations):
                     _ = model(dummy_input)
 
-        end_time: float = time.time()
+        end_time: float = time.perf_counter()
         avg_runtime: float = (end_time - start_time) / iterations
         return avg_runtime
 
