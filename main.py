@@ -5,7 +5,7 @@ from src.classification_module.train import Trainer
 from src.classification_module.metrics import Metrics
 from rich.console import Console
 
-from src.utils.CNNBuilder import (
+from src.utils.cnn_builder import (
     CNNBuilder,
     NetworkConfig,
     LayerConfig,
@@ -21,7 +21,7 @@ from src.utils.CNNBuilder import (
 def main():
     # 1. Load data
     importer = DataImporter()
-    dataloader = importer.get_as_cnn(batch_size=512, test_split=0.2)
+    loader_tuple = importer.get_as_cnn(batch_size=512, test_split=0.2)
 
     console = Console()
 
@@ -65,7 +65,7 @@ def main():
 
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    trainer = Trainer(dataloader, model, loss_fn, optimizer)
+    trainer = Trainer(loader_tuple, model, loss_fn, optimizer)
 
     # 5. Training loop
     num_epochs = 1

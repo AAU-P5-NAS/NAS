@@ -3,9 +3,9 @@ from __future__ import annotations
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
-from typing import Any, Dict, Tuple, Optional, List
+from typing import Any, Dict, Tuple, Optional
 from pydantic import BaseModel as type_check
-from utils.CNNBuilder import (
+from utils.network_utils import (
     LayerType,
     OutChannels,
     KernelSize,
@@ -58,7 +58,7 @@ class CustomEnv(gym.Env, type_check):
         output_actions = (
             len(standard_actions)
             + len(LayerType)
-            + (self.max_layers - 1)  # One for each index
+            + (self.max_layers - 1)  # One for each index (which index to apply action on)
             + len(OutChannels)
             + len(KernelSize)
             + len(Stride)
