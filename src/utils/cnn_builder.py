@@ -48,6 +48,7 @@ class CNNBuilder:
         for layer in conv_pool_layers:
             if layer.layer_type is LayerType.CONV:
                 stride = layer.stride.to_stride() if layer.stride is not None else 1
+                print("STRIDESTRIDE", stride)
                 assert layer.kernel_size is not None
                 kernel = layer.kernel_size.to_kernel()
                 assert kernel is not None  #
@@ -69,6 +70,8 @@ class CNNBuilder:
                 assert layer.activation is not None
                 layers.append(layer.activation.to_module())
                 current_in_channels = out_ch
+                print("type of layer is Conv", type(layer))
+                print("h, w, kernel, stride", h, w, kernel, stride)
                 h, w = update_spatial_dims(h, w, kernel, stride, padding)
 
             elif layer.layer_type is LayerType.POOL:
@@ -86,6 +89,8 @@ class CNNBuilder:
                     layers.append(nn.AvgPool2d(kernel, stride))
 
                 assert stride is not None
+                print("type of layer is Pool", type(layer))
+                print("h, w, kernel, stride", h, w, kernel, stride)
                 h, w = update_spatial_dims(h, w, kernel, stride)
 
             print("current dimensions", h, w)
@@ -102,7 +107,7 @@ class CNNBuilder:
             assert layer.activation is not None
             layers.append(layer.activation.to_module())
             in_features = layer.linear_units.to_units()
-
+            print("type of layer is Linear", type(layer))
             print("current dimensions", in_features)
 
         layers.append(nn.Linear(in_features, self.num_classes))

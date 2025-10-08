@@ -2,6 +2,7 @@ import sys
 import os
 import pytest
 import torch.nn as nn
+import onnx
 
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -85,8 +86,9 @@ def test_invalid_layer_order_raises_error():
         )
 
 
-""" @pytest.mark.parametrize("save_separate", [True, False])
+@pytest.mark.parametrize("save_separate", [True, False])
 def test_onnx_export(valid_rl_config, tmp_path, save_separate):
+    """Test ONNX export works and creates a valid file"""
     builder = CNNBuilder(valid_rl_config)
     builder.build()
 
@@ -98,7 +100,6 @@ def test_onnx_export(valid_rl_config, tmp_path, save_separate):
     onnx.checker.check_model(model)
 
     os.remove(path)
- """
 
 
 def test_onnx_export_raises_CNNExportError(valid_rl_config):

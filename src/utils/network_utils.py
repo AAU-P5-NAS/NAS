@@ -148,7 +148,6 @@ class NetworkConfig(BaseModel):
 def update_spatial_dims(
     h: int, w: int, kernel: int, stride: int, padding: int = 0
 ) -> Tuple[int, int]:
-    stride = Stride.to_stride(Stride(stride))
     h_new = (h + 2 * padding - kernel) // stride + 1
     w_new = (w + 2 * padding - kernel) // stride + 1
     return h_new, w_new
@@ -202,9 +201,9 @@ def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig)
 
     h, w = input_dims
     if layer.layer_type == LayerType.CONV:
-        h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.value)
+        h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.to_stride())
     elif layer.layer_type == LayerType.POOL:
-        h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.value)
+        h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.to_stride())
     return h, w
 
 
