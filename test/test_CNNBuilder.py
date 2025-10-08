@@ -12,34 +12,35 @@ from src.utils.CNNBuilder import (
     InvalidLayerConfigError,
     CNNExportError,
     InvalidLayerOrderError,
-    RLConfig,
-    CNNActionSpace,
+    NetworkConfig,
+    LayerConfig,
     LayerType,
     OutChannels,
     KernelSize,
     LinearUnits,
     ActivationFunction,
     PoolMode,
+    cnn_config_to_flatt,
 )
 
 
 @pytest.fixture
 def valid_rl_config():
     """Return a standard valid RLConfig."""
-    return RLConfig(
+    return NetworkConfig(
         layers=[
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.CONV,
                 out_channels=OutChannels.CH_16,
                 kernel_size=KernelSize.KS_3,
                 activation=ActivationFunction.RELU,
             ),
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.POOL,
                 pool_mode=PoolMode.MAX,
                 kernel_size=KernelSize.KS_1,
             ),
-            CNNActionSpace(
+            LayerConfig(
                 layer_type=LayerType.LINEAR,
                 linear_units=LinearUnits.LU_64,
                 activation=ActivationFunction.TANH,
@@ -61,7 +62,7 @@ def test_valid_cnn_build(valid_rl_config):
 def test_invalid_layer_config_raises_error():
     """Test CNNActionSpace raises InvalidLayerConfigError if conv layer missing kernel"""
     with pytest.raises(InvalidLayerConfigError):
-        CNNActionSpace(
+        LayerConfig(
             layer_type=LayerType.CONV,
             out_channels=OutChannels.CH_16,  # kernel_size is missing
         )
@@ -70,13 +71,13 @@ def test_invalid_layer_config_raises_error():
 def test_invalid_layer_order_raises_error():
     """Test RLConfig raises InvalidLayerOrderError if conv appears after linear"""
     with pytest.raises(InvalidLayerOrderError):
-        RLConfig(
+        NetworkConfig(
             layers=[
-                CNNActionSpace(
+                LayerConfig(
                     layer_type=LayerType.LINEAR,
                     linear_units=LinearUnits.LU_64,
                 ),
-                CNNActionSpace(
+                LayerConfig(
                     layer_type=LayerType.CONV,
                     out_channels=OutChannels.CH_16,
                     kernel_size=KernelSize.KS_3,
@@ -106,3 +107,18 @@ def test_onnx_export_raises_CNNExportError(valid_rl_config):
 
     with pytest.raises(CNNExportError):
         builder.export_to_onnx()
+
+
+@pytest.mark.parametrize("size", [3, 6])
+def test_cnn_config_to_flatt(valid_rl_config, size):
+    flatten = cnn_config_to_flatt(valid_rl_config, size)
+
+    assert len(flatten) == size * 7, f"Expected {size * 7}, got {len(flatten)}"
+    assert all(isinstance(x, int) for x in flatten)
+    assert all(x >= -1 for x in flatten)
+
+
+@pytest.mark.parametrize("size", [2])
+def test_cnn_config_to_flatt_fails(valid_rl_config, size):
+    with pytest.raises(ValueError):
+        cnn_config_to_flatt(valid_rl_config, size)
