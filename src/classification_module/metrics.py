@@ -127,7 +127,7 @@ class MetrcicsEvaluator:
         # Measure runtime
         if self.device.type == "cuda":
             torch.cuda.synchronize()  # Ensure GPU is ready (wait until prior scheduled tasks are done)
-            start_time: float = time.perf_counter()
+            start_time: float = time.perf_counter()  # Start timing
             with torch.no_grad():
                 for _ in range(iterations):
                     _ = model(dummy_input)
