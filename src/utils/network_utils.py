@@ -158,7 +158,7 @@ def get_latest_layer_index(observation: list[int]):
     """Look for the first occurrence of -1 in the observation array with form index 7, 14, 21 ..."""
     for i in range(0, len(observation), 7):
         if observation[i] == -1 and i != 0:
-            return i // 7
+            return i // 7 - 1
         elif observation[i] == -1 and i == 0:
             return None  # No layers defined yet
     return (len(observation) // 7) - 1  # All layers defined
