@@ -8,9 +8,14 @@ from src.utils.network_utils import (
     OutChannels,
     PoolMode,
     Stride,
+    InvalidLayerConfigError,
 )
 
 from src.utils.cnn_builder import CNNBuilder
+
+
+class InvalidArchitectureAction(ValueError):
+    pass
 
 
 def arch_builder(actions: list[int], partial_arch: NetworkConfig) -> NetworkConfig:
@@ -40,61 +45,71 @@ def arch_builder(actions: list[int], partial_arch: NetworkConfig) -> NetworkConf
         pass
 
 
-def remove_layer():
+def remove_layer(actions: list[int], partial_arch: NetworkConfig):
     raise NotImplementedError
 
 
-def modify_layer():
+def modify_layer(actions: list[int], partial_arch: NetworkConfig):
     raise NotImplementedError
 
 
 def add_layer(actions: list[int], partial_arch: NetworkConfig):
     try:
         lt = LayerType(actions[2])
-    except ValueError:
-        lt = None
-    try:
-        oc = OutChannels(actions[3])
-    except ValueError:
-        oc = None
-    try:
-        ks = KernelSize(actions[4])
-    except ValueError:
-        ks = None
-    try:
-        st = Stride(actions[5])
-    except ValueError:
-        st = None
-    try:
-        lu = LinearUnits(actions[6])
-    except ValueError:
-        lu = None
-    try:
-        pm = PoolMode(actions[7])
-    except ValueError:
-        pm = None
-    try:
-        act = ActivationFunction(actions[8])
-    except ValueError:
-        act = None
+        try:
+            oc = OutChannels(actions[3])
+        except ValueError:
+            oc = None
+        try:
+            ks = KernelSize(actions[4])
+        except ValueError:
+            ks = None
+        try:
+            st = Stride(actions[5])
+        except ValueError:
+            st = None
+        try:
+            lu = LinearUnits(actions[6])
+        except ValueError:
+            lu = None
+        try:
+            pm = PoolMode(actions[7])
+        except ValueError:
+            pm = None
+        try:
+            act = ActivationFunction(actions[8])
+        except ValueError:
+            act = None
 
-    layerConfig = LayerConfig(
-        layer_type=lt,
-        out_channels=oc,
-        kernel_size=ks,
-        stride=st,
-        linear_units=lu,
-        pool_mode=pm,
-        activation=act,
-    )
+        layerConfig = LayerConfig(
+            layer_type=lt,
+            out_channels=oc,
+            kernel_size=ks,
+            stride=st,
+            linear_units=lu,
+            pool_mode=pm,
+            activation=act,
+        )
+    except ValueError:
+        raise InvalidArchitectureAction("Cannot add a layer of type None")
 
-    partial_arch.layers.append(layerConfig)
-    return partial_arch
+    layer_idx = actions[1]
+    if layer_idx == len(partial_arch.layers):
+        partial_arch.layers.append(layerConfig)
+        return partial_arch
+    else:
+        partial_arch.layers.insert(layer_idx, layerConfig)
+
+        if check_compatibility(partial_arch):
+            return partial_arch
+        else:
+            raise InvalidLayerConfigError("The partial arch is not compatible")
 
 
-# ------------------------------------------------------------------------------------------------#
-# ------------------------------------------------------------------------------------------------#
-# ------------------------------------------------------------------------------------------------#
+def check_compatibility(partial_arch) -> bool:
+    raise NotImplementedError
+
+
 # ------------------------------------------------------------------------------------------------#
 # ------------------------------------------------------------------------------------------------#
 # ------------------------------------------------------------------------------------------------#
