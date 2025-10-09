@@ -47,9 +47,9 @@ partial_arch2 = NetworkConfig(
 empty_arch = NetworkConfig(layers=[])
 
 ## [action, layerIdx, layerType, outCh, kernelSize, stride, linearU,  poolMode, actFun]
-empty_arch_actions = [1, 0, 0, 0, 1, -1, -1, -1, 0]  # add conv layer
-partial_arch1_actions = [1, 2, 1, -1, -1, -1, 3, -1, 1]  # add linear layer
-partial_arch2_actions = [1, 1, 2, -1, 0, -1, -1, 0, 3]  # add pool layer
+empty_arch_actions = [2, 0, 0, 0, 1, -1, -1, -1, 0]  # add conv layer
+partial_arch1_actions = [2, 2, 1, -1, -1, -1, 3, -1, 1]  # add linear layer
+partial_arch2_actions = [2, 1, 2, -1, 0, -1, -1, 0, 3]  # add pool layer
 
 
 @pytest.mark.parametrize(

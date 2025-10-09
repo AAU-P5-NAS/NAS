@@ -23,18 +23,32 @@ def arch_builder(actions: list[int], partial_arch: NetworkConfig) -> NetworkConf
     the actions must be in the following order, otherwise, the method will fail when calling .build() on the constructed Network
     [action, layerIdx, layerType, outCh, kernelSize, stride, linearU,  poolMode, actFun]
 
-    Also, currently it only append the layer at the end so it makes no use of "action" and "layerIdx"
+    Also, currently it only append the layer at the end.
 
     """
     if actions[0] == 0:
+        # remove layer
         pass
     elif actions[0] == 1:
+        # modify layer
         pass
     elif actions[0] == 2:
-        pass
+        # add layer
+        return add_layer(actions, partial_arch)
     elif actions[0] == 3:
+        # no oberation
         pass
 
+
+def remove_layer():
+    raise NotImplementedError
+
+
+def modify_layer():
+    raise NotImplementedError
+
+
+def add_layer(actions: list[int], partial_arch: NetworkConfig):
     try:
         lt = LayerType(actions[2])
     except ValueError:
@@ -78,18 +92,6 @@ def arch_builder(actions: list[int], partial_arch: NetworkConfig) -> NetworkConf
     return partial_arch
 
 
-def remove_layer():
-    raise NotImplementedError
-
-
-def modify_layer():
-    raise NotImplementedError
-
-
-def add_layer():
-    raise NotImplementedError
-
-
 # ------------------------------------------------------------------------------------------------#
 # ------------------------------------------------------------------------------------------------#
 # ------------------------------------------------------------------------------------------------#
@@ -110,11 +112,6 @@ if __name__ == "__main__":
             LayerConfig(
                 layer_type=LayerType.POOL, pool_mode=PoolMode.MAX, kernel_size=KernelSize.KS_1
             ),
-            #     LayerConfig(
-            #         layer_type=LayerType.LINEAR,
-            #         linear_units=LinearUnits.LU_64,
-            #         activation=ActivationFunction.TANH,
-            #     ),
         ]
     )
 
