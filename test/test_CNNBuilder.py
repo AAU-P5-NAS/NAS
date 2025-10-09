@@ -19,6 +19,7 @@ from src.utils.network_utils import (
     InvalidLayerConfigError,
     InvalidLayerOrderError,
     CNNExportError,
+    Stride,
 )
 
 from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config, arch_builder
@@ -124,7 +125,6 @@ def test_cnn_config_to_flatt_fails(valid_rl_config, size):
         flatten_cnn_config(valid_rl_config, size)
 
 
-# [action, layerIdx, layerType, outCh, kernelSize, stride, linearU,  poolMode, actFun]
 partial_arch1 = NetworkConfig(
     layers=[
         LayerConfig(
@@ -137,18 +137,65 @@ partial_arch1 = NetworkConfig(
     ]
 )
 
+partial_arch2 = NetworkConfig(
+    layers=[
+        LayerConfig(
+            layer_type=LayerType.CONV,
+            out_channels=OutChannels.CH_16,
+            kernel_size=KernelSize.KS_3,
+            activation=ActivationFunction.RELU,
+        ),
+    ]
+)
+
 empty_arch = NetworkConfig(layers=[])
 
-
-partial_arch1_actions = [1, 2, 1, -1, -1, -1, 3, -1, 1]
-empty_arch_actions = [1, 0, 0, 0, 1, -1, -1, -1, 0]
+## [action, layerIdx, layerType, outCh, kernelSize, stride, linearU,  poolMode, actFun]
+empty_arch_actions = [1, 0, 0, 0, 1, -1, -1, -1, 0]  # add conv layer
+partial_arch1_actions = [1, 2, 1, -1, -1, -1, 3, -1, 1]  # add linear layer
+partial_arch2_actions = [1, 1, 2, -1, 0, -1, -1, 0, 3]  # add pool layer
 
 
 @pytest.mark.parametrize(
     "actions, partial_arch",
-    [(partial_arch1_actions, partial_arch1), (empty_arch_actions, empty_arch)],
+    [
+        (empty_arch_actions, empty_arch),
+        (partial_arch1_actions, partial_arch1),
+        (partial_arch2_actions, partial_arch2),
+    ],
 )
 def test_arch_builder_given_valid_input(actions: list[int], partial_arch: NetworkConfig):
     old_arhc = copy.deepcopy(partial_arch)
     new_arch = arch_builder(actions, partial_arch)
-    assert len(old_arhc.layers) + 1 == len(new_arch.layers)
+    assert len(new_arch.layers) == len(old_arhc.layers) + 1
+
+    new_layer = new_arch.layers[-1]
+
+    assert new_layer.layer_type is LayerType(actions[2])
+
+    if actions[3] == -1:
+        assert new_layer.out_channels is None
+    else:
+        assert new_layer.out_channels is OutChannels(actions[3])
+
+    if actions[4] == -1:
+        assert new_layer.kernel_size is None
+    else:
+        assert new_layer.kernel_size is KernelSize(actions[4])
+
+    if actions[5] == -1:
+        assert new_layer.stride is None
+    else:
+        assert new_layer.stride is Stride(actions[5])
+
+    if actions[6] == -1:
+        assert new_layer.linear_units is None
+    else:
+        assert new_layer.linear_units is LinearUnits(actions[6])
+
+    if actions[7] == -1:
+        assert new_layer.pool_mode is None
+    else:
+        assert new_layer.pool_mode is PoolMode(actions[7])
+
+    assert new_layer.activation is ActivationFunction(actions[8])

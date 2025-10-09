@@ -294,7 +294,8 @@ if __name__ == "__main__":
     print(model)
 
     actions = [1, 2, 1, -1, -1, -1, 3, -1, 1]
-    arch_builder(actions, config)
+    action1 = [1, 1, 2, -1, 0, -1, -1, 0, 3]
+    arch_builder(action1, config)
 
     print("the new config")
 
