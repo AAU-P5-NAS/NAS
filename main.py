@@ -4,6 +4,7 @@ from src.data_module.importer import DataImporter
 from src.classification_module.train import Trainer
 from src.classification_module.metrics import Metrics
 from rich.console import Console
+from src.classification_module.reward import RewardCalculator
 
 from src.utils.CNNBuilder import (
     CNNBuilder,
@@ -21,7 +22,7 @@ from src.utils.CNNBuilder import (
 def main():
     # 1. Load data
     importer = DataImporter()
-    train_loader, test_loader = importer.get_as_cnn(batch_size=512)
+    dataloader = importer.get_as_cnn(batch_size=512, test_split=0.2)
 
     console = Console()
 
@@ -76,13 +77,17 @@ def main():
 
     end_time = time.time()
     training_time = end_time - start_time
-
-    metrics: Metrics = trainer.test()
+    with console.status("[bold blue]Evaluating CNN on test set..."):
+        metrics: Metrics = trainer.test()
+    console.print("[bold blue]CNN training complete![/bold blue]")
     metrics.training_time = training_time
     console.print(f"[bold green]Epoch {epoch + 1} complete![/bold green]")
     console.print(f"[bold yellow]Test Metrics:[/bold yellow] {metrics.model_dump()}")
 
-    console.print("[bold blue]CNN training complete![/bold blue]")
+    rewardCalculator = RewardCalculator()
+    reward: float = rewardCalculator.compute_reward(metrics)
+
+    console.print(f"[bold magenta]Reward:[/bold magenta] {reward}")
 
 
 if __name__ == "__main__":
