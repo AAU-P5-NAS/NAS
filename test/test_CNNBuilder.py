@@ -7,21 +7,21 @@ import onnx
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.utils.CNNBuilder import (
-    CNNBuilder,
-    InvalidLayerConfigError,
-    CNNExportError,
-    InvalidLayerOrderError,
-    NetworkConfig,
-    LayerConfig,
+from src.utils.network_utils import (
     LayerType,
     OutChannels,
     KernelSize,
     LinearUnits,
     ActivationFunction,
     PoolMode,
-    cnn_config_to_flatt,
+    NetworkConfig,
+    LayerConfig,
+    InvalidLayerConfigError,
+    InvalidLayerOrderError,
+    CNNExportError,
 )
+
+from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
 
 
 @pytest.fixture
@@ -111,7 +111,7 @@ def test_onnx_export_raises_CNNExportError(valid_rl_config):
 
 @pytest.mark.parametrize("size", [3, 6])
 def test_cnn_config_to_flatt(valid_rl_config, size):
-    flatten = cnn_config_to_flatt(valid_rl_config, size)
+    flatten = flatten_cnn_config(valid_rl_config, size)
 
     assert len(flatten) == size * 7, f"Expected {size * 7}, got {len(flatten)}"
     assert all(isinstance(x, int) for x in flatten)
@@ -121,4 +121,4 @@ def test_cnn_config_to_flatt(valid_rl_config, size):
 @pytest.mark.parametrize("size", [2])
 def test_cnn_config_to_flatt_fails(valid_rl_config, size):
     with pytest.raises(ValueError):
-        cnn_config_to_flatt(valid_rl_config, size)
+        flatten_cnn_config(valid_rl_config, size)
