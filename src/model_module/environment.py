@@ -1,12 +1,20 @@
 from __future__ import annotations
+import time
 
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
-from typing import Any, Dict, Tuple, Optional
-from pydantic import BaseModel as type_check
-from utils.network_utils import (
+from typing import Any, Dict, List, Tuple, Optional
+import torch
+from src.model_module.action_builder import ActionBuilder
+from src.classification_module.metrics import Metrics
+from src.classification_module.reward import RewardCalculator
+from src.classification_module.train import Trainer
+from src.data_module.importer import DataImporter
+from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
+from src.utils.network_utils import (
     LayerType,
+    NetworkConfig,
     OutChannels,
     KernelSize,
     Stride,
@@ -14,6 +22,9 @@ from utils.network_utils import (
     PoolMode,
     ActivationFunction,
 )
+from src.utils.arch_builder import arch_builder
+from torch.nn import CrossEntropyLoss
+from rich.console import Console
 
 standard_actions = {
     "REMOVE_LAYER",
@@ -23,7 +34,7 @@ standard_actions = {
 }
 
 
-class CustomEnv(gym.Env, type_check):
+class CustomEnv(gym.Env):
     """
     🎯 What skill should the agent learn?
         Training other agents.
@@ -50,9 +61,12 @@ class CustomEnv(gym.Env, type_check):
 
         self.render_mode = render_mode
         self.max_layers = max_layers
-
+        self.data_importer = DataImporter(max_per_class=30)
+        self.loader_tuple = self.data_importer.get_as_cnn(batch_size=64, test_split=0.2)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
+        self.console = Console()
+        self.current_network_config = NetworkConfig(layers=[])
 
     def _get_action_space(self) -> spaces.Space:
         output_actions = (
@@ -71,6 +85,7 @@ class CustomEnv(gym.Env, type_check):
 
     def _get_observation_space(self) -> spaces.Space:
         observation_space_vector: List[int] = []
+        # Add +1 to each enum length to include an "empty/unused" value
         observation_space_vector.append(len(LayerType))
         observation_space_vector.append(len(OutChannels))
         observation_space_vector.append(len(KernelSize))
@@ -82,13 +97,12 @@ class CustomEnv(gym.Env, type_check):
 
         return spaces.MultiDiscrete(observation_space_vector)
 
-    def _get_observation(self):
+    def _get_observation(self) -> List[int]:
         """Retrieve state from other agent.
-
         Returns:
-
         """
-        return []
+        flattened_obs = flatten_cnn_config(self.current_network_config, self.max_layers)
+        return flattened_obs
 
     def _get_info(self) -> Dict[str, Any]:
         """Compute auxiliary information for debugging.
@@ -118,7 +132,7 @@ class CustomEnv(gym.Env, type_check):
 
         return observation, info
 
-    def step(self, action: List[float]) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
+    def step(self, action_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
 
         Args:
@@ -127,25 +141,64 @@ class CustomEnv(gym.Env, type_check):
         Returns:
             tuple: (observation, reward, terminated, truncated, info)
         """
+        # update the current observation
+        action_builder = ActionBuilder(10, "add_layer_sequential")
+        obs = self._get_observation()
+        action = action_builder.build_action(action_output=action_logits, observation=obs)
+        network_configuration = arch_builder(
+            actions=action, partial_arch=self.current_network_config
+        )
+        self.current_network_config = network_configuration
+
+        cnn_builder = CNNBuilder(rl_config=network_configuration)
+        architecture = cnn_builder.build()
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        architecture.to(device)
+        optimizer = torch.optim.SGD(architecture.parameters(), lr=0.01, momentum=0.9)
+        trainer = Trainer(
+            dataloaders=self.loader_tuple,
+            model=architecture,
+            loss_function=CrossEntropyLoss(),
+            optimizer=optimizer,
+        )
+
+        num_epochs = 5
+        start_time = time.time()
+        for epoch in range(num_epochs):
+            with self.console.status(f"[bold blue]Training CNN, epoch {epoch + 1}/{num_epochs}"):
+                trainer.train()
+        end_time = time.time()
+        training_time = end_time - start_time
+        self.console.log(
+            f"[bold green]Training completed in {training_time:.2f} seconds[/bold green]"
+        )
+        with self.console.status("[bold blue]Evaluating CNN on test set..."):
+            metrics: Metrics = trainer.test()
+        # self.console.log(f"[bold green]Evaluation completed. Metrics: {metrics}[/bold green]")
+        metrics.training_time = training_time
+        # self.console.print(f"[bold yellow]Test Metrics:[/bold yellow] {metrics.model_dump()}")
 
         terminated = self._should_terminate()
         truncated = self._has_truncated()
 
-        reward = self._calculate_reward()
-
-        observation = self._get_observation()
+        reward = self._calculate_reward(metrics)
         info = self._get_info()
 
-        return observation, reward, terminated, truncated, info
+        obs = self._get_observation()
+        return obs, reward, terminated, truncated, info
 
     def _should_terminate(self) -> bool:
+        return False
         raise NotImplementedError
 
     def _has_truncated(self) -> bool:
+        return False
         raise NotImplementedError
 
-    def _calculate_reward(self) -> float:
-        reward: float = 0
+    def _calculate_reward(self, metrics: Metrics) -> float:
+        rewardCalculator = RewardCalculator()
+        reward: float = rewardCalculator.compute_reward(metrics)
+        self.console.print(f"[bold magenta]Reward:[/bold magenta] {reward}")
         return reward
 
     def render(self):

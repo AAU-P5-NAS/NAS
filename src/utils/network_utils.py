@@ -23,85 +23,95 @@ class CNNExportError(Exception):
 
 
 class StandardAction(enum.Enum):
-    REMOVE_LAYER = 0
-    MODIFY_LAYER = 1
-    ADD_LAYER = 2
-    DO_NOTHING = 3
+    NONE = 0
+    REMOVE_LAYER = 1
+    MODIFY_LAYER = 2
+    ADD_LAYER = 3
 
 
 class LayerType(enum.Enum):
-    CONV = 0  # "conv"
-    LINEAR = 1
-    POOL = 2  # "pool"
+    NONE = 0
+    CONV = 1  # "conv"
+    LINEAR = 2
+    POOL = 3  # "pool"
 
 
 class LinearUnits(enum.IntEnum):
-    LU_8 = 0  # 8
-    LU_16 = 1  # 16
-    LU_32 = 2  # 32
-    LU_64 = 3  # 64
-    LU_128 = 4  # 128
-    LU_256 = 5  # 256
-    LU_512 = 6  # 512
+    NONE = 0
+    LU_8 = 1  # 8
+    LU_16 = 2  # 16
+    LU_32 = 3  # 32
+    LU_64 = 4  # 64
+    LU_128 = 5  # 128
+    LU_256 = 6  # 256
+    LU_512 = 7  # 512
 
     def to_units(self):
-        mapping = [8, 16, 32, 64, 128, 256, 512]
+        mapping = [None, 8, 16, 32, 64, 128, 256, 512]
         return mapping[self.value]
 
 
 class OutChannels(enum.IntEnum):
-    CH_16 = 0  # 16
-    CH_32 = 1  # 32
-    CH_64 = 2  # 64
-    CH_128 = 3  # 128
+    NONE = 0
+    CH_16 = 1  # 16
+    CH_32 = 2  # 32
+    CH_64 = 3  # 64
+    CH_128 = 4  # 128
 
     def to_channels(self):
-        mapping = [16, 32, 64, 128]
+        mapping = [None, 16, 32, 64, 128]
         return mapping[self.value]
 
 
 class KernelSize(enum.IntEnum):
-    KS_1 = 0  # 1
-    KS_3 = 1  # 3
-    KS_5 = 2  # 5
+    NONE = 0
+    KS_1 = 1  # 1
+    KS_3 = 2  # 3
+    KS_5 = 3  # 5
 
     def to_kernel(self):
-        mapping = [1, 3, 5]
+        mapping = [None, 1, 3, 5]
         return mapping[self.value]
 
 
 class Stride(enum.IntEnum):
-    S_1 = 0  # 1
-    S_2 = 1  # 2
+    NONE = 0
+    S_1 = 1  # 1
+    S_2 = 2  # 2
 
     def to_stride(self):
-        mapping = [1, 2]
+        mapping = [None, 1, 2]
         return mapping[self.value]
 
 
 class PoolMode(enum.Enum):
-    MAX = 0  # "max"
-    AVG = 1  # "avg"
+    NONE = 0
+    MAX = 1  # "max"
+    AVG = 2  # "avg"
 
     def to_pmode(self):
-        mapping = ["max", "avg"]
+        mapping = [None, "max", "avg"]
         return mapping[self.value]
 
 
 class ActivationFunction(enum.Enum):
-    RELU = 0  # "relu"
-    TANH = 1  # "tanh"
-    SOFTMAX = 2  # "softmax"
-    NONE = 3  # "none"
+    NONE = 0  # "none"
+    RELU = 1  # "relu"
+    TANH = 2  # "tanh"
+    SOFTMAX = 3  # "softmax"
 
     def to_module(self) -> nn.Module:
         mapping = {
-            0: lambda: nn.ReLU(),
-            1: lambda: nn.Tanh(),
-            2: lambda: nn.Softmax(dim=1),
-            3: lambda: nn.Identity(),
+            0: lambda: nn.Identity(),
+            1: lambda: nn.ReLU(),
+            2: lambda: nn.Tanh(),
+            3: lambda: nn.Softmax(dim=1),
         }
         return mapping[self.value]()
+
+
+def get_none_value_for_enum(enum_cls):
+    return len(enum_cls)
 
 
 class LayerConfig(BaseModel):
@@ -154,11 +164,11 @@ def update_spatial_dims(
 
 
 def get_latest_layer_index(observation: list[int]):
-    """Look for the first occurrence of -1 in the observation array with form index 7, 14, 21 ..."""
+    """Look for the first occurrence of 0 in the observation array with form index 7, 14, 21 ..."""
     for i in range(0, len(observation), 7):
-        if observation[i] == -1 and i != 0:
+        if observation[i] == 0 and i != 0:
             return i // 7 - 1
-        elif observation[i] == -1 and i == 0:
+        elif observation[i] == 0 and i == 0:
             return None  # No layers defined yet
     return (len(observation) // 7) - 1  # All layers defined
 
@@ -170,14 +180,14 @@ def get_layer_from_index(observation: list[int], index: int) -> LayerConfig:
         raise ValueError(f"Layer index {index} is out of bounds or undefined in the observation.")
     return LayerConfig(
         layer_type=LayerType(observation[start]),
-        out_channels=OutChannels(observation[start + 1]) if observation[start + 1] != -1 else None,
-        kernel_size=KernelSize(observation[start + 2]) if observation[start + 2] != -1 else None,
-        stride=Stride(observation[start + 3]) if observation[start + 3] != -1 else None,
-        pool_mode=PoolMode(observation[start + 4]) if observation[start + 4] != -1 else None,
+        out_channels=OutChannels(observation[start + 1]) if observation[start + 1] != 0 else None,
+        kernel_size=KernelSize(observation[start + 2]) if observation[start + 2] != 0 else None,
+        stride=Stride(observation[start + 3]) if observation[start + 3] != 0 else None,
+        pool_mode=PoolMode(observation[start + 4]) if observation[start + 4] != 0 else None,
         activation=ActivationFunction(observation[start + 5])
-        if observation[start + 5] != -1
+        if observation[start + 5] != 0
         else None,
-        linear_units=LinearUnits(observation[start + 6]) if observation[start + 6] != -1 else None,
+        linear_units=LinearUnits(observation[start + 6]) if observation[start + 6] != 0 else None,
     )
 
 
@@ -212,7 +222,7 @@ def get_output_dimensions(observation: list[int]):
     """Calculate the output dimensions after applying all layers in the observation."""
     input_dims = (28, 28)  # Assuming starting with 28x28 input
     for i in range(0, len(observation), 7):
-        if observation[i] == -1:
+        if observation[i] == 0:
             break  # No more layers defined
         layer = get_layer_from_index(observation, i // 7)
         input_dims = calculate_output_dimensions(input_dims, layer)
@@ -236,20 +246,20 @@ def get_valid_strides(
 
 
 def get_latest_layer(observation: list[int]):
-    """Look for the first occurrence of -1 in the observation array with form index 7, 14, 21 ..."""
+    """Look for the first occurrence of 0 in the observation array with form index 7, 14, 21 ..."""
     for i in range(0, len(observation), 7):
-        if observation[i] == -1 and i != 0:
+        if observation[i] == 0 and i != 0:
             return LayerConfig(
                 layer_type=LayerType(observation[i]),
-                out_channels=OutChannels(observation[i + 1]) if observation[i + 1] != -1 else None,
-                kernel_size=KernelSize(observation[i + 2]) if observation[i + 2] != -1 else None,
-                stride=Stride(observation[i + 3]) if observation[i + 3] != -1 else None,
-                pool_mode=PoolMode(observation[i + 4]) if observation[i + 4] != -1 else None,
+                out_channels=OutChannels(observation[i + 1]) if observation[i + 1] != 0 else None,
+                kernel_size=KernelSize(observation[i + 2]) if observation[i + 2] != 0 else None,
+                stride=Stride(observation[i + 3]) if observation[i + 3] != 0 else None,
+                pool_mode=PoolMode(observation[i + 4]) if observation[i + 4] != 0 else None,
                 activation=ActivationFunction(observation[i + 5])
-                if observation[i + 5] != -1
+                if observation[i + 5] != 0
                 else None,
-                linear_units=LinearUnits(observation[i + 6]) if observation[i + 6] != -1 else None,
+                linear_units=LinearUnits(observation[i + 6]) if observation[i + 6] != 0 else None,
             )
             return i // 7
-        elif observation[i] == -1 and i == 0:
+        elif observation[i] == 0 and i == 0:
             return None  # No layers defined yet

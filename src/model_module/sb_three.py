@@ -1,4 +1,4 @@
-from environment import CustomEnv
+from src.model_module.environment import CustomEnv
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy, ActorCriticPolicy
 
@@ -8,7 +8,7 @@ class SBThreeAgent:
         self,
         policy_algorithm_class: type[BaseAlgorithm],
         policy: type[BasePolicy] = ActorCriticPolicy,
-        learning_rate: float = 0.001,
+        learning_rate: float = 0.005,
     ):
         self.env: CustomEnv = CustomEnv()
         self.model = policy_algorithm_class(

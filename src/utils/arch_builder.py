@@ -32,17 +32,17 @@ def arch_builder(actions: list[int], partial_arch: NetworkConfig) -> NetworkConf
 
     """
     if actions[0] == 0:
+        # no oberation
+        return partial_arch
+    if actions[0] == 1:
         # remove layer
         pass
-    elif actions[0] == 1:
+    elif actions[0] == 2:
         # modify layer
         pass
-    elif actions[0] == 2:
+    elif actions[0] == 3:
         # add layer
         return add_layer(actions, partial_arch)
-    elif actions[0] == 3:
-        # no oberation
-        pass
 
 
 def remove_layer(actions: list[int], partial_arch: NetworkConfig):
@@ -93,13 +93,17 @@ def add_layer(actions: list[int], partial_arch: NetworkConfig):
     except ValueError:
         raise InvalidArchitectureAction("Cannot add a layer of type None")
 
+    partial_arch.layers.append(layerConfig)
+
     layer_idx = actions[1]
+    print("layer_idx", layer_idx)
+    print("len(partial_arch.layers)", len(partial_arch.layers))
     if layer_idx == len(partial_arch.layers):
         partial_arch.layers.append(layerConfig)
         return partial_arch
     else:
         partial_arch.layers.insert(layer_idx, layerConfig)
-
+        return partial_arch
         if check_compatibility(partial_arch):
             return partial_arch
         else:
@@ -135,20 +139,12 @@ if __name__ == "__main__":
     cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
     model = cnn_builder.build()
     # Print the model architecture
-    print("Built CNN model:")
-    print(model)
 
-    actions = [1, 2, 1, -1, -1, -1, 3, -1, 1]
-    action1 = [1, 1, 2, -1, 0, -1, -1, 0, 3]
+    actions = [1, 2, 1, 0, 0, 0, 3, 0, 1]
+    action1 = [1, 1, 2, 0, 1, 0, 0, 1, 3]
     arch_builder(action1, config)
 
-    print("the new config")
-
     for layer in config.layers:
-        print(layer)
-
-    cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
-    model = cnn_builder.build()
-    # Print the model architecture
-    print("Built CNN model:")
-    print(model)
+        cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
+        model = cnn_builder.build()
+        # Print the model architecture
