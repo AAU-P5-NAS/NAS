@@ -21,9 +21,12 @@ class RewardCalculator:
         """Compute reward as weighted combination of metrics."""
 
         reward = 0.0
+        for weight in self.weights.model_dump().values():
+            if weight < 0:
+                raise ValueError("Weights must be non-negative")
 
         total_weight: float = sum(self.weights.model_dump().values())
-        if total_weight > 0:
+        if total_weight != 1.0 and total_weight > 0:
             normalized_weights: dict[str, float] = {
                 metric: weight / total_weight
                 for metric, weight in self.weights.model_dump().items()
