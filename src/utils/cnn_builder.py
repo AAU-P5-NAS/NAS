@@ -48,7 +48,7 @@ class CNNBuilder:
         for layer in conv_pool_layers:
             if layer.layer_type is LayerType.CONV:
                 stride = layer.stride.to_stride() if layer.stride is not None else 1
-                print("STRIDESTRIDE", stride)
+                # print("STRIDESTRIDE", stride)
                 assert layer.kernel_size is not None
                 kernel = layer.kernel_size.to_kernel()
                 assert kernel is not None  #
@@ -57,7 +57,6 @@ class CNNBuilder:
                 out_ch = layer.out_channels.to_channels()
                 assert out_ch is not None
                 assert current_in_channels is not None
-
                 layers.append(
                     nn.Conv2d(
                         in_channels=current_in_channels,
@@ -70,8 +69,8 @@ class CNNBuilder:
                 assert layer.activation is not None
                 layers.append(layer.activation.to_module())
                 current_in_channels = out_ch
-                print("type of layer is Conv", type(layer))
-                print("h, w, kernel, stride", h, w, kernel, stride)
+                # print("type of layer is Conv", type(layer))
+                # print("h, w, kernel, stride", h, w, kernel, stride)
                 h, w = update_spatial_dims(h, w, kernel, stride, padding)
 
             elif layer.layer_type is LayerType.POOL:
@@ -89,11 +88,11 @@ class CNNBuilder:
                     layers.append(nn.AvgPool2d(kernel, stride))
 
                 assert stride is not None
-                print("type of layer is Pool", type(layer))
-                print("h, w, kernel, stride", h, w, kernel, stride)
+                # print("type of layer is Pool", type(layer))
+                # print("h, w, kernel, stride", h, w, kernel, stride)
                 h, w = update_spatial_dims(h, w, kernel, stride)
 
-            print("current dimensions", h, w)
+            # print("current dimensions", h, w)
 
         layers.append(nn.Flatten())
         assert current_in_channels is not None
@@ -107,8 +106,8 @@ class CNNBuilder:
             assert layer.activation is not None
             layers.append(layer.activation.to_module())
             in_features = layer.linear_units.to_units()
-            print("type of layer is Linear", type(layer))
-            print("current dimensions", in_features)
+            # print("type of layer is Linear", type(layer))
+            # print("current dimensions", in_features)
 
         layers.append(nn.Linear(in_features, self.num_classes))
 
@@ -135,7 +134,7 @@ class CNNBuilder:
 
         os.makedirs("saved_models", exist_ok=True)
         full_path = os.path.join("saved_models", filename)
-        print("self.model", self.model)
+        # print("self.model", self.model)
         dummy_input = torch.randn(1, *input_size)
         # Suppress deprecation warnings for ONNX export. smthn about a new version of onnx exporter, but the current one still work
         with warnings.catch_warnings():
@@ -225,3 +224,4 @@ if __name__ == "__main__":
     print("CNN config to flat array")
     print(config.layers[0])  # this shows why 7 slots per layer is choosen
     print(flatten_cnn_config(config, 4))
+    actions = flatten_cnn_config(config, 4)

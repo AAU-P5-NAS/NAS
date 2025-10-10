@@ -4,7 +4,6 @@ import pytest
 import torch.nn as nn
 import onnx
 
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.utils.network_utils import (
