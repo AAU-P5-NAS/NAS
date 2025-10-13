@@ -96,8 +96,6 @@ def add_layer(actions: list[int], partial_arch: NetworkConfig):
     partial_arch.layers.append(layerConfig)
 
     layer_idx = actions[1]
-    print("layer_idx", layer_idx)
-    print("len(partial_arch.layers)", len(partial_arch.layers))
     if layer_idx == len(partial_arch.layers):
         partial_arch.layers.append(layerConfig)
         return partial_arch

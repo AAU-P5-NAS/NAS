@@ -93,7 +93,7 @@ class LogitSlices(BaseModel):
 
 class MaskContext(BaseModel):
     logits: np.ndarray
-    observation: list[int]
+    observation: np.ndarray
     slices: LogitSlices
     action_strategy: str
     sampling_strategy: Callable[[np.ndarray], int]

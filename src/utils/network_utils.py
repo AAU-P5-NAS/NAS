@@ -1,5 +1,6 @@
 import enum
 from typing import List, Optional, Tuple
+import numpy as np
 from pydantic import BaseModel, field_validator, model_validator
 import torch.nn as nn
 
@@ -163,7 +164,7 @@ def update_spatial_dims(
     return h_new, w_new
 
 
-def get_latest_layer_index(observation: list[int]):
+def get_latest_layer_index(observation: np.ndarray):
     """Look for the first occurrence of 0 in the observation array with form index 7, 14, 21 ..."""
     for i in range(0, len(observation), 7):
         if observation[i] == 0 and i != 0:
@@ -173,7 +174,7 @@ def get_latest_layer_index(observation: list[int]):
     return (len(observation) // 7) - 1  # All layers defined
 
 
-def get_layer_from_index(observation: list[int], index: int) -> LayerConfig:
+def get_layer_from_index(observation: np.ndarray, index: int) -> LayerConfig:
     """Retrieve the LayerConfig corresponding to a given layer index in the observation."""
     start = index * 7
     if start >= len(observation) or observation[start] == -1:
@@ -218,7 +219,7 @@ def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig)
     return h, w
 
 
-def get_output_dimensions(observation: list[int]):
+def get_output_dimensions(observation: np.ndarray):
     """Calculate the output dimensions after applying all layers in the observation."""
     input_dims = (28, 28)  # Assuming starting with 28x28 input
     for i in range(0, len(observation), 7):
@@ -245,7 +246,7 @@ def get_valid_strides(
     return valid_strides
 
 
-def get_latest_layer(observation: list[int]):
+def get_latest_layer(observation: np.ndarray):
     """Look for the first occurrence of 0 in the observation array with form index 7, 14, 21 ..."""
     for i in range(0, len(observation), 7):
         if observation[i] == 0 and i != 0:

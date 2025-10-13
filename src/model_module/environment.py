@@ -99,12 +99,9 @@ class CustomEnv(gym.Env):
 
         return spaces.MultiDiscrete(observation_space_vector)
 
-    def _get_observation(self) -> List[int]:
-        """Retrieve state from other agent.
-        Returns:
-        """
+    def _get_observation(self) -> np.ndarray:
         flattened_obs = flatten_cnn_config(self.current_network_config, self.max_layers)
-        return flattened_obs
+        return np.array(flattened_obs, dtype=np.float32)
 
     def _get_info(self) -> Dict[str, Any]:
         """Compute auxiliary information for debugging.
@@ -134,6 +131,7 @@ class CustomEnv(gym.Env):
         self.current_network_config = NetworkConfig(layers=[])
 
         observation = self._get_observation()
+        assert isinstance(observation, np.ndarray), f"obs must be numpy, got {type(observation)}"
         info = self._get_info()
 
         return observation, info
@@ -148,14 +146,14 @@ class CustomEnv(gym.Env):
             tuple: (observation, reward, terminated, truncated, info)
         """
         self.step_count += 1
-        self.console.print(
+        """ self.console.print(
             f"[bold cyan]Step {self.step_count}/{self.max_steps_per_episode}[/bold cyan] - Current layers: {len(self.current_network_config.layers)}"
-        )
+        ) """
 
         # Try to build action - if it fails, agent is done building
         action_builder = ActionBuilder(10, "add_layer_sequential")
         obs = self._get_observation()
-
+        assert isinstance(obs, np.ndarray), f"obs must be numpy, got {type(obs)}"
         try:
             action = action_builder.build_action(action_output=action_logits, observation=obs)
             # If action was successful, update the architecture
@@ -199,14 +197,17 @@ class CustomEnv(gym.Env):
             cnn_builder = CNNBuilder(rl_config=self.current_network_config)
             architecture = cnn_builder.build()
 
+            # Ensure a single explicit device and move the model BEFORE creating the optimizer.
+            # If the optimizer is created while params are on CPU, its state may be on CPU and cause
+            # CPU/GPU device-mismatch errors during training.
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            architecture.to(device)
+
             # Validate architecture has trainable parameters
             total_params = sum(p.numel() for p in architecture.parameters() if p.requires_grad)
             if total_params == 0:
                 self.console.print("[bold red]Architecture has no trainable parameters[/bold red]")
                 return -4.0
-
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            architecture.to(device)
 
             # Adaptive training setup based on network depth
             num_layers = len(self.current_network_config.layers)
@@ -218,19 +219,22 @@ class CustomEnv(gym.Env):
                 # Deep networks: lower LR, Adam optimizer for better convergence
                 lr = 0.001
                 optimizer = torch.optim.Adam(architecture.parameters(), lr=lr)
+
             trainer = Trainer(
                 dataloaders=self.loader_tuple,
                 model=architecture,
                 loss_function=CrossEntropyLoss(),
                 optimizer=optimizer,
+                device=device,
             )
+            print("I REACH THIS PLACE")
 
             # Adaptive epochs based on network complexity
             num_layers = len(self.current_network_config.layers)
             if num_layers <= 2:
-                num_epochs = 3  # Shallow networks train quickly
+                num_epochs = 10  # Shallow networks train quickly
             else:
-                num_epochs = 5  # Deep networks need more epochs
+                num_epochs = 15  # Deep networks need more epochs
             start_time = time.time()
 
             # Train for fixed number of epochs with timeout protection
@@ -263,7 +267,7 @@ class CustomEnv(gym.Env):
                     f"[bold red]Training took too long ({training_time:.1f}s) - likely hung[/bold red]"
                 )
                 return -3.0  # Penalty for hung training
-            elif training_time < 0.3:  # Less than 300ms suggests failed training
+            elif training_time < 0.005:  # Less than 300ms suggests failed training
                 self.console.print("[bold yellow]Training too fast - likely failed[/bold yellow]")
                 return -2.0  # Penalty for failed training
 
