@@ -49,7 +49,7 @@ Metric_literal_no_test_loss = Literal[
 class MetrcicsEvaluator:
     def __init__(
         self,
-        device: torch.device = torch.device("cpu"),
+        device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         average: Optional[Literal["micro", "macro", "weighted", "none"]] = "macro",
     ):
         task: str = "multiclass"

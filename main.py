@@ -1,20 +1,7 @@
 import os
-
-import torch
 from src.model_module.sb_three import SBThreeAgent
 from rich.console import Console
-from stable_baselines3 import A2C  # Add this import
-
-print("torch.version:", torch.__version__)
-print("cuda available:", torch.cuda.is_available())
-if torch.cuda.is_available():
-    print("cuda device count:", torch.cuda.device_count())
-    print("current device:", torch.cuda.current_device())
-    try:
-        print("device name:", torch.cuda.get_device_name(0))
-    except Exception as e:
-        print("get_device_name failed:", e)
-print("CUDA_VISIBLE_DEVICES:", os.environ.get("CUDA_VISIBLE_DEVICES"))
+from stable_baselines3 import PPO  # Add this import
 
 console = Console()
 
@@ -22,12 +9,19 @@ console = Console()
 def main():
     console.print("[bold blue]Initializing NAS RL Agent...[/bold blue]")
 
-    # Initialize agent with PPO algorithm
-    agent = SBThreeAgent(policy_algorithm_class=A2C)
+    # Delete old models to force fresh start
+    import shutil
 
-    # Train the agent (reduced for testing reward changes)
+    if os.path.exists("saved_models"):
+        shutil.rmtree("saved_models")
+        console.print("[yellow]Deleted old saved models[/yellow]")
+
+    # Initialize agent with PPO algorithm
+    agent = SBThreeAgent(policy_algorithm_class=PPO)
+
+    # Train the agent
     console.print("[bold green]Starting training...[/bold green]")
-    agent.train(total_timesteps=500)  # Reduced to see reward patterns faster
+    agent.train(total_timesteps=500)
 
     # Save the trained model
     agent.save_model()

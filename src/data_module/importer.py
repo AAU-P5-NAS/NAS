@@ -45,7 +45,7 @@ class DataImporter:
     def __init__(
         self,
         filepath: str = CSV_DEFAULT_PATH,
-        max_per_class: int | None = None,  # new argument
+        max_per_class: int | None = None,
     ):
         with console.status(f"[bold blue]Loading data from {filepath}..."):
             try:
@@ -54,6 +54,7 @@ class DataImporter:
                 raise CSVFilepathDoesntExist(filepath) from None
 
             data = data_file.values.astype("float32")
+            # Keep tensors on CPU - Trainer will move them to the correct device
             labels = torch.tensor(data[:, 0], dtype=torch.long)
             values = torch.tensor(data[:, 1:] / 255.0)
             values = values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W)

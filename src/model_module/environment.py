@@ -61,8 +61,10 @@ class CustomEnv(gym.Env):
 
         self.render_mode = render_mode
         self.max_layers = max_layers
-        self.max_steps_per_episode = 5  # Agent can take up to 5 actions per architecture
-        self.data_importer = DataImporter(max_per_class=50)
+        self.max_steps_per_episode = (
+            max_layers / 2
+        )  # (an action adds a layer and an activation function which itself is a layer)
+        self.data_importer = DataImporter(max_per_class=5000)
         self.loader_tuple = self.data_importer.get_as_cnn(batch_size=64, test_split=0.2)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
@@ -111,9 +113,7 @@ class CustomEnv(gym.Env):
         """
         return {}
 
-    def reset(
-        self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None
-    ) -> Tuple[Any, Dict[str, Any]]:
+    def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
         """Start a new episode.
 
         Args:
@@ -129,11 +129,8 @@ class CustomEnv(gym.Env):
         # Reset episode state
         self.step_count = 0
         self.current_network_config = NetworkConfig(layers=[])
-
         observation = self._get_observation()
-        assert isinstance(observation, np.ndarray), f"obs must be numpy, got {type(observation)}"
         info = self._get_info()
-
         return observation, info
 
     def step(self, action_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
@@ -146,21 +143,16 @@ class CustomEnv(gym.Env):
             tuple: (observation, reward, terminated, truncated, info)
         """
         self.step_count += 1
-        """ self.console.print(
-            f"[bold cyan]Step {self.step_count}/{self.max_steps_per_episode}[/bold cyan] - Current layers: {len(self.current_network_config.layers)}"
-        ) """
-
-        # Try to build action - if it fails, agent is done building
-        action_builder = ActionBuilder(10, "add_layer_sequential")
-        obs = self._get_observation()
-        assert isinstance(obs, np.ndarray), f"obs must be numpy, got {type(obs)}"
         try:
+            # Build architecture and setup model
+            action_builder = ActionBuilder(10, "add_layer_sequential")
+            obs = self._get_observation()
+            assert isinstance(obs, np.ndarray), f"obs must be numpy, got {type(obs)}"
             action = action_builder.build_action(action_output=action_logits, observation=obs)
-            # If action was successful, update the architecture
-            network_configuration = arch_builder(
+            new_network_config = arch_builder(
                 actions=action, partial_arch=self.current_network_config
             )
-            self.current_network_config = network_configuration
+            self.current_network_config = new_network_config
 
             # Check if we should terminate this episode and evaluate
             if self.step_count >= self.max_steps_per_episode:
@@ -191,50 +183,21 @@ class CustomEnv(gym.Env):
         """Evaluate the current architecture and return reward"""
         if len(self.current_network_config.layers) == 0:
             self.console.print("[bold red]No layers in architecture - giving penalty[/bold red]")
-            return -5.0
+            return 0.0
 
         try:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             cnn_builder = CNNBuilder(rl_config=self.current_network_config)
             architecture = cnn_builder.build()
-
-            # Ensure a single explicit device and move the model BEFORE creating the optimizer.
-            # If the optimizer is created while params are on CPU, its state may be on CPU and cause
-            # CPU/GPU device-mismatch errors during training.
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             architecture.to(device)
-
-            # Validate architecture has trainable parameters
-            total_params = sum(p.numel() for p in architecture.parameters() if p.requires_grad)
-            if total_params == 0:
-                self.console.print("[bold red]Architecture has no trainable parameters[/bold red]")
-                return -4.0
-
-            # Adaptive training setup based on network depth
-            num_layers = len(self.current_network_config.layers)
-            if num_layers <= 2:
-                # Shallow networks: higher LR, SGD works fine
-                lr = 0.01
-                optimizer = torch.optim.SGD(architecture.parameters(), lr=lr, momentum=0.9)
-            else:
-                # Deep networks: lower LR, Adam optimizer for better convergence
-                lr = 0.001
-                optimizer = torch.optim.Adam(architecture.parameters(), lr=lr)
-
+            optimizer = torch.optim.SGD(architecture.parameters(), lr=0.001, momentum=0.9)
             trainer = Trainer(
                 dataloaders=self.loader_tuple,
                 model=architecture,
-                loss_function=CrossEntropyLoss(),
+                loss_function=CrossEntropyLoss().to(device),
                 optimizer=optimizer,
-                device=device,
             )
-            print("I REACH THIS PLACE")
-
-            # Adaptive epochs based on network complexity
-            num_layers = len(self.current_network_config.layers)
-            if num_layers <= 2:
-                num_epochs = 10  # Shallow networks train quickly
-            else:
-                num_epochs = 15  # Deep networks need more epochs
+            num_epochs = 5
             start_time = time.time()
 
             # Train for fixed number of epochs with timeout protection
