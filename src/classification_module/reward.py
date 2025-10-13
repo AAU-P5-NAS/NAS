@@ -3,14 +3,9 @@ from src.classification_module.metrics import Metrics
 
 
 class Weights(BaseModel):
-    accuracy: float = 6.0
-    precision: float = 0.0
-    recall: float = 0.0
-    f1_score: float = 10.0
-    test_loss: float = 5.0
-    flops: float = 2.0
-    runtime: float = 3.0
-    architecture_size: float = 1.0
+    accuracy: float = 1.0  # Primary goal
+    f1_score: float = 0.5  # Secondary goal
+    efficiency: float = 0.2  # Penalize complexity
 
 
 class RewardCalculator:
@@ -18,31 +13,29 @@ class RewardCalculator:
         self.weights: Weights = weights
 
     def compute_reward(self, metrics: Metrics) -> float:
-        """Compute reward as weighted combination of metrics."""
+        """Compute reward focusing on accuracy with efficiency bonus."""
 
-        reward = 0.0
-        for weight in self.weights.model_dump().values():
-            if weight < 0:
-                raise ValueError("Weights must be non-negative")
+        # Get core metrics with defaults
+        accuracy = getattr(metrics, "accuracy", 0.0)
+        f1_score = getattr(metrics, "f1_score", 0.0)
+        runtime = getattr(metrics, "runtime", 1.0)
+        architecture_size = getattr(metrics, "architecture_size", 1)
 
-        total_weight: float = sum(self.weights.model_dump().values())
-        if total_weight != 1.0 and total_weight > 0:
-            normalized_weights: dict[str, float] = {
-                metric: weight / total_weight
-                for metric, weight in self.weights.model_dump().items()
-            }
-        else:
-            normalized_weights: dict[str, float] = self.weights.model_dump()
+        # Ensure valid ranges
+        accuracy = max(0.0, min(1.0, accuracy))
+        f1_score = max(0.0, min(1.0, f1_score))
 
-        for metric, weight in normalized_weights.items():
-            value: float | int | None = getattr(metrics, metric, None)
+        # Calculate base performance reward (0-1 scale)
+        performance_reward = (
+            self.weights.accuracy * accuracy + self.weights.f1_score * f1_score
+        ) / (self.weights.accuracy + self.weights.f1_score)
 
-            if value is None:
-                continue
+        # Calculate efficiency penalty (0-1 scale, lower is better)
+        # Penalize slow training and large architectures
+        efficiency_penalty = min(1.0, (runtime / 10.0) + (architecture_size / 20.0))
+        efficiency_bonus = (1.0 - efficiency_penalty) * self.weights.efficiency
 
-            if metric in {"flops", "runtime", "architecture_size"}:
-                value = 1 / (1 + value)
+        # Final reward: performance - efficiency penalty
+        reward = performance_reward + efficiency_bonus * 0.1
 
-            reward += weight * value
-
-        return reward
+        return max(0.0, reward)  # Ensure non-negative

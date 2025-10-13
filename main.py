@@ -7,11 +7,21 @@ console = Console()
 
 
 def main():
-    # initialize agent with PPO algorithm
+    console.print("[bold blue]Initializing NAS RL Agent...[/bold blue]")
 
-    model = SBThreeAgent(policy_algorithm_class=PPO)
+    # Initialize agent with PPO algorithm
+    agent = SBThreeAgent(policy_algorithm_class=PPO)
 
-    model.train(total_timesteps=10)
+    # Train the agent (reduced for testing reward changes)
+    console.print("[bold green]Starting training...[/bold green]")
+    agent.train(total_timesteps=500)  # Reduced to see reward patterns faster
+
+    # Save the trained model
+    agent.save_model()
+
+    # Evaluate the trained agent
+    console.print("[bold yellow]Evaluating trained agent...[/bold yellow]")
+    agent.evaluate(num_episodes=5)
 
 
 if __name__ == "__main__":

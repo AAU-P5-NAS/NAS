@@ -126,6 +126,10 @@ def get_logit_slices(max_layers: int):
 def build_action_add_layer_sequential(ctx: MaskContext):
     ctx.logits = mask_action_type_sequential(ctx)
     ctx.decisions.append(sample_action_from_slice(ctx, "standard_actions"))
+
+    if ctx.decisions[0] == StandardAction.NONE.value:
+        raise ValueError("No action selected, cannot proceed to add layer.")
+
     ctx.logits = mask_indexes_sequential(ctx)
     ctx.decisions.append(sample_action_from_slice(ctx, "layer_index"))
     ctx.logits = mask_layer_type_sequential(ctx)
@@ -167,6 +171,13 @@ def mask_action_type_sequential(ctx: MaskContext):
     if latest_layer_index == ctx.max_layers - 1:
         raise MaxLayersReachedException("Maximum number of layers reached.")
 
+    if latest_layer_index is None:
+        # No layers yet, can only add
+        new_logits[ctx.slices.standard_actions.get_index(StandardAction.ADD_LAYER)] = 1
+        new_logits[ctx.slices.standard_actions.get_index(StandardAction.NONE)] = -np.inf
+        new_logits[ctx.slices.standard_actions.get_index(StandardAction.MODIFY_LAYER)] = -np.inf
+        new_logits[ctx.slices.standard_actions.get_index(StandardAction.REMOVE_LAYER)] = -np.inf
+        return new_logits
     modify_layer_index = ctx.slices.standard_actions.get_index(StandardAction.MODIFY_LAYER)
     remove_layer_index = ctx.slices.standard_actions.get_index(StandardAction.REMOVE_LAYER)
     new_logits[modify_layer_index] = -np.inf
@@ -314,5 +325,8 @@ def mask_pool_mode_sequential(ctx: MaskContext):
 
 def mask_activation_function_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
+    # Mask NONE activation - not useful for hidden layers
     new_logits[ctx.slices.activation_function.get_index(ActivationFunction.NONE)] = -np.inf
+    # Mask SOFTMAX activation - should only be used in output layer, not hidden layers
+    new_logits[ctx.slices.activation_function.get_index(ActivationFunction.SOFTMAX)] = -np.inf
     return new_logits

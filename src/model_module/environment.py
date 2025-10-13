@@ -61,12 +61,14 @@ class CustomEnv(gym.Env):
 
         self.render_mode = render_mode
         self.max_layers = max_layers
-        self.data_importer = DataImporter(max_per_class=30)
+        self.max_steps_per_episode = 5  # Agent can take up to 5 actions per architecture
+        self.data_importer = DataImporter(max_per_class=50)
         self.loader_tuple = self.data_importer.get_as_cnn(batch_size=64, test_split=0.2)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
         self.console = Console()
         self.current_network_config = NetworkConfig(layers=[])
+        self.step_count = 0  # Track steps in episode
 
     def _get_action_space(self) -> spaces.Space:
         output_actions = (
@@ -127,6 +129,10 @@ class CustomEnv(gym.Env):
         # IMPORTANT: Must call this first to seed the random number generator
         super().reset(seed=seed)
 
+        # Reset episode state
+        self.step_count = 0
+        self.current_network_config = NetworkConfig(layers=[])
+
         observation = self._get_observation()
         info = self._get_info()
 
@@ -141,64 +147,165 @@ class CustomEnv(gym.Env):
         Returns:
             tuple: (observation, reward, terminated, truncated, info)
         """
-        # update the current observation
+        self.step_count += 1
+        self.console.print(
+            f"[bold cyan]Step {self.step_count}/{self.max_steps_per_episode}[/bold cyan] - Current layers: {len(self.current_network_config.layers)}"
+        )
+
+        # Try to build action - if it fails, agent is done building
         action_builder = ActionBuilder(10, "add_layer_sequential")
         obs = self._get_observation()
-        action = action_builder.build_action(action_output=action_logits, observation=obs)
-        network_configuration = arch_builder(
-            actions=action, partial_arch=self.current_network_config
-        )
-        self.current_network_config = network_configuration
 
-        cnn_builder = CNNBuilder(rl_config=network_configuration)
-        architecture = cnn_builder.build()
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        architecture.to(device)
-        optimizer = torch.optim.SGD(architecture.parameters(), lr=0.01, momentum=0.9)
-        trainer = Trainer(
-            dataloaders=self.loader_tuple,
-            model=architecture,
-            loss_function=CrossEntropyLoss(),
-            optimizer=optimizer,
-        )
+        try:
+            action = action_builder.build_action(action_output=action_logits, observation=obs)
+            # If action was successful, update the architecture
+            network_configuration = arch_builder(
+                actions=action, partial_arch=self.current_network_config
+            )
+            self.current_network_config = network_configuration
 
-        num_epochs = 5
-        start_time = time.time()
-        for epoch in range(num_epochs):
-            with self.console.status(f"[bold blue]Training CNN, epoch {epoch + 1}/{num_epochs}"):
-                trainer.train()
-        end_time = time.time()
-        training_time = end_time - start_time
-        self.console.log(
-            f"[bold green]Training completed in {training_time:.2f} seconds[/bold green]"
-        )
-        with self.console.status("[bold blue]Evaluating CNN on test set..."):
-            metrics: Metrics = trainer.test()
-        # self.console.log(f"[bold green]Evaluation completed. Metrics: {metrics}[/bold green]")
-        metrics.training_time = training_time
-        # self.console.print(f"[bold yellow]Test Metrics:[/bold yellow] {metrics.model_dump()}")
+            # Check if we should terminate this episode and evaluate
+            if self.step_count >= self.max_steps_per_episode:
+                # Episode complete - evaluate architecture and give reward
+                reward = self._evaluate_architecture()
+                terminated = True
+                truncated = False
+            else:
+                # Continue building - give small positive reward for valid action
+                reward = 0.1
+                terminated = False
+                truncated = False
 
-        terminated = self._should_terminate()
-        truncated = self._has_truncated()
+        except Exception:
+            # Action builder returned None/failed - agent is done building
+            self.console.print(
+                "[bold yellow]Agent finished building architecture (no more actions)[/bold yellow]"
+            )
+            reward = self._evaluate_architecture()
+            terminated = True
+            truncated = False
 
-        reward = self._calculate_reward(metrics)
         info = self._get_info()
-
         obs = self._get_observation()
         return obs, reward, terminated, truncated, info
 
+    def _evaluate_architecture(self) -> float:
+        """Evaluate the current architecture and return reward"""
+        if len(self.current_network_config.layers) == 0:
+            self.console.print("[bold red]No layers in architecture - giving penalty[/bold red]")
+            return -5.0
+
+        try:
+            cnn_builder = CNNBuilder(rl_config=self.current_network_config)
+            architecture = cnn_builder.build()
+
+            # Validate architecture has trainable parameters
+            total_params = sum(p.numel() for p in architecture.parameters() if p.requires_grad)
+            if total_params == 0:
+                self.console.print("[bold red]Architecture has no trainable parameters[/bold red]")
+                return -4.0
+
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            architecture.to(device)
+
+            # Adaptive training setup based on network depth
+            num_layers = len(self.current_network_config.layers)
+            if num_layers <= 2:
+                # Shallow networks: higher LR, SGD works fine
+                lr = 0.01
+                optimizer = torch.optim.SGD(architecture.parameters(), lr=lr, momentum=0.9)
+            else:
+                # Deep networks: lower LR, Adam optimizer for better convergence
+                lr = 0.001
+                optimizer = torch.optim.Adam(architecture.parameters(), lr=lr)
+            trainer = Trainer(
+                dataloaders=self.loader_tuple,
+                model=architecture,
+                loss_function=CrossEntropyLoss(),
+                optimizer=optimizer,
+            )
+
+            # Adaptive epochs based on network complexity
+            num_layers = len(self.current_network_config.layers)
+            if num_layers <= 2:
+                num_epochs = 3  # Shallow networks train quickly
+            else:
+                num_epochs = 5  # Deep networks need more epochs
+            start_time = time.time()
+
+            # Train for fixed number of epochs with timeout protection
+            for epoch in range(num_epochs):
+                epoch_start = time.time()
+                try:
+                    with self.console.status(
+                        f"[bold blue]Training CNN, epoch {epoch + 1}/{num_epochs}"
+                    ):
+                        trainer.train()
+
+                    # Check for hung training (epoch taking too long)
+                    epoch_time = time.time() - epoch_start
+                    if epoch_time > 15:  # 15 seconds per epoch max
+                        self.console.print(
+                            f"[bold yellow]Epoch {epoch + 1} took {epoch_time:.1f}s - stopping early[/bold yellow]"
+                        )
+                        break
+
+                except Exception as e:
+                    self.console.print(
+                        f"[bold red]Training failed at epoch {epoch + 1}: {e}[/bold red]"
+                    )
+                    return -3.0  # Penalty for training failure
+
+            end_time = time.time()
+            training_time = end_time - start_time  # Check training time validity
+            if training_time > 60:  # Over 1 minute suggests hanging
+                self.console.print(
+                    f"[bold red]Training took too long ({training_time:.1f}s) - likely hung[/bold red]"
+                )
+                return -3.0  # Penalty for hung training
+            elif training_time < 0.3:  # Less than 300ms suggests failed training
+                self.console.print("[bold yellow]Training too fast - likely failed[/bold yellow]")
+                return -2.0  # Penalty for failed training
+
+            self.console.log(
+                f"[bold green]Training completed in {training_time:.2f} seconds[/bold green]"
+            )
+
+            with self.console.status("[bold blue]Evaluating CNN on test set..."):
+                metrics: Metrics = trainer.test()
+
+            # Set both runtime fields to ensure compatibility
+            metrics.runtime = training_time
+            metrics.training_time = training_time
+
+            reward = self._calculate_reward(metrics)
+            return reward
+
+        except Exception as e:
+            self.console.print(f"[bold red]Architecture evaluation failed: {e}[/bold red]")
+            return -5.0  # Penalty for invalid architecture
+
     def _should_terminate(self) -> bool:
+        # Termination is now handled in step() method
         return False
-        raise NotImplementedError
 
     def _has_truncated(self) -> bool:
+        # Truncation is now handled in step() method
         return False
-        raise NotImplementedError
 
     def _calculate_reward(self, metrics: Metrics) -> float:
         rewardCalculator = RewardCalculator()
         reward: float = rewardCalculator.compute_reward(metrics)
-        self.console.print(f"[bold magenta]Reward:[/bold magenta] {reward}")
+
+        # Debug logging
+        self.console.print(
+            f"[bold magenta]Metrics - Accuracy: {getattr(metrics, 'accuracy', 'N/A'):.4f}, "
+            f"F1: {getattr(metrics, 'f1_score', 'N/A'):.4f}, "
+            f"Runtime: {getattr(metrics, 'runtime', 'N/A'):.2f}s, "
+            f"Layers: {len(self.current_network_config.layers)}[/bold magenta]"
+        )
+        self.console.print(f"[bold magenta]→ Reward: {reward:.4f}[/bold magenta]")
+
         return reward
 
     def render(self):
