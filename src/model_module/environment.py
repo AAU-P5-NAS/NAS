@@ -72,6 +72,8 @@ class CustomEnv(gym.Env):
         self.console = Console()
         self.current_network_config = NetworkConfig(layers=[])
         self.actions_taken = 0  # Track steps in episode
+        self.running_average_reward = 0.0
+        self.step_count = 0
 
     def _get_action_space(self) -> spaces.Space:
         output_actions = (
@@ -127,7 +129,7 @@ class CustomEnv(gym.Env):
         super().reset(seed=seed)
 
         # Reset episode state
-        self.step_count = 0
+        self.actions_taken = 0
         self.current_network_config = NetworkConfig(layers=[])
         observation = self._get_observation()
         info = self._get_info()
@@ -143,6 +145,7 @@ class CustomEnv(gym.Env):
         - tuple: (observation, reward, terminated, truncated, info)
         """
         self.actions_taken += 1
+        self.step_count += 1
 
         try:
             new_architecture, error = self.get_architecture(action_logits)
@@ -157,7 +160,6 @@ class CustomEnv(gym.Env):
                 truncated = False
                 self.actions_taken = 0  # Reset for next episode
             else:
-                self.console.print("[bold blue]Architecture modified, continuing...[/bold blue]")
                 reward = 0.5
                 terminated = False
                 truncated = False
@@ -169,6 +171,17 @@ class CustomEnv(gym.Env):
 
         info = self._get_info()
         obs = self._get_observation()
+
+        if self.step_count == 50:
+            avg_reward = self.running_average_reward / self.step_count
+            self.console.print(
+                f"[bold cyan]Running average reward over last {self.step_count} steps: {avg_reward:.4f}[/bold cyan]"
+            )
+            self.running_average_reward = 0.0
+            self.step_count = 0
+        else:
+            self.running_average_reward += reward
+
         return obs, reward, terminated, truncated, info
 
     def get_architecture(
@@ -195,7 +208,6 @@ class CustomEnv(gym.Env):
             self.current_network_config = new_network_config
             return new_network_config, None
         except Exception:
-            self.console.print("[bold yellow]Building Finished![/bold yellow]")
             return self.current_network_config, Exception("No more layers can be added")
 
     def train_classifier(
@@ -324,14 +336,6 @@ class CustomEnv(gym.Env):
         """
         rewardCalculator = RewardCalculator()
         reward: float = rewardCalculator.compute_reward(metrics)
-
-        # Debug logging
-        self.console.print(
-            f"[bold orange]Accuracy: {getattr(metrics, 'accuracy', 'N/A'):.4f}\n"
-            f"F1: {getattr(metrics, 'f1_score', 'N/A'):.4f}\n"
-            f"Runtime: {getattr(metrics, 'runtime', 'N/A'):.2f}s\n"
-            f"Layers: {len(self.current_network_config.layers)}[/bold orange]"
-        )
         self.console.print(f"[bold magenta]→ Reward: {reward:.4f}[/bold magenta]")
 
         return reward
