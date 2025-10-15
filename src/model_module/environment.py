@@ -72,7 +72,7 @@ class CustomEnv(gym.Env):
         self.console = Console()
         self.current_network_config = NetworkConfig(layers=[])
         self.actions_taken = 0  # Track steps in episode
-        self.running_average_reward = 0.0
+        self.sum_reward = 0.0
         self.step_count = 0
 
     def _get_action_space(self) -> spaces.Space:
@@ -173,14 +173,14 @@ class CustomEnv(gym.Env):
         obs = self._get_observation()
 
         if self.step_count == 50:
-            avg_reward = self.running_average_reward / self.step_count
+            avg_reward = self.sum_reward / self.step_count
             self.console.print(
                 f"[bold cyan]Running average reward over last {self.step_count} steps: {avg_reward:.4f}[/bold cyan]"
             )
-            self.running_average_reward = 0.0
+            self.sum_reward = 0.0
             self.step_count = 0
         else:
-            self.running_average_reward += reward
+            self.sum_reward += reward
 
         return obs, reward, terminated, truncated, info
 
