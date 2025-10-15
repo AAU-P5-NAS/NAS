@@ -262,9 +262,9 @@ class CustomEnv(gym.Env):
             self.console.print("[bold yellow]Training too fast - likely failed[/bold yellow]")
             return -2.0  # Penalty for failed training
 
-        self.console.log(
+        """ self.console.log(
             f"[bold green]Training completed in {training_time:.2f} seconds[/bold green]"
-        )
+        ) """
 
         with self.console.status("[bold blue]Evaluating CNN on test set..."):
             metrics = trainer.test()
@@ -331,8 +331,12 @@ class CustomEnv(gym.Env):
 
         if self.step_count >= 50:
             avg_reward = self.sum_reward / self.step_count
+            avg_accuracy = self.sum_accuracy / self.step_count
             self.console.print(
                 f"[bold cyan]Running average reward over last {self.step_count} steps: {avg_reward:.4f}[/bold cyan]"
+            )
+            self.console.print(
+                f"[bold cyan]Running average accuracy over last {self.step_count} steps: {avg_accuracy:.4f}[/bold cyan]"
             )
             self.sum_reward = 0.0
             self.step_count = 0
