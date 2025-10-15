@@ -339,6 +339,7 @@ class CustomEnv(gym.Env):
                 f"[bold cyan]Running average accuracy over last {self.step_count} steps: {avg_accuracy:.4f}[/bold cyan]"
             )
             self.sum_reward = 0.0
+            self.sum_accuracy = 0.0
             self.step_count = 0
         else:
             self.sum_reward += reward
