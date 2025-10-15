@@ -335,7 +335,7 @@ class CustomEnv(gym.Env):
         self.console.print(f"[bold magenta]→ sum reward: {self.sum_reward}[/bold magenta]")
         self.console.print(f"[bold magenta]→ sum accuracy: {self.sum_accuracy}[/bold magenta]")
 
-        if self.step_count == 50:
+        if self.step_count >= 50:
             avg_reward = self.sum_reward / self.step_count
             self.console.print(
                 f"[bold cyan]Running average reward over last {self.step_count} steps: {avg_reward:.4f}[/bold cyan]"
