@@ -205,6 +205,5 @@ if __name__ == "__main__":
     # Print the model architecture
 
     # Optional: export to ONNX
-    onnx_path = cnn_builder.export_to_onnx(False)
 
     actions = flatten_cnn_config(config, 4)

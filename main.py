@@ -3,7 +3,9 @@ import os
 from src.model_module.sb_three import SBThreeAgent
 from rich.console import Console
 from stable_baselines3 import A2C  # Add this import
+import warnings
 
+warnings.filterwarnings("ignore", message="Unsupported operator aten::tanh")
 console = Console()
 
 
