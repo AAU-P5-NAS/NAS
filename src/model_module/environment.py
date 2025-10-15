@@ -73,6 +73,7 @@ class CustomEnv(gym.Env):
         self.current_network_config = NetworkConfig(layers=[])
         self.actions_taken = 0  # Track steps in episode
         self.sum_reward = 0.0
+        self.sum_accuracy = 0.0
         self.step_count = 0
 
     def _get_action_space(self) -> spaces.Space:
@@ -171,16 +172,6 @@ class CustomEnv(gym.Env):
 
         info = self._get_info()
         obs = self._get_observation()
-
-        if self.step_count == 50:
-            avg_reward = self.sum_reward / self.step_count
-            self.console.print(
-                f"[bold cyan]Running average reward over last {self.step_count} steps: {avg_reward:.4f}[/bold cyan]"
-            )
-            self.sum_reward = 0.0
-            self.step_count = 0
-        else:
-            self.sum_reward += reward
 
         return obs, reward, terminated, truncated, info
 
@@ -337,6 +328,20 @@ class CustomEnv(gym.Env):
         rewardCalculator = RewardCalculator()
         reward: float = rewardCalculator.compute_reward(metrics)
         self.console.print(f"[bold magenta]→ Reward: {reward:.4f}[/bold magenta]")
+
+        if self.step_count == 50:
+            avg_reward = self.sum_reward / self.step_count
+            self.console.print(
+                f"[bold cyan]Running average reward over last {self.step_count} steps: {avg_reward:.4f}[/bold cyan]"
+            )
+            self.sum_reward = 0.0
+            self.step_count = 0
+        else:
+            self.sum_reward += reward
+            if hasattr(metrics, "accuracy") and metrics.accuracy is not None:
+                self.sum_accuracy += metrics.accuracy
+            else:
+                self.sum_accuracy += 0.0
 
         return reward
 
