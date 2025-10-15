@@ -328,6 +328,12 @@ class CustomEnv(gym.Env):
         rewardCalculator = RewardCalculator()
         reward: float = rewardCalculator.compute_reward(metrics)
         self.console.print(f"[bold magenta]→ Reward: {reward:.4f}[/bold magenta]")
+        self.console.print(
+            f"[bold magenta]→ Accuracy: {metrics.accuracy if hasattr(metrics, 'accuracy') else 0.0}[/bold magenta]"
+        )
+        self.console.print(f"[bold magenta]→ steps taken: {self.step_count}[/bold magenta]")
+        self.console.print(f"[bold magenta]→ sum reward: {self.sum_reward}[/bold magenta]")
+        self.console.print(f"[bold magenta]→ sum accuracy: {self.sum_accuracy}[/bold magenta]")
 
         if self.step_count == 50:
             avg_reward = self.sum_reward / self.step_count
