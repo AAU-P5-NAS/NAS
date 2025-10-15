@@ -61,16 +61,17 @@ class CustomEnv(gym.Env):
 
         self.render_mode = render_mode
         self.max_layers = max_layers
-        self.max_steps_per_episode = (
-            max_layers / 2
-        )  # (an action adds a layer and an activation function which itself is a layer)
+        self.max_actions_per_episode = (
+            max_layers
+            / 2  # (an action adds a layer and an activation function which itself is a layer)
+        )
         self.data_importer = DataImporter(max_per_class=5000)
         self.loader_tuple = self.data_importer.get_as_cnn(batch_size=64, test_split=0.2)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
         self.console = Console()
         self.current_network_config = NetworkConfig(layers=[])
-        self.step_count = 0  # Track steps in episode
+        self.actions_taken = 0  # Track steps in episode
 
     def _get_action_space(self) -> spaces.Space:
         output_actions = (
@@ -89,7 +90,6 @@ class CustomEnv(gym.Env):
 
     def _get_observation_space(self) -> spaces.Space:
         observation_space_vector: List[int] = []
-        # Add +1 to each enum length to include an "empty/unused" value
         observation_space_vector.append(len(LayerType))
         observation_space_vector.append(len(OutChannels))
         observation_space_vector.append(len(KernelSize))
@@ -116,12 +116,12 @@ class CustomEnv(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
         """Start a new episode.
 
-        Args:
-            seed: Random seed for reproducible episodes
-            options: Additional configuration (currently unused)
+        :Args:
+        - seed: Random seed for reproducible episodes
+        - options: Additional configuration (currently unused)
 
-        Returns:
-            tuple: (observation, info) for the initial state
+        :Returns:
+        - tuple: (observation, info) for the initial state
         """
         # IMPORTANT: Must call this first to seed the random number generator
         super().reset(seed=seed)
@@ -136,42 +136,32 @@ class CustomEnv(gym.Env):
     def step(self, action_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
 
-        Args:
-            action: The action to take and the index of the layer to apply the action on.
+        :Args:
+        - action: The logits produced by the agent's policy network.
 
-        Returns:
-            tuple: (observation, reward, terminated, truncated, info)
+        :Returns:
+        - tuple: (observation, reward, terminated, truncated, info)
         """
-        self.step_count += 1
-        try:
-            # Build architecture and setup model
-            action_builder = ActionBuilder(10, "add_layer_sequential")
-            obs = self._get_observation()
-            assert isinstance(obs, np.ndarray), f"obs must be numpy, got {type(obs)}"
-            action = action_builder.build_action(action_output=action_logits, observation=obs)
-            new_network_config = arch_builder(
-                actions=action, partial_arch=self.current_network_config
-            )
-            self.current_network_config = new_network_config
+        self.actions_taken += 1
 
-            # Check if we should terminate this episode and evaluate
-            if self.step_count >= self.max_steps_per_episode:
-                # Episode complete - evaluate architecture and give reward
-                reward = self._evaluate_architecture()
+        try:
+            new_architecture, error = self.get_architecture(action_logits)
+            shouldEvaluate = (
+                True
+                if error is not None or self.actions_taken >= self.max_actions_per_episode
+                else False
+            )
+            if shouldEvaluate:
+                reward = self._evaluate_architecture(new_architecture)
                 terminated = True
                 truncated = False
             else:
-                # Continue building - give small positive reward for valid action
                 reward = 0.1
                 terminated = False
                 truncated = False
-
-        except Exception:
-            # Action builder returned None/failed - agent is done building
-            self.console.print(
-                "[bold yellow]Agent finished building architecture (no more actions)[/bold yellow]"
-            )
-            reward = self._evaluate_architecture()
+        except Exception as e:
+            self.console.print(f"[bold red]Exception occurred: {e}[/bold red]")
+            reward = -1.0
             terminated = True
             truncated = False
 
@@ -179,74 +169,135 @@ class CustomEnv(gym.Env):
         obs = self._get_observation()
         return obs, reward, terminated, truncated, info
 
-    def _evaluate_architecture(self) -> float:
-        """Evaluate the current architecture and return reward"""
-        if len(self.current_network_config.layers) == 0:
+    def get_architecture(
+        self, action_logits: np.ndarray
+    ) -> tuple[NetworkConfig, Optional[Exception]]:
+        """Build a new architecture based on the agent's action logits.
+
+        :Args:
+        - action_logits: The logits produced by the agent's policy network.
+
+        :Returns:
+        - tuple: (new_network_config, error)
+
+        """
+        try:
+            observation = self._get_observation()
+            action_builder = ActionBuilder(10, "add_layer_sequential")
+            action = action_builder.build_action(
+                action_output=action_logits, observation=observation
+            )
+            new_network_config = arch_builder(
+                actions=action, partial_arch=self.current_network_config
+            )
+            self.current_network_config = new_network_config
+            return new_network_config, None
+        except Exception:
+            self.console.print("[bold yellow]Building Finished![/bold yellow]")
+            return self.current_network_config, Exception("No more layers can be added")
+
+    def train_classifier(
+        self,
+        dataloaders: Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader],
+        model: torch.nn.Module,
+        loss_function: torch.nn.modules.loss._Loss,
+        optimizer: torch.optim.Optimizer,
+    ):
+        """Train and evaluate the given model, returning the evaluation metrics. Expects that all inputs are not already moved to device.
+
+        :Args:
+        - dataloaders: Tuple of (train_dataloader, test_dataloader).
+        - model: The CNN model to train.
+        - loss_function: The loss function to use (e.g., CrossEntropyLoss).
+        - optimizer: The optimizer to use (e.g., SGD, Adam).
+
+        :Returns:
+        - Metrics | float: The evaluation metrics after training, or a penalty float if training failed.
+        """
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        trainer = Trainer(
+            dataloaders=dataloaders,
+            model=model.to(device),
+            loss_function=loss_function.to(device),
+            optimizer=optimizer,
+        )
+        num_epochs = 5
+        start_time = time.time()
+
+        for epoch in range(num_epochs):
+            start_time_epoch = time.time()
+            try:
+                with self.console.status(
+                    f"[bold blue]Training CNN, epoch {epoch + 1}/{num_epochs}"
+                ):
+                    trainer.train()
+
+                end_time_epoch = time.time()
+                epoch_time = end_time_epoch - start_time_epoch
+                if epoch_time > 20:
+                    self.console.print(
+                        f"[bold red]Epoch {epoch + 1} took too long ({epoch_time:.1f}s) - likely hung[/bold red]"
+                    )
+                    return -3.0  # Penalty for hung training
+            except Exception as e:
+                self.console.print(
+                    f"[bold red]Training failed at epoch {epoch + 1}: {e}[/bold red]"
+                )
+                return -3.0  # Penalty for failed training
+
+        end_time = time.time()
+        training_time = end_time - start_time
+        if training_time > 60:
+            self.console.print(
+                f"[bold red]Training took too long ({training_time:.1f}s) - likely hung[/bold red]"
+            )
+            return -3.0  # Penalty for hung training
+        elif training_time < 0.005:
+            self.console.print("[bold yellow]Training too fast - likely failed[/bold yellow]")
+            return -2.0  # Penalty for failed training
+
+        self.console.log(
+            f"[bold green]Training completed in {training_time:.2f} seconds[/bold green]"
+        )
+
+        with self.console.status("[bold blue]Evaluating CNN on test set..."):
+            metrics = trainer.test()
+
+        metrics.runtime = training_time
+        metrics.training_time = training_time
+
+        return metrics
+
+    def _evaluate_architecture(self, new_architecture: NetworkConfig) -> float:
+        """Evaluate the given architecture by training and testing it, returning the computed reward.
+
+        :Args:
+        - new_architecture: The CNN architecture to evaluate.
+
+        :Returns:
+        - float: The computed reward based on evaluation metrics.
+        """
+        if len(new_architecture.layers) == 0:
             self.console.print("[bold red]No layers in architecture - giving penalty[/bold red]")
-            return 0.0
+            return -5.0
 
         try:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            cnn_builder = CNNBuilder(rl_config=self.current_network_config)
+            cnn_builder = CNNBuilder(rl_config=new_architecture)
             architecture = cnn_builder.build()
-            architecture.to(device)
             optimizer = torch.optim.SGD(architecture.parameters(), lr=0.001, momentum=0.9)
-            trainer = Trainer(
+
+            training_results = self.train_classifier(
                 dataloaders=self.loader_tuple,
                 model=architecture,
-                loss_function=CrossEntropyLoss().to(device),
+                loss_function=CrossEntropyLoss(),
                 optimizer=optimizer,
             )
-            num_epochs = 5
-            start_time = time.time()
-
-            # Train for fixed number of epochs with timeout protection
-            for epoch in range(num_epochs):
-                epoch_start = time.time()
-                try:
-                    with self.console.status(
-                        f"[bold blue]Training CNN, epoch {epoch + 1}/{num_epochs}"
-                    ):
-                        trainer.train()
-
-                    # Check for hung training (epoch taking too long)
-                    epoch_time = time.time() - epoch_start
-                    if epoch_time > 15:  # 15 seconds per epoch max
-                        self.console.print(
-                            f"[bold yellow]Epoch {epoch + 1} took {epoch_time:.1f}s - stopping early[/bold yellow]"
-                        )
-                        break
-
-                except Exception as e:
-                    self.console.print(
-                        f"[bold red]Training failed at epoch {epoch + 1}: {e}[/bold red]"
-                    )
-                    return -3.0  # Penalty for training failure
-
-            end_time = time.time()
-            training_time = end_time - start_time  # Check training time validity
-            if training_time > 60:  # Over 1 minute suggests hanging
-                self.console.print(
-                    f"[bold red]Training took too long ({training_time:.1f}s) - likely hung[/bold red]"
-                )
-                return -3.0  # Penalty for hung training
-            elif training_time < 0.005:  # Less than 300ms suggests failed training
-                self.console.print("[bold yellow]Training too fast - likely failed[/bold yellow]")
-                return -2.0  # Penalty for failed training
-
-            self.console.log(
-                f"[bold green]Training completed in {training_time:.2f} seconds[/bold green]"
-            )
-
-            with self.console.status("[bold blue]Evaluating CNN on test set..."):
-                metrics: Metrics = trainer.test()
-
-            # Set both runtime fields to ensure compatibility
-            metrics.runtime = training_time
-            metrics.training_time = training_time
-
-            reward = self._calculate_reward(metrics)
-            return reward
+            if isinstance(training_results, Metrics):
+                reward = self._calculate_reward(training_results)
+                return reward
+            else:
+                return training_results  # Already a penalty value
 
         except Exception as e:
             self.console.print(f"[bold red]Architecture evaluation failed: {e}[/bold red]")
@@ -261,15 +312,23 @@ class CustomEnv(gym.Env):
         return False
 
     def _calculate_reward(self, metrics: Metrics) -> float:
+        """Calculate the reward based on evaluation metrics.
+
+        :Args:
+        - metrics: The evaluation metrics from testing the architecture.
+
+        :Returns:
+        - float: The computed reward.
+        """
         rewardCalculator = RewardCalculator()
         reward: float = rewardCalculator.compute_reward(metrics)
 
         # Debug logging
         self.console.print(
-            f"[bold magenta]Metrics - Accuracy: {getattr(metrics, 'accuracy', 'N/A'):.4f}, "
-            f"F1: {getattr(metrics, 'f1_score', 'N/A'):.4f}, "
-            f"Runtime: {getattr(metrics, 'runtime', 'N/A'):.2f}s, "
-            f"Layers: {len(self.current_network_config.layers)}[/bold magenta]"
+            f"[bold orange]Accuracy: {getattr(metrics, 'accuracy', 'N/A'):.4f}\n"
+            f"F1: {getattr(metrics, 'f1_score', 'N/A'):.4f}\n"
+            f"Runtime: {getattr(metrics, 'runtime', 'N/A'):.2f}s\n"
+            f"Layers: {len(self.current_network_config.layers)}[/bold orange]"
         )
         self.console.print(f"[bold magenta]→ Reward: {reward:.4f}[/bold magenta]")
 

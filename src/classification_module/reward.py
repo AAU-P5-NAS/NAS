@@ -7,6 +7,11 @@ class Weights(BaseModel):
     f1_score: float = 0.5
     runtime_penalty: float = 0.1
     size_penalty: float = 0.05
+    precision: float = 0.0
+    recall: float = 0.0
+    test_loss: float = 0.0
+    flops: float = 0.0
+    architecture_size: float = 0.0
 
 
 class RewardCalculator:
@@ -31,10 +36,18 @@ class RewardCalculator:
         f1_score = getattr(metrics, "f1_score", 0.0)
         runtime = getattr(metrics, "runtime", 1.0)
         architecture_size = getattr(metrics, "architecture_size", 100000)
+        flops = getattr(metrics, "flops", 0.0)
+        test_loss = getattr(metrics, "test_loss", 0.0)
+        precision = getattr(metrics, "precision", 0.0)
+        recall = getattr(metrics, "recall", 0.0)
 
         # Ensure valid ranges
         accuracy = max(0.0, min(1.0, accuracy))
         f1_score = max(0.0, min(1.0, f1_score))
+        precision = max(0.0, min(1.0, precision))
+        recall = max(0.0, min(1.0, recall))
+        test_loss = max(0.0, min(1.0, test_loss))
+        flops = max(0.0, min(1.0, flops))
 
         # Strong penalty for essentially random performance (26 classes = ~3.8% random)
         if accuracy < 0.1:
@@ -42,7 +55,12 @@ class RewardCalculator:
 
         # Combined performance metric
         performance_score = (
-            self.weights.accuracy * accuracy + self.weights.f1_score * f1_score
+            self.weights.accuracy * accuracy
+            + self.weights.f1_score * f1_score
+            + self.weights.precision * precision
+            + self.weights.recall * recall
+            + self.weights.test_loss * (1.0 - test_loss)
+            + self.weights.flops * (1.0 - flops)
         ) / (self.weights.accuracy + self.weights.f1_score)
 
         # QUADRATIC scaling: rewards high accuracy more, but not explosively

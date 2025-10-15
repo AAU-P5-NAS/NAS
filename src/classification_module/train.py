@@ -40,21 +40,13 @@ class Trainer:
 
     def train(self):
         self.model.train()
-        for batch in self.train_loader:
-            # Unpack safely
-            if isinstance(batch, (list, tuple)):
-                X, y = batch
-            else:
-                X = batch
-                y = None
-
+        for X, Y in self.train_loader:
             X = X.to(self.device, non_blocking=True)
-            if y is not None:
-                y = y.to(self.device, non_blocking=True)
+            Y = Y.to(self.device, non_blocking=True)
 
             # Compute prediction error
             predictions = self.model(X)
-            loss = self.loss_function(predictions, y)
+            loss = self.loss_function(predictions, Y)
 
             # Backpropagation
             self.optimizer.zero_grad()
