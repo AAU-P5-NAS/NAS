@@ -170,7 +170,6 @@ def mask_action_type_sequential(ctx: MaskContext):
     latest_layer_index = get_latest_layer_index(ctx.observation)
     if latest_layer_index == ctx.max_layers - 1:
         raise MaxLayersReachedException("Maximum number of layers reached.")
-
     if latest_layer_index is None:
         # No layers yet, can only add
         new_logits[ctx.slices.standard_actions.get_index(StandardAction.ADD_LAYER)] = 1
@@ -182,18 +181,6 @@ def mask_action_type_sequential(ctx: MaskContext):
     remove_layer_index = ctx.slices.standard_actions.get_index(StandardAction.REMOVE_LAYER)
     new_logits[modify_layer_index] = -np.inf
     new_logits[remove_layer_index] = -np.inf
-
-    add_layer_index = ctx.slices.standard_actions.get_index(StandardAction.ADD_LAYER)
-    none_action_index = ctx.slices.standard_actions.get_index(StandardAction.NONE)
-    print("Remove Layer prevLogits", ctx.logits[remove_layer_index])
-    print("Modify Layer prevLogits", ctx.logits[modify_layer_index])
-    print("Add Layer prevLogits", ctx.logits[add_layer_index])
-    print("None Action prevLogits", ctx.logits[none_action_index])
-    print("_____________")
-    print("Remove Layer NewLogits:", new_logits[remove_layer_index])
-    print("Modify Layer NewLogits:", new_logits[modify_layer_index])
-    print("Add Layer NewLogits:", new_logits[add_layer_index])
-    print("None Action NewLogits:", new_logits[none_action_index])
     return new_logits
 
 

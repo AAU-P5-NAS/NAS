@@ -5,8 +5,8 @@ from src.classification_module.metrics import Metrics
 class Weights(BaseModel):
     accuracy: float = 1.0
     f1_score: float = 0.5
-    runtime_penalty: float = 0.1
-    size_penalty: float = 0.05
+    runtime_penalty: float = 0.003
+    size_penalty: float = 0.0001
     precision: float = 0.0
     recall: float = 0.0
     test_loss: float = 0.0
@@ -49,10 +49,6 @@ class RewardCalculator:
         test_loss = max(0.0, min(1.0, test_loss))
         flops = max(0.0, min(1.0, flops))
 
-        # Strong penalty for essentially random performance (26 classes = ~3.8% random)
-        if accuracy < 0.1:
-            return -10.0
-
         # Combined performance metric
         performance_score = (
             self.weights.accuracy * accuracy
@@ -63,14 +59,15 @@ class RewardCalculator:
             + self.weights.flops * (1.0 - flops)
         ) / (self.weights.accuracy + self.weights.f1_score)
 
+        if (accuracy < 0.1) and (f1_score < 0.1):
+            # Very poor performance, likely random guessing
+            return -10.0
+
         # QUADRATIC scaling: rewards high accuracy more, but not explosively
         # Using: reward = 10 * performance^2
         # This makes 0.85->0.93 more valuable than 0.70->0.78, but smoothly
         # Scale factor adjusted so 0.95 accuracy ≈ 9 reward
         performance_reward = 10.0 * (performance_score**2)
-
-        # normalize between 0 and 1
-        performance_reward = max(0.0, min(1.0, performance_reward))
 
         # Runtime penalty (penalize slow models)
         # Target: ~2s is good, >10s starts getting penalized
