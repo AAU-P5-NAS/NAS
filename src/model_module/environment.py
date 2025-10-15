@@ -227,7 +227,7 @@ class CustomEnv(gym.Env):
             loss_function=loss_function.to(device),
             optimizer=optimizer,
         )
-        num_epochs = 5
+        num_epochs = 15
         start_time = time.time()
 
         for epoch in range(num_epochs):

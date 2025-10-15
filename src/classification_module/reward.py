@@ -63,11 +63,10 @@ class RewardCalculator:
             # Very poor performance, likely random guessing
             return -10.0
 
-        # QUADRATIC scaling: rewards high accuracy more, but not explosively
-        # Using: reward = 10 * performance^2
-        # This makes 0.85->0.93 more valuable than 0.70->0.78, but smoothly
-        # Scale factor adjusted so 0.95 accuracy ≈ 9 reward
-        performance_reward = 10.0 * (performance_score**2)
+        if performance_score < 0.3:
+            performance_reward = 5.0 * performance_score  # linear for low acc
+        else:
+            performance_reward = 10.0 * (performance_score**2)
 
         # Runtime penalty (penalize slow models)
         # Target: ~2s is good, >10s starts getting penalized
@@ -81,6 +80,9 @@ class RewardCalculator:
         size_penalty = self.weights.size_penalty * (architecture_size / 50000.0)
 
         # Final reward with penalties
+
+        runtime_penalty = 0.0
+        size_penalty = 0.0
         reward = performance_reward - runtime_penalty - size_penalty
 
         return reward
