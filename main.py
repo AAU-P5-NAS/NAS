@@ -1,4 +1,6 @@
 import os
+
+import torch
 from src.model_module.sb_three import SBThreeAgent
 from rich.console import Console
 from stable_baselines3 import A2C  # Add this import
@@ -8,7 +10,8 @@ console = Console()
 
 def main():
     console.print("[bold blue]Initializing NAS RL Agent...[/bold blue]")
-
+    print("torch.cuda.is_available:", torch.cuda.is_available())
+    print("torch.cuda.device_count:", torch.cuda.device_count())
     # Delete old models to force fresh start
     import shutil
 

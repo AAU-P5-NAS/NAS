@@ -69,6 +69,9 @@ class RewardCalculator:
         # Scale factor adjusted so 0.95 accuracy ≈ 9 reward
         performance_reward = 10.0 * (performance_score**2)
 
+        # normalize between 0 and 1
+        performance_reward = max(0.0, min(1.0, performance_reward))
+
         # Runtime penalty (penalize slow models)
         # Target: ~2s is good, >10s starts getting penalized
         runtime_penalty = 0.0

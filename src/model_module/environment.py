@@ -65,7 +65,7 @@ class CustomEnv(gym.Env):
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
-        self.data_importer = DataImporter(max_per_class=5000)
+        self.data_importer = DataImporter(max_per_class=1000)
         self.loader_tuple = self.data_importer.get_as_cnn(batch_size=64, test_split=0.2)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
@@ -156,12 +156,13 @@ class CustomEnv(gym.Env):
                 terminated = True
                 truncated = False
             else:
-                reward = 0.1
+                self.console.print("[bold blue]Architecture modified, continuing...[/bold blue]")
+                reward = 0.5
                 terminated = False
                 truncated = False
         except Exception as e:
             self.console.print(f"[bold red]Exception occurred: {e}[/bold red]")
-            reward = -1.0
+            reward = 0.0
             terminated = True
             truncated = False
 
