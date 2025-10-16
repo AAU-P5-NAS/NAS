@@ -65,7 +65,7 @@ class CustomEnv(gym.Env):
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
-        self.data_importer = DataImporter(max_per_class=100)
+        self.data_importer = DataImporter(max_per_class=1000)
         self.loader_tuple = self.data_importer.get_as_cnn(batch_size=64, test_split=0.2)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
@@ -74,7 +74,7 @@ class CustomEnv(gym.Env):
         self.actions_taken = 0  # Track steps in episode
         self.sum_reward = 0.0
         self.sum_accuracy = 0.0
-        self.step_count = 0
+        self.evaluation_count = 0
 
     def _get_action_space(self) -> spaces.Space:
         output_actions = (
@@ -146,29 +146,31 @@ class CustomEnv(gym.Env):
         - tuple: (observation, reward, terminated, truncated, info)
         """
         self.actions_taken += 1
-        self.step_count += 1
 
-        try:
-            new_architecture, error = self.get_architecture(action_logits)
-            shouldEvaluate = (
-                True
-                if error is not None or self.actions_taken >= self.max_actions_per_episode
-                else False
-            )
-            if shouldEvaluate:
-                reward = self._evaluate_architecture(new_architecture)
+        with self.console.status(
+            f"[bold blue]Training model on action number {self.evaluation_count} ...[/bold blue]"
+        ):
+            try:
+                new_architecture, error = self.get_architecture(action_logits)
+                shouldEvaluate = (
+                    True
+                    if error is not None or self.actions_taken >= self.max_actions_per_episode
+                    else False
+                )
+                if shouldEvaluate:
+                    reward = self._evaluate_architecture(new_architecture)
+                    terminated = True
+                    truncated = False
+                    self.actions_taken = 0  # Reset for next episode
+                else:
+                    reward = 0.0
+                    terminated = False
+                    truncated = False
+            except Exception as e:
+                self.console.print(f"[bold red]Exception occurred: {e}[/bold red]")
+                reward = 0.0
                 terminated = True
                 truncated = False
-                self.actions_taken = 0  # Reset for next episode
-            else:
-                reward = 0.5
-                terminated = False
-                truncated = False
-        except Exception as e:
-            self.console.print(f"[bold red]Exception occurred: {e}[/bold red]")
-            reward = 0.0
-            terminated = True
-            truncated = False
 
         info = self._get_info()
         obs = self._get_observation()
@@ -231,20 +233,9 @@ class CustomEnv(gym.Env):
         start_time = time.time()
 
         for epoch in range(num_epochs):
-            start_time_epoch = time.time()
             try:
-                with self.console.status(
-                    f"[bold blue]Training CNN, epoch {epoch + 1}/{num_epochs}"
-                ):
-                    trainer.train()
+                trainer.train()
 
-                end_time_epoch = time.time()
-                epoch_time = end_time_epoch - start_time_epoch
-                if epoch_time > 20:
-                    self.console.print(
-                        f"[bold red]Epoch {epoch + 1} took too long ({epoch_time:.1f}s) - likely hung[/bold red]"
-                    )
-                    return -3.0  # Penalty for hung training
             except Exception as e:
                 self.console.print(
                     f"[bold red]Training failed at epoch {epoch + 1}: {e}[/bold red]"
@@ -253,21 +244,7 @@ class CustomEnv(gym.Env):
 
         end_time = time.time()
         training_time = end_time - start_time
-        if training_time > 60:
-            self.console.print(
-                f"[bold red]Training took too long ({training_time:.1f}s) - likely hung[/bold red]"
-            )
-            return -3.0  # Penalty for hung training
-        elif training_time < 0.005:
-            self.console.print("[bold yellow]Training too fast - likely failed[/bold yellow]")
-            return -2.0  # Penalty for failed training
-
-        """ self.console.log(
-            f"[bold green]Training completed in {training_time:.2f} seconds[/bold green]"
-        ) """
-
-        with self.console.status("[bold blue]Evaluating CNN on test set..."):
-            metrics = trainer.test()
+        metrics = trainer.test()
 
         metrics.runtime = training_time
         metrics.training_time = training_time
@@ -299,7 +276,11 @@ class CustomEnv(gym.Env):
                 optimizer=optimizer,
             )
             if isinstance(training_results, Metrics):
+                self.console.print(
+                    f"[bold green]Accuracy: {training_results.accuracy}[/bold green]"
+                )
                 reward = self._calculate_reward(training_results)
+                self.console.print(f"[bold green]Reward: {reward}[/bold green]")
                 return reward
             else:
                 return training_results  # Already a penalty value
@@ -327,20 +308,20 @@ class CustomEnv(gym.Env):
         """
         rewardCalculator = RewardCalculator()
         reward: float = rewardCalculator.compute_reward(metrics)
-        # self.console.print(f"[bold magenta]→ Reward: {reward:.4f}[/bold magenta]")
+        self.evaluation_count += 1
 
-        if self.step_count >= 50:
-            avg_reward = self.sum_reward / self.step_count
-            avg_accuracy = self.sum_accuracy / self.step_count
+        if self.evaluation_count >= 50:
+            avg_reward = self.sum_reward / self.evaluation_count
+            avg_accuracy = self.sum_accuracy / self.evaluation_count
             self.console.print(
-                f"[bold cyan]Running average reward over last {self.step_count} steps: {avg_reward:.4f}[/bold cyan]"
+                f"[bold cyan]Average reward over last {self.evaluation_count} actions: {avg_reward:.4f}[/bold cyan]"
             )
             self.console.print(
-                f"[bold cyan]Running average accuracy over last {self.step_count} steps: {avg_accuracy:.4f}[/bold cyan]"
+                f"[bold cyan]Average accuracy over last {self.evaluation_count} actions: {avg_accuracy:.4f}[/bold cyan]"
             )
             self.sum_reward = 0.0
             self.sum_accuracy = 0.0
-            self.step_count = 0
+            self.evaluation_count = 0
         else:
             self.sum_reward += reward
             if hasattr(metrics, "accuracy") and metrics.accuracy is not None:

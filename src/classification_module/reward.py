@@ -1,88 +1,92 @@
 from pydantic import BaseModel
 from src.classification_module.metrics import Metrics
+import numpy as np
 
 
 class Weights(BaseModel):
-    accuracy: float = 1.0
-    f1_score: float = 0.5
-    runtime_penalty: float = 0.003
-    size_penalty: float = 0.0001
+    accuracy: float = 6.0
     precision: float = 0.0
     recall: float = 0.0
-    test_loss: float = 0.0
-    flops: float = 0.0
-    architecture_size: float = 0.0
+    f1_score: float = 10.0
+    test_loss: float = 5.0
+    flops: float = 2.0
+    runtime: float = 3.0
+    architecture_size: float = 1.0
+
+
+class Baselines(BaseModel):
+    """Expected ranges for normalization"""
+
+    max_flops: float = 1e9  # 1 billion FLOPs
+    max_runtime: float = 300.0  # 5 minutes
+    max_params: float = 1e7  # 10M parameters
+    max_test_loss: float = 3.0  # Clip losses above this
 
 
 class RewardCalculator:
-    def __init__(self, weights: Weights = Weights()):
-        self.weights: Weights = weights
+    def __init__(self, weights: Weights = Weights(), baselines: Baselines = Baselines()):
+        self.weights = weights
+        self.baselines = baselines
+
+    def _normalize_metric(self, metric_name: str, value: float) -> float:
+        """Normalize metric to [0, 1] range where 1 is better."""
+
+        # Already normalized (higher is better)
+        if metric_name in {"accuracy", "precision", "recall", "f1_score"}:
+            return np.clip(value, 0.0, 1.0)
+
+        # Test loss (lower is better, unbounded)
+        elif metric_name == "test_loss":
+            # Invert and normalize: 0 loss = 1.0, max_loss = 0.0
+            normalized = 1.0 - np.clip(value / self.baselines.max_test_loss, 0.0, 1.0)
+            return normalized
+
+        # FLOPs (lower is better)
+        elif metric_name == "flops":
+            normalized = 1.0 - np.clip(value / self.baselines.max_flops, 0.0, 1.0)
+            return normalized
+
+        # Runtime (lower is better)
+        elif metric_name == "runtime":
+            normalized = 1.0 - np.clip(value / self.baselines.max_runtime, 0.0, 1.0)
+            return normalized
+
+        # Architecture size (lower is better)
+        elif metric_name == "architecture_size":
+            normalized = 1.0 - np.clip(value / self.baselines.max_params, 0.0, 1.0)
+            return normalized
+
+        return 0.0
 
     def compute_reward(self, metrics: Metrics) -> float:
-        """
-        Compute reward with exponential scaling for high accuracy.
+        """Compute reward as weighted combination of normalized metrics."""
 
-        Reward structure:
-        - Random guessing (~0.038): -10
-        - Low accuracy (<0.3): -5 to 0
-        - Medium accuracy (0.3-0.7): 0 to 5
-        - Good accuracy (0.7-0.85): 5 to 12
-        - Excellent accuracy (0.85-0.95): 12 to 25
-        - Outstanding accuracy (>0.95): 25+
-        """
+        # Validate weights
+        for weight in self.weights.model_dump().values():
+            if weight < 0:
+                raise ValueError("Weights must be non-negative")
 
-        # Get core metrics with defaults
-        accuracy = getattr(metrics, "accuracy", 0.0)
-        f1_score = getattr(metrics, "f1_score", 0.0)
-        runtime = getattr(metrics, "runtime", 1.0)
-        architecture_size = getattr(metrics, "architecture_size", 100000)
-        flops = getattr(metrics, "flops", 0.0)
-        test_loss = getattr(metrics, "test_loss", 0.0)
-        precision = getattr(metrics, "precision", 0.0)
-        recall = getattr(metrics, "recall", 0.0)
+        # Normalize weights to sum to 1
+        total_weight = sum(self.weights.model_dump().values())
+        if total_weight == 0:
+            raise ValueError("Total weight cannot be zero")
 
-        # Ensure valid ranges
-        accuracy = max(0.0, min(1.0, accuracy))
-        f1_score = max(0.0, min(1.0, f1_score))
-        precision = max(0.0, min(1.0, precision))
-        recall = max(0.0, min(1.0, recall))
-        test_loss = max(0.0, min(1.0, test_loss))
-        flops = max(0.0, min(1.0, flops))
+        normalized_weights = {
+            metric: weight / total_weight for metric, weight in self.weights.model_dump().items()
+        }
 
-        # Combined performance metric
-        performance_score = (
-            self.weights.accuracy * accuracy
-            + self.weights.f1_score * f1_score
-            + self.weights.precision * precision
-            + self.weights.recall * recall
-            + self.weights.test_loss * (1.0 - test_loss)
-            + self.weights.flops * (1.0 - flops)
-        ) / (self.weights.accuracy + self.weights.f1_score)
+        # Calculate weighted sum of normalized metrics
+        reward = 0.0
+        for metric_name, weight in normalized_weights.items():
+            if weight == 0:
+                continue
 
-        if (accuracy < 0.1) and (f1_score < 0.1):
-            # Very poor performance, likely random guessing
-            return -10.0
+            value = getattr(metrics, metric_name, None)
+            if value is None:
+                continue
 
-        if performance_score < 0.3:
-            performance_reward = 5.0 * performance_score  # linear for low acc
-        else:
-            performance_reward = 10.0 * (performance_score**2)
+            # Normalize metric to [0, 1] where 1 is better
+            normalized_value = self._normalize_metric(metric_name, value)
+            reward += weight * normalized_value
 
-        # Runtime penalty (penalize slow models)
-        # Target: ~2s is good, >10s starts getting penalized
-        runtime_penalty = 0.0
-        if runtime > 2.0:
-            # Softer penalty - don't penalize training time too heavily during search
-            runtime_penalty = self.weights.runtime_penalty * ((runtime - 2.0) / 10.0)
-
-        # Architecture size penalty (penalize overly complex models)
-        # Normalize by typical size (e.g., 50k parameters is reasonable)
-        size_penalty = self.weights.size_penalty * (architecture_size / 50000.0)
-
-        # Final reward with penalties
-
-        runtime_penalty = 0.0
-        size_penalty = 0.0
-        reward = performance_reward - runtime_penalty - size_penalty
-
-        return reward
+        return reward  # Now guaranteed in [0, 1]
