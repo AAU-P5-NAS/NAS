@@ -1,93 +1,36 @@
-import torch
-import time
-from src.data_module.importer import DataImporter
-from src.classification_module.train import Trainer
-from src.classification_module.metrics import Metrics
-from rich.console import Console
-from src.classification_module.reward import RewardCalculator
+import os
 
-from src.utils.cnn_builder import (
-    CNNBuilder,
-    NetworkConfig,
-    LayerConfig,
-    LayerType,
-    OutChannels,
-    KernelSize,
-    LinearUnits,
-    ActivationFunction,
-    PoolMode,
-)
+from src.model_module.sb_three import SBThreeAgent
+from rich.console import Console
+from stable_baselines3 import A2C  # Add this import
+import warnings
+
+warnings.filterwarnings("ignore", message="Unsupported operator aten::tanh")
+console = Console()
 
 
 def main():
-    # 1. Load data
-    importer = DataImporter()
-    loader_tuple = importer.get_as_cnn(batch_size=512, test_split=0.2)
+    console.print("[bold blue]Initializing NAS RL Agent...[/bold blue]")
 
-    console = Console()
+    import shutil
 
-    # 2. Define CNN configuration using CNNActionSpace
-    config = NetworkConfig(
-        layers=[
-            LayerConfig(
-                layer_type=LayerType.CONV,
-                out_channels=OutChannels.CH_16,
-                kernel_size=KernelSize.KS_3,
-                activation=ActivationFunction.RELU,
-            ),
-            LayerConfig(
-                layer_type=LayerType.POOL,
-                pool_mode=PoolMode.MAX,
-                kernel_size=KernelSize.KS_1,
-            ),
-            LayerConfig(
-                layer_type=LayerType.CONV,
-                out_channels=OutChannels.CH_32,
-                kernel_size=KernelSize.KS_3,
-                activation=ActivationFunction.RELU,
-            ),
-            LayerConfig(
-                layer_type=LayerType.POOL,
-                pool_mode=PoolMode.MAX,
-                kernel_size=KernelSize.KS_1,
-            ),
-            LayerConfig(
-                layer_type=LayerType.LINEAR,
-                linear_units=LinearUnits.LU_64,
-                activation=ActivationFunction.RELU,
-            ),
-        ]
-    )
+    if os.path.exists("saved_models"):
+        shutil.rmtree("saved_models")
+        console.print("[yellow]Deleted old saved models[/yellow]")
 
-    cnn = CNNBuilder(config)
-    model = cnn.build()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    # Initialize agent with PPO algorithm
+    agent = SBThreeAgent(policy_algorithm_class=A2C)
 
-    loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    trainer = Trainer(loader_tuple, model, loss_fn, optimizer)
+    # Train the agent
+    console.print("[bold green]Starting training...[/bold green]")
+    agent.train(total_timesteps=100000)
 
-    # 5. Training loop
-    num_epochs = 1
-    start_time = time.time()
-    for epoch in range(num_epochs):
-        with console.status(f"[bold blue]Training CNN, epoch {epoch + 1}/{num_epochs}"):
-            trainer.train()
+    # Save the trained model
+    agent.save_model()
 
-    end_time = time.time()
-    training_time = end_time - start_time
-    with console.status("[bold blue]Evaluating CNN on test set..."):
-        metrics: Metrics = trainer.test()
-    console.print("[bold blue]CNN training complete![/bold blue]")
-    metrics.training_time = training_time
-    console.print(f"[bold green]Epoch {epoch + 1} complete![/bold green]")
-    console.print(f"[bold yellow]Test Metrics:[/bold yellow] {metrics.model_dump()}")
-
-    rewardCalculator = RewardCalculator()
-    reward: float = rewardCalculator.compute_reward(metrics)
-
-    console.print(f"[bold magenta]Reward:[/bold magenta] {reward}")
+    # Evaluate the trained agent
+    console.print("[bold yellow]Evaluating trained agent...[/bold yellow]")
+    agent.evaluate(num_episodes=5)
 
 
 if __name__ == "__main__":

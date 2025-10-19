@@ -1,6 +1,6 @@
 import numpy as np
 
-from utils.action_builder_utils import (
+from src.utils.action_builder_utils import (
     ActionStrategy,
     MaskContext,
     build_action_add_layer_sequential,
@@ -14,7 +14,7 @@ class ActionBuilder:
         self.strategy = strategy
         self.max_layers = max_layers
 
-    def build_action(self, action_output: np.ndarray, observation: list[int]):
+    def build_action(self, action_output: np.ndarray, observation: np.ndarray):
         strategy = ActionStrategy(self.strategy)
         ctx = MaskContext(
             logits=action_output,

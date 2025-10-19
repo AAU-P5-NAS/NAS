@@ -28,21 +28,25 @@ class Trainer:
     ):
         self.train_loader, self.test_loader = dataloaders
         self.model: nn.Module = model
-        self.loss_function: _Loss = loss_function
+        self.device: torch.device = (
+            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        )
+        # IMPORTANT: Pass device to evaluator so metrics are on same device as model
+        self.evaluator: MetrcicsEvaluator = MetrcicsEvaluator(device=self.device)
+        self.model.to(self.device)
+        self.loss_function: _Loss = loss_function.to(self.device)
         self.optimizer: Optimizer = optimizer
-        self.evaluator: MetrcicsEvaluator = MetrcicsEvaluator()
-        self.device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.chosen_metrics: List[Metric_literal] = chosen_metrics
 
     def train(self):
         self.model.train()
-        for X, y in self.train_loader:
-            X = X.to(self.device)
-            y = y.to(self.device)
+        for X, Y in self.train_loader:
+            X = X.to(self.device, non_blocking=True)
+            Y = Y.to(self.device, non_blocking=True)
 
             # Compute prediction error
             predictions = self.model(X)
-            loss = self.loss_function(predictions, y)
+            loss = self.loss_function(predictions, Y)
 
             # Backpropagation
             self.optimizer.zero_grad()
@@ -62,14 +66,16 @@ class Trainer:
                 outputs = self.model(X)
                 test_loss += self.loss_function(outputs, y).item()
                 predictions = outputs.argmax(1)
-                all_preds.append(predictions.cpu())
-                all_labels.append(y.cpu())
+                # Keep predictions on same device for metrics calculation
+                all_preds.append(predictions)
+                all_labels.append(y)
 
         test_loss /= len(self.test_loader)
 
         all_preds_flattened: Tensor = torch.cat(all_preds)
         all_labels_flattened: Tensor = torch.cat(all_labels)
 
+        # Predictions and labels are now on the same device as the metrics
         metrics: Metrics = self.evaluator.calculate_metrics(
             self.model, all_preds_flattened, all_labels_flattened
         )

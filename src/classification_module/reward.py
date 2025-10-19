@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from src.classification_module.metrics import Metrics
+import numpy as np
 
 
 class Weights(BaseModel):
@@ -13,36 +14,79 @@ class Weights(BaseModel):
     architecture_size: float = 1.0
 
 
+class Baselines(BaseModel):
+    """Expected ranges for normalization"""
+
+    max_flops: float = 1e9  # 1 billion FLOPs
+    max_runtime: float = 300.0  # 5 minutes
+    max_params: float = 1e7  # 10M parameters
+    max_test_loss: float = 3.0  # Clip losses above this
+
+
 class RewardCalculator:
-    def __init__(self, weights: Weights = Weights()):
-        self.weights: Weights = weights
+    def __init__(self, weights: Weights = Weights(), baselines: Baselines = Baselines()):
+        self.weights = weights
+        self.baselines = baselines
+
+    def _normalize_metric(self, metric_name: str, value: float) -> float:
+        """Normalize metric to [0, 1] range where 1 is better."""
+
+        # Already normalized (higher is better)
+        if metric_name in {"accuracy", "precision", "recall", "f1_score"}:
+            return np.clip(value, 0.0, 1.0)
+
+        # Test loss (lower is better, unbounded)
+        elif metric_name == "test_loss":
+            # Invert and normalize: 0 loss = 1.0, max_loss = 0.0
+            normalized = 1.0 - np.clip(value / self.baselines.max_test_loss, 0.0, 1.0)
+            return normalized
+
+        # FLOPs (lower is better)
+        elif metric_name == "flops":
+            normalized = 1.0 - np.clip(value / self.baselines.max_flops, 0.0, 1.0)
+            return normalized
+
+        # Runtime (lower is better)
+        elif metric_name == "runtime":
+            normalized = 1.0 - np.clip(value / self.baselines.max_runtime, 0.0, 1.0)
+            return normalized
+
+        # Architecture size (lower is better)
+        elif metric_name == "architecture_size":
+            normalized = 1.0 - np.clip(value / self.baselines.max_params, 0.0, 1.0)
+            return normalized
+
+        return 0.0
 
     def compute_reward(self, metrics: Metrics) -> float:
-        """Compute reward as weighted combination of metrics."""
+        """Compute reward as weighted combination of normalized metrics."""
 
-        reward = 0.0
+        # Validate weights
         for weight in self.weights.model_dump().values():
             if weight < 0:
                 raise ValueError("Weights must be non-negative")
 
-        total_weight: float = sum(self.weights.model_dump().values())
-        if total_weight != 1.0 and total_weight > 0:
-            normalized_weights: dict[str, float] = {
-                metric: weight / total_weight
-                for metric, weight in self.weights.model_dump().items()
-            }
-        else:
-            normalized_weights: dict[str, float] = self.weights.model_dump()
+        # Normalize weights to sum to 1
+        total_weight = sum(self.weights.model_dump().values())
+        if total_weight == 0:
+            raise ValueError("Total weight cannot be zero")
 
-        for metric, weight in normalized_weights.items():
-            value: float | int | None = getattr(metrics, metric, None)
+        normalized_weights = {
+            metric: weight / total_weight for metric, weight in self.weights.model_dump().items()
+        }
 
+        # Calculate weighted sum of normalized metrics
+        reward = 0.0
+        for metric_name, weight in normalized_weights.items():
+            if weight == 0:
+                continue
+
+            value = getattr(metrics, metric_name, None)
             if value is None:
                 continue
 
-            if metric in {"flops", "runtime", "architecture_size"}:
-                value = 1 / (1 + value)
+            # Normalize metric to [0, 1] where 1 is better
+            normalized_value = self._normalize_metric(metric_name, value)
+            reward += weight * normalized_value
 
-            reward += weight * value
-
-        return reward
+        return reward  # Now guaranteed in [0, 1]
