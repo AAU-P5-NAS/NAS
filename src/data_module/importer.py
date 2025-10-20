@@ -6,9 +6,11 @@ from rich.console import Console
 from pathlib import Path
 import requests
 import gdown
-# import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.pyplot as plt
 
 KAGGLE_DEFAULT_PATH: str = "src/data_module/az_images_data.csv"
+# emnist has already split up the data into train and test sets, for valid comparison we use those
 EMNIST_TEST_PATH: str = "src/data_module/emnist_letters_test.csv"
 EMNIST_TRAIN_PATH: str = "src/data_module/emnist_letters_train.csv"
 EMNIST_TEST_URL: str = (
@@ -29,106 +31,6 @@ console = Console()
 class DatasetOption(enum.Enum):
     KAGGLE = 0
     EMNIST_LETTERS = 1
-
-
-def fetch_csv_from_url(src: str, dest: str):
-    """
-    Fetches a CSV file from a public Google Drive link and saves it to dest.
-    Works for links of the form:
-      https://drive.google.com/file/d/<FILE_ID>/view?usp=sharing
-    """
-
-    response = requests.get(src)
-    response.raise_for_status()
-    # Ensure destination directory exists
-    dest_path = Path(dest)
-    dest_path.parent.mkdir(parents=True, exist_ok=True)
-
-    gdown.download(src, dest, quiet=True)
-
-
-def import_kaggle_csv(max_per_class: int | None = None):
-    with console.status(f"[bold blue]Loading data from {KAGGLE_DEFAULT_PATH}..."):
-        try:
-            data_file = pd.read_csv(KAGGLE_DEFAULT_PATH, header=None)
-        except FileNotFoundError:
-            raise ValueError(
-                f"The provided filepath for data importer could not be found: {KAGGLE_DEFAULT_PATH}"
-            ) from None
-
-        data = data_file.values.astype("float32")
-        labels = torch.tensor(data[:, 0], dtype=torch.long)
-        values = torch.tensor(data[:, 1:] / 255.0)
-        values = values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W)
-
-        if max_per_class is not None:  # Limit the number of samples per class
-            selected_indices = []
-            for label in labels.unique():
-                label_indices = torch.where(labels == label)[0]
-                n_select = min(max_per_class, len(label_indices))
-                selected_indices.append(label_indices[:n_select])
-            selected_indices = torch.cat(selected_indices)
-
-            values = values[selected_indices]
-            labels = labels[selected_indices]
-
-        return torch.utils.data.TensorDataset(values, labels)
-
-
-def import_emnist_letters(max_per_class: int | None = None):
-    if not Path(EMNIST_TRAIN_PATH).is_file():
-        console.print("[bold orange]EMNIST Letters train data not found.[/bold orange]")
-        with console.status("[bold yellow]Downloading EMNIST Letters train data...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_TRAIN_URL, EMNIST_TRAIN_PATH)
-            console.print("[bold green]EMNIST Letters train data downloaded ✔[/bold green]")
-    if not Path(EMNIST_TEST_PATH).is_file():
-        console.print("[bold orange]EMNIST Letters test data not found.[/bold orange]")
-        with console.status("[bold yellow]Downloading EMNIST Letters test data...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_TEST_URL, EMNIST_TEST_PATH)
-            console.print("[bold green]EMNIST Letters test data downloaded ✔[/bold green]")
-
-    with console.status("[bold blue]Loading EMNIST Letters data...[/bold blue]"):
-        try:
-            train_file = pd.read_csv(EMNIST_TRAIN_PATH, header=None)
-            test_file = pd.read_csv(EMNIST_TEST_PATH, header=None)
-        except FileNotFoundError:
-            raise ValueError(
-                f"The provided filepath for data importer could not be found: {EMNIST_TRAIN_PATH} or {EMNIST_TEST_PATH}"
-            ) from None
-
-        train_data = train_file.values.astype("float32")
-        test_data = test_file.values.astype("float32")
-
-        train_labels = torch.tensor(train_data[:, 0] - 1, dtype=torch.long)
-        test_labels = torch.tensor(test_data[:, 0] - 1, dtype=torch.long)
-
-        train_values = torch.tensor(train_data[:, 1:] / 255.0)
-        test_values = torch.tensor(test_data[:, 1:] / 255.0)
-
-        train_values = train_values.view(
-            -1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W
-        ).transpose(2, 3)
-        test_values = test_values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W).transpose(
-            2, 3
-        )
-
-        if max_per_class is not None:  # Limit the number of samples per class
-            selected_indices = []
-            for label in train_labels.unique():
-                label_indices = torch.where(train_labels == label)[0]
-                n_select = min(max_per_class, len(label_indices))
-                selected_indices.append(label_indices[:n_select])
-            selected_indices = torch.cat(selected_indices)
-
-            train_values = train_values[selected_indices]
-            train_labels = train_labels[selected_indices]
-
-        return (
-            torch.utils.data.TensorDataset(train_values, train_labels),
-            torch.utils.data.TensorDataset(test_values, test_labels),
-        )
-
-    pass
 
 
 class DataImporter:
@@ -177,7 +79,6 @@ class DataImporter:
 
         :Raises:
         - ValueError: If batch_size is not a positive integer or if test_split is not between 0 and 1.
-
         """
 
         if batch_size <= 0:
@@ -188,20 +89,7 @@ class DataImporter:
                 self.train_dataset, batch_size=batch_size, shuffle=shuffle
             )
             test_dataloader = torch.utils.data.DataLoader(self.test_dataset, batch_size=batch_size)
-
-            # plot 5 examples from the first batch of the train dataloader
-            """ images, labels = next(iter(train_dataloader))
-            n = min(20, images.size(0))
-            fig, axes = plt.subplots(1, n, figsize=(n * 2, 2))
-            for i in range(n):
-                img = images[i].squeeze().cpu().numpy()
-                lbl = labels[i].item()
-                ax = axes[i] if n > 1 else axes
-                ax.imshow(img, cmap="gray", vmin=0.0, vmax=1.0)
-                ax.set_title(chr(ord("A") + int(lbl)))
-                ax.axis("off")
-            plt.tight_layout()
-            plt.show() """
+            self.visualize_samples(train_dataloader)
             return train_dataloader, test_dataloader
 
         if not 0 < test_split < 1:
@@ -219,17 +107,120 @@ class DataImporter:
             train_dataset, batch_size=batch_size, shuffle=shuffle
         )
         test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
-        # plot 5 examples from the first batch of the train dataloader
-        """ images, labels = next(iter(train_dataloader))
-        n = min(20, images.size(0))
-        fig, axes = plt.subplots(1, n, figsize=(n * 2, 2))
+        return train_dataloader, test_dataloader
+
+    def visualize_samples(self, dataloader: torch.utils.data.DataLoader, num_samples: int = 9):
+        images, labels = next(iter(dataloader))
+        n = min(num_samples, images.size(0))
+
+        # compute grid size
+        rows = int(n**0.5) or 1
+        cols = int(np.ceil(n / rows))
+
+        _, axes = plt.subplots(rows, cols, figsize=(cols * 2, rows * 2))
+        axes = np.array(axes).reshape(-1)
+
         for i in range(n):
             img = images[i].squeeze().cpu().numpy()
             lbl = labels[i].item()
-            ax = axes[i] if n > 1 else axes
+            ax = axes[i]
             ax.imshow(img, cmap="gray", vmin=0.0, vmax=1.0)
             ax.set_title(chr(ord("A") + int(lbl)))
             ax.axis("off")
+
+        # turn of unused subplots, if num_samples is not perfect square
+        for j in range(i + 1, len(axes)):
+            axes[j].axis("off")
+
         plt.tight_layout()
-        plt.show() """
-        return train_dataloader, test_dataloader
+        plt.show()
+
+
+def fetch_csv_from_url(src: str, dest: str):
+    """Fetches a CSV file from a public Google Drive link and saves it to dest"""
+    response = requests.get(src)
+    response.raise_for_status()
+    dest_path = Path(dest)
+    dest_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure destination directory exists
+
+    gdown.download(src, dest, quiet=True)
+
+
+def import_kaggle_csv(max_per_class: int | None = None):
+    with console.status(f"[bold blue]Loading data from {KAGGLE_DEFAULT_PATH}..."):
+        try:
+            data_file = pd.read_csv(KAGGLE_DEFAULT_PATH, header=None)
+        except FileNotFoundError:
+            raise ValueError(f"Provided filepath not found: {KAGGLE_DEFAULT_PATH}") from None
+
+        data = data_file.values.astype("float32")
+        labels = torch.tensor(data[:, 0], dtype=torch.long)
+        values = torch.tensor(data[:, 1:] / 255.0)
+        values = values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W)
+
+        if max_per_class is not None:  # Limit the number of samples per class
+            selected_indices = []
+            for label in labels.unique():
+                label_indices = torch.where(labels == label)[0]
+                n_select = min(max_per_class, len(label_indices))
+                selected_indices.append(label_indices[:n_select])
+            selected_indices = torch.cat(selected_indices)
+
+            values = values[selected_indices]
+            labels = labels[selected_indices]
+
+        return torch.utils.data.TensorDataset(values, labels)
+
+
+def import_emnist_letters(max_per_class: int | None = None):
+    if not Path(EMNIST_TRAIN_PATH).is_file():
+        console.print("[bold yellow]EMNIST Letters train data not found.[/bold yellow]")
+        with console.status("[bold yellow]Downloading EMNIST Letters train data...[/bold yellow]"):
+            fetch_csv_from_url(EMNIST_TRAIN_URL, EMNIST_TRAIN_PATH)
+            console.print("[bold green]EMNIST Letters train data downloaded ✔[/bold green]")
+    if not Path(EMNIST_TEST_PATH).is_file():
+        console.print("[bold yellow]EMNIST Letters test data not found.[/bold yellow]")
+        with console.status("[bold yellow]Downloading EMNIST Letters test data...[/bold yellow]"):
+            fetch_csv_from_url(EMNIST_TEST_URL, EMNIST_TEST_PATH)
+            console.print("[bold green]EMNIST Letters test data downloaded ✔[/bold green]")
+
+    with console.status("[bold blue]Loading EMNIST Letters data...[/bold blue]"):
+        try:
+            train_file = pd.read_csv(EMNIST_TRAIN_PATH, header=None)
+            test_file = pd.read_csv(EMNIST_TEST_PATH, header=None)
+        except FileNotFoundError:
+            raise ValueError(
+                f"The provided filepath for data importer could not be found: {EMNIST_TRAIN_PATH} or {EMNIST_TEST_PATH}"
+            ) from None
+
+        train_data = train_file.values.astype("float32")
+        test_data = test_file.values.astype("float32")
+
+        train_labels = torch.tensor(train_data[:, 0] - 1, dtype=torch.long)
+        test_labels = torch.tensor(test_data[:, 0] - 1, dtype=torch.long)
+
+        train_values = torch.tensor(train_data[:, 1:] / 255.0)
+        test_values = torch.tensor(test_data[:, 1:] / 255.0)
+
+        train_values = train_values.view(
+            -1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W
+        ).transpose(2, 3)
+        test_values = test_values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W).transpose(
+            2, 3
+        )
+
+        if max_per_class is not None:  # Limit the number of samples per class
+            selected_indices = []
+            for label in train_labels.unique():
+                label_indices = torch.where(train_labels == label)[0]
+                n_select = min(max_per_class, len(label_indices))
+                selected_indices.append(label_indices[:n_select])
+            selected_indices = torch.cat(selected_indices)
+
+            train_values = train_values[selected_indices]
+            train_labels = train_labels[selected_indices]
+
+        return (
+            torch.utils.data.TensorDataset(train_values, train_labels),
+            torch.utils.data.TensorDataset(test_values, test_labels),
+        )
