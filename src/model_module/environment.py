@@ -117,10 +117,6 @@ class CustomEnv(gym.Env):
         """
 
         info = {}
-        info["actions_taken"] = self.actions_taken
-        info["sum_reward"] = self.sum_reward
-        info["sum_accuracy"] = self.sum_accuracy
-        info["evaluation_count"] = self.evaluation_count
 
         info["episode"] = {
             "r": self.sum_reward,
@@ -189,6 +185,9 @@ class CustomEnv(gym.Env):
 
         info = self._get_info()
         obs = self._get_observation()
+
+        print(f"Info: {info}")
+        print(f"Terminated?: {terminated}")
 
         return obs, reward, terminated, truncated, info
 
