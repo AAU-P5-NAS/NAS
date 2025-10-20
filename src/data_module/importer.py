@@ -1,10 +1,11 @@
+import enum
 from typing import Optional
 import torch
 import pandas as pd
 from rich.console import Console
-from pydantic import BaseModel, ConfigDict
 
-CSV_DEFAULT_PATH: str = "src/data_module/az_images_data.csv"
+KAGGLE_DEFAULT_PATH: str = "src/data_module/az_images_data.csv"
+EMNIST_DEFAULT_PATH: str = "src/data_module/emnist_letters.csv"
 GRAYSCALE_NUM_CHANNELS: int = 1
 IMG_DEFAULT_SIZE: tuple[int, int] = (28, 28)
 NUM_CLASSES: int = 26
@@ -14,26 +15,41 @@ DEFAULT_H, DEFAULT_W = IMG_DEFAULT_SIZE
 console = Console()
 
 
-class ConvolutionalArguments(BaseModel):
-    in_channels: int = 1
-    out_channels: int = 32
-    kernel_size: int | tuple[int, int] = (3, 3)
-    stride: int = 1
-    padding: int = 0
-    dilation: int = 1
-    groups: int = 1
-    bias: bool = True
-    padding_mode: str = "zeros"
-    device: str | None = None
-    dtype: torch.dtype | None = None
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+class DatasetOption(enum.Enum):
+    KAGGLE = 0
+    EMNIST_LETTERS = 1
 
 
-class CSVFilepathDoesntExist(Exception):
-    def __init__(self, data):
-        msg = f"The provided filepath '{data}' does not exist."
-        super().__init__(msg)
-        self.data = data
+def import_kaggle_csv(max_per_class: int | None = None):
+    with console.status(f"[bold blue]Loading data from {KAGGLE_DEFAULT_PATH}..."):
+        try:
+            data_file = pd.read_csv(KAGGLE_DEFAULT_PATH, header=None)
+        except FileNotFoundError:
+            raise ValueError(
+                f"The provided filepath for data importer could not be found: {KAGGLE_DEFAULT_PATH}"
+            ) from None
+
+        data = data_file.values.astype("float32")
+        labels = torch.tensor(data[:, 0], dtype=torch.long)
+        values = torch.tensor(data[:, 1:] / 255.0)
+        values = values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W)
+
+        if max_per_class is not None:  # Limit the number of samples per class
+            selected_indices = []
+            for label in labels.unique():
+                label_indices = torch.where(labels == label)[0]
+                n_select = min(max_per_class, len(label_indices))
+                selected_indices.append(label_indices[:n_select])
+            selected_indices = torch.cat(selected_indices)
+
+            values = values[selected_indices]
+            labels = labels[selected_indices]
+
+        return values, labels, torch.utils.data.TensorDataset(values, labels)
+
+
+def import_emnist_letters(max_per_class: int | None = None):
+    pass
 
 
 class DataImporter:
@@ -44,36 +60,20 @@ class DataImporter:
 
     def __init__(
         self,
-        filepath: str = CSV_DEFAULT_PATH,
+        dataset_option: DatasetOption,
         max_per_class: int | None = None,
     ):
-        with console.status(f"[bold blue]Loading data from {filepath}..."):
-            try:
-                data_file = pd.read_csv(filepath, header=None)
-            except FileNotFoundError:
-                raise CSVFilepathDoesntExist(filepath) from None
+        if dataset_option is None:
+            raise ValueError("dataset_option must be provided")
 
-            data = data_file.values.astype("float32")
-            # Keep tensors on CPU - Trainer will move them to the correct device
-            labels = torch.tensor(data[:, 0], dtype=torch.long)
-            values = torch.tensor(data[:, 1:] / 255.0)
-            values = values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W)
+        if dataset_option == DatasetOption.KAGGLE:
+            console.print("[yellow]Using kaggle dataset.[/yellow]")
+            self.data, self.labels, self.dataset = import_kaggle_csv(max_per_class)
 
-            if max_per_class is not None:
-                # Limit the number of samples per class
-                selected_indices = []
-                for label in labels.unique():
-                    label_indices = torch.where(labels == label)[0]
-                    n_select = min(max_per_class, len(label_indices))
-                    selected_indices.append(label_indices[:n_select])
-                selected_indices = torch.cat(selected_indices)
+        if dataset_option == DatasetOption.EMNIST_LETTERS:
+            console.print("[yellow]Using EMNIST Letters dataset.[/yellow]")
+            # self.data, self.labels, self.dataset = import_emnist_letters(max_per_class)
 
-                values = values[selected_indices]
-                labels = labels[selected_indices]
-
-            self.data = values
-            self.labels = labels
-            self.dataset = torch.utils.data.TensorDataset(values, labels)
         console.print(
             f"[bold green]Data loaded ✔ (classes limited to {max_per_class} samples each)[/bold green]"
             if max_per_class
