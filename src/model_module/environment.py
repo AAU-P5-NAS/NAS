@@ -112,9 +112,18 @@ class CustomEnv(gym.Env):
         """Compute auxiliary information for debugging.
 
         Returns:
+        - dict: Auxiliary information for debugging
 
         """
-        return {}
+
+        info = {}
+        info["actions_taken"] = self.actions_taken
+        info["current_network_config"] = self.current_network_config
+        info["sum_reward"] = self.sum_reward
+        info["sum_accuracy"] = self.sum_accuracy
+        info["evaluation_count"] = self.evaluation_count
+
+        return info
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
         """Start a new episode.
