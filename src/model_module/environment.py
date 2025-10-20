@@ -10,7 +10,7 @@ from src.model_module.action_builder import ActionBuilder
 from src.classification_module.metrics import Metrics
 from src.classification_module.reward import RewardCalculator
 from src.classification_module.train import Trainer
-from src.data_module.importer import DataImporter
+from src.data_module.importer import DataImporter, DatasetOption
 from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
 from src.utils.network_utils import (
     LayerType,
@@ -56,7 +56,7 @@ class CustomEnv(gym.Env):
     render_mode: str
     max_layers: int
 
-    def __init__(self, render_mode: str = "console", max_layers: int = 10):
+    def __init__(self, render_mode: str = "console", max_layers: int = 16):
         super().__init__()
 
         self.render_mode = render_mode
@@ -65,7 +65,7 @@ class CustomEnv(gym.Env):
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
-        self.data_importer = DataImporter(max_per_class=1000)
+        self.data_importer = DataImporter(max_per_class=1000, dataset_option=DatasetOption.KAGGLE)
         self.loader_tuple = self.data_importer.get_as_cnn(batch_size=64, test_split=0.2)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
@@ -229,7 +229,7 @@ class CustomEnv(gym.Env):
             loss_function=loss_function.to(device),
             optimizer=optimizer,
         )
-        num_epochs = 15
+        num_epochs = 10
         start_time = time.time()
 
         for epoch in range(num_epochs):
@@ -281,6 +281,13 @@ class CustomEnv(gym.Env):
                 )
                 reward = self._calculate_reward(training_results)
                 self.console.print(f"[bold green]Reward: {reward}[/bold green]")
+                if reward > 0.60:
+                    self.console.print(
+                        f"[bold magenta]New architecture accepted with reward {reward}[/bold magenta]"
+                    )
+                    self.console.print(
+                        f"[bold magenta]Architecture: {new_architecture}[/bold magenta]"
+                    )
                 return reward
             else:
                 return training_results  # Already a penalty value

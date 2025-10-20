@@ -39,16 +39,13 @@ class LayerType(enum.Enum):
 
 class LinearUnits(enum.IntEnum):
     NONE = 0
-    LU_8 = 1  # 8
-    LU_16 = 2  # 16
-    LU_32 = 3  # 32
     LU_64 = 4  # 64
     LU_128 = 5  # 128
     LU_256 = 6  # 256
     LU_512 = 7  # 512
 
     def to_units(self):
-        mapping = [None, 8, 16, 32, 64, 128, 256, 512]
+        mapping = [None, 64, 128, 256, 512]
         return mapping[self.value]
 
 
@@ -58,9 +55,11 @@ class OutChannels(enum.IntEnum):
     CH_32 = 2  # 32
     CH_64 = 3  # 64
     CH_128 = 4  # 128
+    CH_256 = 5  # 256
+    CH_512 = 6  # 512
 
     def to_channels(self):
-        mapping = [None, 16, 32, 64, 128]
+        mapping = [None, 16, 32, 64, 128, 256, 512]
         return mapping[self.value]
 
 
@@ -250,17 +249,21 @@ def get_latest_layer(observation: np.ndarray):
     """Look for the first occurrence of 0 in the observation array with form index 7, 14, 21 ..."""
     for i in range(0, len(observation), 7):
         if observation[i] == 0 and i != 0:
+            idx = i - 7
             return LayerConfig(
-                layer_type=LayerType(observation[i]),
-                out_channels=OutChannels(observation[i + 1]) if observation[i + 1] != 0 else None,
-                kernel_size=KernelSize(observation[i + 2]) if observation[i + 2] != 0 else None,
-                stride=Stride(observation[i + 3]) if observation[i + 3] != 0 else None,
-                pool_mode=PoolMode(observation[i + 4]) if observation[i + 4] != 0 else None,
-                activation=ActivationFunction(observation[i + 5])
-                if observation[i + 5] != 0
+                layer_type=LayerType(observation[idx]),
+                out_channels=OutChannels(observation[idx + 1])
+                if observation[idx + 1] != 0
                 else None,
-                linear_units=LinearUnits(observation[i + 6]) if observation[i + 6] != 0 else None,
+                kernel_size=KernelSize(observation[idx + 2]) if observation[idx + 2] != 0 else None,
+                stride=Stride(observation[idx + 3]) if observation[idx + 3] != 0 else None,
+                pool_mode=PoolMode(observation[idx + 4]) if observation[idx + 4] != 0 else None,
+                activation=ActivationFunction(observation[idx + 5])
+                if observation[idx + 5] != 0
+                else None,
+                linear_units=LinearUnits(observation[idx + 6])
+                if observation[idx + 6] != 0
+                else None,
             )
-            return i // 7
         elif observation[i] == 0 and i == 0:
             return None  # No layers defined yet

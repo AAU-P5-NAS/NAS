@@ -18,6 +18,8 @@ dependencies = [
     "torchmetrics>=1.8.2",
     "fvcore>=0.1.5.post20221221",
     "stable-baselines3[extra]>=2.7.0",
+    "requests>=2.32.5",
+    "gdown>=5.2.0",
 ]
 
 [dependency-groups]
