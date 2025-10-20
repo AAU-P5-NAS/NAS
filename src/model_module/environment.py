@@ -118,10 +118,16 @@ class CustomEnv(gym.Env):
 
         info = {}
         info["actions_taken"] = self.actions_taken
-        info["current_network_config"] = self.current_network_config
         info["sum_reward"] = self.sum_reward
         info["sum_accuracy"] = self.sum_accuracy
         info["evaluation_count"] = self.evaluation_count
+
+        info["episode"] = {
+            "r": self.sum_reward,
+            "l": self.actions_taken,
+            "a": self.sum_accuracy,
+            "e": self.evaluation_count,
+        }
 
         return info
 
