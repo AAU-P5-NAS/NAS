@@ -53,9 +53,9 @@ MaskContext:
 The raw logits from the Agent are organized into a Slices object for easier management and sampling. 
 This helps with masking specific invalid actions. For example, to mask out linear units: 
     masked_logits = ctx.logits.copy()
-    masked_logits[ctx.slices.linear_units.all] = -np.inf
-    masked_logits[ctx.slices.linear_units.idx(LinearUnits.UNIT_128)] = 1  # only allow 128 units
-    return masked_logits
+    masked_logits[ctx.slices.linear_units.all] = -np.inf # mask all linear units
+    masked_logits[ctx.slices.linear_units.idx(LinearUnits.UNIT_128)] = 1  # explicitly allow 128 units
+    return masked_logits 
 """
 
 
