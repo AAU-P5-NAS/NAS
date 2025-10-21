@@ -55,6 +55,7 @@ This helps with masking specific invalid actions. For example, to mask out linea
     masked_logits = ctx.logits.copy()
     masked_logits[ctx.slices.linear_units.all] = -np.inf # mask all linear units
     masked_logits[ctx.slices.linear_units.idx(LinearUnits.UNIT_128)] = 1  # explicitly allow 128 units
+    masked_logits[ctx.slices.linear_units[LinearUnits.UNIT_128]] = -np.inf  # Can also use indexing with [] (same as above)
     return masked_logits 
 """
 
