@@ -119,10 +119,10 @@ class CustomEnv(gym.Env):
         info = {}
 
         info["episode"] = {
-            "r": self.sum_reward,
-            "l": self.actions_taken,
-            "a": self.sum_accuracy,
-            "e": self.evaluation_count,
+            "r": float(self.sum_reward),
+            "l": float(self.actions_taken),
+            "a": float(self.sum_accuracy),
+            "e": float(self.evaluation_count),
         }
 
         return info
@@ -247,14 +247,17 @@ class CustomEnv(gym.Env):
         start_time = time.time()
 
         for epoch in range(num_epochs):
-            try:
-                trainer.train()
+            with self.console.status(
+                f"[bold blue]Training epoch {epoch + 1}/{num_epochs}...[/bold blue]"
+            ):
+                try:
+                    trainer.train()
 
-            except Exception as e:
-                self.console.print(
-                    f"[bold red]Training failed at epoch {epoch + 1}: {e}[/bold red]"
-                )
-                return -3.0  # Penalty for failed training
+                except Exception as e:
+                    self.console.print(
+                        f"[bold red]Training failed at epoch {epoch + 1}: {e}[/bold red]"
+                    )
+                    return -3.0  # Penalty for failed training
 
         end_time = time.time()
         training_time = end_time - start_time

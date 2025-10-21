@@ -9,6 +9,7 @@ warnings.filterwarnings("ignore", message="Unsupported operator aten::tanh")
 console = Console()
 
 
+# TODO: fix this shit
 def main():
     console.print("[bold blue]Initializing NAS RL Agent...[/bold blue]")
 
@@ -23,7 +24,7 @@ def main():
 
     # Train the agent
     console.print("[bold green]Starting training...[/bold green]")
-    agent.train(total_timesteps=100000)
+    agent.train(total_timesteps=3)
 
     # Save the trained model
     agent.save_model()
