@@ -1,13 +1,11 @@
 import enum
-from typing import Callable
-from pydantic import BaseModel, ConfigDict
 import numpy as np
-
 import sys
 import os
+from typing import Callable
+from pydantic import BaseModel, ConfigDict
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 
 from src.utils.network_utils import (
     StandardAction,
@@ -49,14 +47,14 @@ class LogitSlices(BaseModel):
     activation_function: slice
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def get_index(self, name: str, idx: int) -> int:
+    def get(self, name: str, idx: int) -> int:
         slc = getattr(self, name)
         return slc.start + idx
 
-    def get_start(self, name: str) -> int:
+    def start(self, name: str) -> int:
         return getattr(self, name).start
 
-    def get_stop(self, name: str) -> int:
+    def stop(self, name: str) -> int:
         return getattr(self, name).stop
 
 
@@ -119,13 +117,9 @@ def build_action_add_layer_sequential(ctx: MaskContext):
     return ctx.decisions
 
 
-def get_logits_for_slice(ctx: MaskContext, slice_name: str) -> np.ndarray:
-    slc = getattr(ctx.slices, slice_name)
-    return ctx.logits[slc.start : slc.stop]
-
-
 def sample_action_from_slice(ctx: MaskContext, slice_name: str) -> int:
-    logits = get_logits_for_slice(ctx, slice_name)
+    slc = getattr(ctx.slices, slice_name)
+    logits = ctx.logits[slc.start : slc.stop]
     if np.all(logits == -np.inf):
         choice = 0  # No valid actions available
     else:
@@ -141,17 +135,11 @@ def mask_action_type_sequential(ctx: MaskContext):
         raise MaxLayersReachedException("Maximum number of layers reached.")
     if latest_layer_index is None:
         # No layers yet, can only add
-        new_logits[ctx.slices.get_index("standard_actions", StandardAction.ADD_LAYER.value)] = 1
-        new_logits[ctx.slices.get_index("standard_actions", StandardAction.NONE.value)] = -np.inf
-        new_logits[
-            ctx.slices.get_index("standard_actions", StandardAction.MODIFY_LAYER.value)
-        ] = -np.inf
-        new_logits[
-            ctx.slices.get_index("standard_actions", StandardAction.REMOVE_LAYER.value)
-        ] = -np.inf
+        new_logits[ctx.slices.standard_actions] = -np.inf
+        new_logits[ctx.slices.get("standard_actions", StandardAction.ADD_LAYER.value)] = 1
         return new_logits
-    modify_layer_index = ctx.slices.get_index("standard_actions", StandardAction.MODIFY_LAYER.value)
-    remove_layer_index = ctx.slices.get_index("standard_actions", StandardAction.REMOVE_LAYER.value)
+    modify_layer_index = ctx.slices.get("standard_actions", StandardAction.MODIFY_LAYER.value)
+    remove_layer_index = ctx.slices.get("standard_actions", StandardAction.REMOVE_LAYER.value)
     new_logits[modify_layer_index] = -np.inf
     new_logits[remove_layer_index] = -np.inf
     return new_logits
@@ -165,8 +153,8 @@ def mask_indexes_sequential(ctx: MaskContext):
 
     next_layer_index = latest_layer_index + 1 if latest_layer_index is not None else 0
 
-    layer_index_start = ctx.slices.layer_index.start
-    layer_index_end = ctx.slices.layer_index.stop
+    layer_index_start = ctx.slices.start("layer_index")
+    layer_index_end = ctx.slices.stop("layer_index")
 
     new_logits[layer_index_start:layer_index_end] = -np.inf
     new_logits[layer_index_start + next_layer_index] = 1  # only next index is valid
@@ -178,29 +166,29 @@ def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
     if ctx.decisions[0] == StandardAction.NONE.value:
         # mask all layer types except NONE
-        layer_type_start = ctx.slices.layer_type.start
-        layer_type_end = ctx.slices.layer_type.stop
+        layer_type_start = ctx.slices.start("layer_type")
+        layer_type_end = ctx.slices.stop("layer_type")
         new_logits[layer_type_start:layer_type_end] = -np.inf
-        new_logits[ctx.slices.get_index("layer_type", LayerType.NONE.value)] = 1
+        new_logits[ctx.slices.get("layer_type", LayerType.NONE.value)] = 1
         return new_logits
 
     linear_layer_exists = any(
         ctx.observation[i] == LayerType.LINEAR.value for i in range(0, len(ctx.observation), 7)
     )
     if linear_layer_exists:
-        layer_type_start = ctx.slices.layer_type.start
-        layer_type_end = ctx.slices.layer_type.stop
+        layer_type_start = ctx.slices.start("layer_type")
+        layer_type_end = ctx.slices.stop("layer_type")
         new_logits[layer_type_start:layer_type_end] = -np.inf
-        linear_index = ctx.slices.get_index("layer_type", LayerType.LINEAR.value)
+        linear_index = ctx.slices.get("layer_type", LayerType.LINEAR.value)
         new_logits[linear_index] = 1  # only linear is valid
 
     previous_layer = get_latest_layer(ctx.observation)
     if previous_layer is None or previous_layer.layer_type != LayerType.CONV:
         # if no previous layer or previous layer is not conv, cannot add pool
-        pool_index = ctx.slices.get_index("layer_type", LayerType.POOL.value)
+        pool_index = ctx.slices.get("layer_type", LayerType.POOL.value)
         new_logits[pool_index] = -np.inf
 
-    none_layer_index = ctx.slices.get_index("layer_type", LayerType.NONE.value)
+    none_layer_index = ctx.slices.get("layer_type", LayerType.NONE.value)
     new_logits[none_layer_index] = -np.inf  # NONE is not valid when adding a layer
     return new_logits
 
@@ -208,15 +196,15 @@ def mask_layer_type_sequential(ctx: MaskContext):
 def mask_out_channels_sequential(ctx: MaskContext):
     if ctx.decisions[2] == LayerType.LINEAR.value or ctx.decisions[2] == LayerType.NONE.value:
         # mask all out_channels
-        out_channels_start = ctx.slices.out_channels.start
-        out_channels_end = ctx.slices.out_channels.stop
+        out_channels_start = ctx.slices.start("out_channels")
+        out_channels_end = ctx.slices.stop("out_channels")
         new_logits = ctx.logits.copy()
         new_logits[out_channels_start:out_channels_end] = -np.inf
-        new_logits[ctx.slices.get_index("out_channels", OutChannels.NONE.value)] = 1
+        new_logits[ctx.slices.get("out_channels", OutChannels.NONE.value)] = 1
         return new_logits
 
     new_logits = ctx.logits.copy()
-    none_index = ctx.slices.get_index("out_channels", OutChannels.NONE.value)
+    none_index = ctx.slices.get("out_channels", OutChannels.NONE.value)
     new_logits[none_index] = -np.inf  # NONE is not valid when adding
     return new_logits
 
@@ -226,10 +214,10 @@ def mask_kernel_size_sequential(ctx: MaskContext):
 
     if ctx.decisions[2] == LayerType.NONE.value or ctx.decisions[2] == LayerType.LINEAR.value:
         # mask all kernel sizes
-        kernel_size_start = ctx.slices.kernel_size.start
-        kernel_size_end = ctx.slices.kernel_size.stop
+        kernel_size_start = ctx.slices.start("kernel_size")
+        kernel_size_end = ctx.slices.stop("kernel_size")
         new_logits[kernel_size_start:kernel_size_end] = -np.inf
-        new_logits[ctx.slices.get_index("kernel_size", KernelSize.NONE.value)] = 1
+        new_logits[ctx.slices.get("kernel_size", KernelSize.NONE.value)] = 1
         return new_logits
 
     latest_output_dims = get_output_dimensions(ctx.observation)
@@ -237,10 +225,10 @@ def mask_kernel_size_sequential(ctx: MaskContext):
     invalid_kernels = [k for k in KernelSize if k not in valid_kernels]
 
     for kernel in invalid_kernels:
-        invalid_kernel_index = ctx.slices.get_index("kernel_size", kernel.value)
+        invalid_kernel_index = ctx.slices.get("kernel_size", kernel.value)
         new_logits[invalid_kernel_index] = -np.inf
 
-    new_logits[ctx.slices.get_index("kernel_size", KernelSize.NONE.value)] = -np.inf
+    new_logits[ctx.slices.get("kernel_size", KernelSize.NONE.value)] = -np.inf
     return new_logits
 
 
@@ -249,10 +237,10 @@ def mask_stride_sequential(ctx: MaskContext):
 
     if ctx.decisions[2] == LayerType.NONE.value or ctx.decisions[2] == LayerType.LINEAR.value:
         # mask all strides
-        stride_start = ctx.slices.stride.start
-        stride_end = ctx.slices.stride.stop
+        stride_start = ctx.slices.start("stride")
+        stride_end = ctx.slices.stop("stride")
         new_logits[stride_start:stride_end] = -np.inf
-        new_logits[ctx.slices.get_index("stride", Stride.NONE.value)] = 1
+        new_logits[ctx.slices.get("stride", Stride.NONE.value)] = 1
         return new_logits
 
     kernel_size_chosen = KernelSize(ctx.decisions[4])
@@ -261,35 +249,29 @@ def mask_stride_sequential(ctx: MaskContext):
     invalid_strides = [s for s in Stride if s not in valid_strides]
 
     for stride in invalid_strides:
-        invalid_stride_index = ctx.slices.get_index("stride", stride.value)
+        invalid_stride_index = ctx.slices.get("stride", stride.value)
         new_logits[invalid_stride_index] = -np.inf
 
-    new_logits[ctx.slices.get_index("stride", Stride.NONE.value)] = -np.inf
+    new_logits[ctx.slices.get("stride", Stride.NONE.value)] = -np.inf
     return new_logits
 
 
 def mask_linear_units_sequential(ctx: MaskContext):
+    new_logits = ctx.logits.copy()
     if ctx.decisions[2] != LayerType.LINEAR.value:
-        new_logits = ctx.logits.copy()
-        linear_units_start = ctx.slices.linear_units.start
-        linear_units_end = ctx.slices.linear_units.stop
-        new_logits[linear_units_start:linear_units_end] = -np.inf
-        new_logits[ctx.slices.get_index("linear_units", LinearUnits.NONE.value)] = 1
+        new_logits[ctx.slices.linear_units] = -np.inf
+        new_logits[ctx.slices.get("linear_units", LinearUnits.NONE.value)] = 1
         return new_logits
 
-    new_logits = ctx.logits.copy()
-    new_logits[ctx.slices.get_index("linear_units", LinearUnits.NONE.value)] = -np.inf
-
+    new_logits[ctx.slices.get("linear_units", LinearUnits.NONE.value)] = -np.inf
     return new_logits
 
 
 def mask_pool_mode_sequential(ctx: MaskContext):
+    new_logits = ctx.logits.copy()
     if ctx.decisions[2] != LayerType.POOL.value:
-        new_logits = ctx.logits.copy()
-        pool_mode_start = ctx.slices.pool_mode.start
-        pool_mode_end = ctx.slices.pool_mode.stop
-        new_logits[pool_mode_start:pool_mode_end] = -np.inf
-        new_logits[ctx.slices.get_index("pool_mode", PoolMode.NONE.value)] = 1
+        new_logits[ctx.slices.pool_mode] = -np.inf
+        new_logits[ctx.slices.get("pool_mode", PoolMode.NONE.value)] = 1
         return new_logits
 
     return ctx.logits
@@ -298,9 +280,7 @@ def mask_pool_mode_sequential(ctx: MaskContext):
 def mask_activation_function_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
     # Mask NONE activation - not useful for hidden layers
-    new_logits[ctx.slices.get_index("activation_function", ActivationFunction.NONE.value)] = -np.inf
+    new_logits[ctx.slices.get("activation_function", ActivationFunction.NONE.value)] = -np.inf
     # Mask SOFTMAX activation - should only be used in output layer, not hidden layers
-    new_logits[
-        ctx.slices.get_index("activation_function", ActivationFunction.SOFTMAX.value)
-    ] = -np.inf
+    new_logits[ctx.slices.get("activation_function", ActivationFunction.SOFTMAX.value)] = -np.inf
     return new_logits
