@@ -94,17 +94,6 @@ class Slices(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class MaskContext(BaseModel):
-    logits: np.ndarray
-    observation: np.ndarray
-    slices: Slices
-    action_strategy: str
-    sampling_strategy: Callable[[np.ndarray], int]
-    max_layers: int
-    decisions: list[int] = []  # store sampled choice for each head
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
 def get_logit_slices(max_layers: int):
     sizes = {
         "standard_actions": len(StandardAction),
@@ -124,6 +113,17 @@ def get_logit_slices(max_layers: int):
         idx += size
     logit_slices = Slices(**logit_slices)
     return logit_slices
+
+
+class MaskContext(BaseModel):
+    logits: np.ndarray
+    observation: np.ndarray
+    slices: Slices
+    action_strategy: str
+    sampling_strategy: Callable[[np.ndarray], int]
+    max_layers: int
+    decisions: list[int] = []  # store sampled choice for each head
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 def build_action_add_layer_sequential(ctx: MaskContext):
