@@ -68,6 +68,7 @@ class CustomEnv(gym.Env):
         self.data_importer = DataImporter(
             max_per_class=1000, dataset_option=DatasetOption.EMNIST_LETTERS
         )
+        self.reward_calculator = RewardCalculator()
         self.loader_tuple = self.data_importer.get_as_cnn(batch_size=64, test_split=0.2)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
@@ -152,26 +153,17 @@ class CustomEnv(gym.Env):
         with self.console.status(
             f"[bold blue]Training model on action number {self.evaluation_count} ...[/bold blue]"
         ):
-            try:
-                new_architecture, error = self.get_architecture(action_logits)
-                shouldEvaluate = (
-                    True
-                    if error is not None or self.actions_taken >= self.max_actions_per_episode
-                    else False
-                )
-                if shouldEvaluate:
-                    reward = self._evaluate_architecture(new_architecture)
-                    terminated = True
-                    truncated = False
-                    self.actions_taken = 0  # Reset for next episode
-                else:
-                    reward = 0.0
-                    terminated = False
-                    truncated = False
-            except Exception as e:
-                self.console.print(f"[bold red]Exception occurred: {e}[/bold red]")
-                reward = 0.0
+            new_architecture, error = self.get_architecture(action_logits)
+            shouldEvaluate = error is not None or self.actions_taken >= self.max_actions_per_episode
+
+            if shouldEvaluate:
+                reward = self._evaluate_architecture(new_architecture)
                 terminated = True
+                truncated = False
+                self.actions_taken = 0  # Reset for next episode
+            else:
+                reward = 0.0
+                terminated = False
                 truncated = False
 
         info = self._get_info()
@@ -242,7 +234,7 @@ class CustomEnv(gym.Env):
                 self.console.print(
                     f"[bold red]Training failed at epoch {epoch + 1}: {e}[/bold red]"
                 )
-                return -3.0  # Penalty for failed training
+                return 0  # Penalty for failed training
 
         end_time = time.time()
         training_time = end_time - start_time
@@ -264,7 +256,7 @@ class CustomEnv(gym.Env):
         """
         if len(new_architecture.layers) == 0:
             self.console.print("[bold red]No layers in architecture - giving penalty[/bold red]")
-            return -5.0
+            return 0
 
         try:
             cnn_builder = CNNBuilder(rl_config=new_architecture)
@@ -277,26 +269,18 @@ class CustomEnv(gym.Env):
                 loss_function=CrossEntropyLoss(),
                 optimizer=optimizer,
             )
-            if isinstance(training_results, Metrics):
-                self.console.print(
-                    f"[bold green]Accuracy: {training_results.accuracy}[/bold green]"
-                )
-                reward = self._calculate_reward(training_results)
-                self.console.print(f"[bold green]Reward: {reward}[/bold green]")
-                if reward > 0.60:
-                    self.console.print(
-                        f"[bold magenta]New architecture accepted with reward {reward}[/bold magenta]"
-                    )
-                    self.console.print(
-                        f"[bold magenta]Architecture: {new_architecture}[/bold magenta]"
-                    )
-                return reward
-            else:
+
+            if isinstance(training_results, (float, int)):
                 return training_results  # Already a penalty value
+
+            reward = self._calculate_reward(training_results)
+            self.console.print(f"[bold green]Accuracy: {training_results.accuracy}[/bold green]")
+            self.console.print(f"[bold green]Reward: {reward}[/bold green]")
+            return reward
 
         except Exception as e:
             self.console.print(f"[bold red]Architecture evaluation failed: {e}[/bold red]")
-            return -5.0  # Penalty for invalid architecture
+            return 0  # Penalty for invalid architecture
 
     def _should_terminate(self) -> bool:
         # Termination is now handled in step() method
@@ -315,10 +299,21 @@ class CustomEnv(gym.Env):
         :Returns:
         - float: The computed reward.
         """
-        rewardCalculator = RewardCalculator()
-        reward: float = rewardCalculator.compute_reward(metrics)
+        reward: float = self.reward_calculator.compute_reward(metrics)
         self.evaluation_count += 1
+        self.check_50_step_summary(reward, metrics)
+        return reward
 
+    def render(self):
+        print(self._get_observation())
+
+    def close(self):
+        if self.render_mode == "console":
+            pass
+        else:
+            raise NotImplementedError
+
+    def check_50_step_summary(self, reward: float, metrics: Metrics):
         if self.evaluation_count >= 50:
             avg_reward = self.sum_reward / self.evaluation_count
             avg_accuracy = self.sum_accuracy / self.evaluation_count
@@ -337,17 +332,6 @@ class CustomEnv(gym.Env):
                 self.sum_accuracy += metrics.accuracy
             else:
                 self.sum_accuracy += 0.0
-
-        return reward
-
-    def render(self):
-        print(self._get_observation())
-
-    def close(self):
-        if self.render_mode == "console":
-            pass
-        else:
-            raise NotImplementedError
 
 
 """ 

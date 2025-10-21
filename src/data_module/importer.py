@@ -113,7 +113,7 @@ class DataImporter:
         images, labels = next(iter(dataloader))
         n = min(num_samples, images.size(0))
 
-        # compute grid size
+        # compute grid size (instead of showing long line of images)
         rows = int(n**0.5) or 1
         cols = int(np.ceil(n / rows))
 
