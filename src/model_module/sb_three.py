@@ -2,6 +2,7 @@ import torch
 from src.model_module.environment import CustomEnv
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy, ActorCriticPolicy
+
 import os
 
 
@@ -33,7 +34,11 @@ class SBThreeAgent:
         self.check_directories()
 
     def train(self, total_timesteps: int = 10000):
-        self.model.learn(total_timesteps=total_timesteps, tb_log_name=self.TB_LOG_NAME)
+        self.model.learn(
+            total_timesteps=total_timesteps,
+            tb_log_name=self.TB_LOG_NAME,
+            log_interval=1,
+        )
 
     def save_model(self):
         """Save the trained model"""

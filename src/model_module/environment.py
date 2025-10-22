@@ -159,7 +159,7 @@ class CustomEnv(gym.Env):
         self.actions_taken += 1
 
         with self.console.status(
-            f"[bold blue]Training model on action number {self.evaluation_count} ...[/bold blue]"
+            f"[bold blue]Training model on action number {self.evaluation_count} ...[/bold blue]\nCurrent mean reward: {self.sum_reward}"
         ):
             try:
                 new_architecture, error = self.get_architecture(action_logits)
@@ -185,9 +185,6 @@ class CustomEnv(gym.Env):
 
         info = self._get_info()
         obs = self._get_observation()
-
-        print(f"Info: {info}")
-        print(f"Terminated?: {terminated}")
 
         return obs, reward, terminated, truncated, info
 
@@ -248,7 +245,7 @@ class CustomEnv(gym.Env):
 
         for epoch in range(num_epochs):
             with self.console.status(
-                f"[bold blue]Training epoch {epoch + 1}/{num_epochs}...[/bold blue]"
+                f"[bold blue]Training epoch {epoch + 1}/{num_epochs}...[/bold blue]\n"
             ):
                 try:
                     trainer.train()
