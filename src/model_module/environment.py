@@ -65,7 +65,7 @@ class CustomEnv(gym.Env):
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
-        self.data_importer = DataImporter(dataset_option=DatasetOption.EMNIST_BALANCED)
+        self.data_importer = DataImporter(dataset_option=DatasetOption.EMNIST_BYMERGE)
         self.loader_tuple = self.data_importer.get_dataloaders(batch_size=64)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()

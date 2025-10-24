@@ -66,5 +66,4 @@ class DataImporter:
         :Returns:
         - tuple of (train_num_classes, test_num_classes): Number of unique classes in training and test datasets.
         """
-
         return self.train_num_classes, self.test_num_classes

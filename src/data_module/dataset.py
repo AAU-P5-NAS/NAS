@@ -1,5 +1,7 @@
 from torch.utils.data import TensorDataset
 from data_module.emnist.emnist_balanced import import_emnist_balanced
+from data_module.emnist.emnist_byclass import import_emnist_byclass
+from data_module.emnist.emnist_bymerge import import_emnist_bymerge
 from data_module.emnist.emnist_letters import import_emnist_letters
 from data_module.emnist.emnist_mnist import import_emnist_mnist
 from typing import Callable, Tuple
@@ -53,7 +55,7 @@ class DatasetOption(enum.Enum):
                     row["index"] - 1: chr(row["uppercase_ascii"]) for _, row in mapping.iterrows()
                 }
                 return lambda x: index_to_char[x]
-            case DatasetOption.EMNIST_BALANCED:
+            case _:
                 mapping = pd.read_csv(
                     self.get_mapping_string(), sep=r"\s+", header=None, names=["index", "ascii"]
                 )
@@ -61,8 +63,6 @@ class DatasetOption(enum.Enum):
                     int(row["index"]): chr(int(row["ascii"])) for _, row in mapping.iterrows()
                 }
                 return lambda x: index_to_char[x]
-            case _:
-                raise ValueError(f"Unknown dataset option: {self}")
 
     def import_data(
         self, max_per_class: int | None = None
@@ -83,5 +83,9 @@ class DatasetOption(enum.Enum):
                 return import_emnist_letters(max_per_class)
             case DatasetOption.EMNIST_BALANCED:
                 return import_emnist_balanced(max_per_class)
+            case DatasetOption.EMNIST_BYCLASS:
+                return import_emnist_byclass(max_per_class)
+            case DatasetOption.EMNIST_BYMERGE:
+                return import_emnist_bymerge(max_per_class)
             case _:
                 raise ValueError(f"Unknown dataset option: {self}")
