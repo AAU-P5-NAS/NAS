@@ -5,7 +5,7 @@ from torch import Tensor, nn
 from torchmetrics import Accuracy, Precision, Recall, F1Score
 from typing import Literal, List, Optional, Callable, Union, cast
 from fvcore.nn import FlopCountAnalysis
-from src.data_module.importer import IMG_DEFAULT_SIZE, NUM_CLASSES
+from src.data_module.import_utils import IMG_DEFAULT_SIZE
 
 
 class InvalidMetricError(Exception):
@@ -49,6 +49,7 @@ Metric_literal_no_test_loss = Literal[
 class MetrcicsEvaluator:
     def __init__(
         self,
+        num_classes: int,
         device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         average: Optional[Literal["micro", "macro", "weighted", "none"]] = "macro",
     ):
@@ -57,16 +58,16 @@ class MetrcicsEvaluator:
         self.image_dimensions = (1, *IMG_DEFAULT_SIZE)
 
         self.accuracy: Accuracy = cast(
-            Accuracy, Accuracy(task=task, average=average, num_classes=NUM_CLASSES).to(device)
+            Accuracy, Accuracy(task=task, average=average, num_classes=num_classes).to(device)
         )
         self.precision: Precision = cast(
-            Precision, Precision(task=task, average=average, num_classes=NUM_CLASSES).to(device)
+            Precision, Precision(task=task, average=average, num_classes=num_classes).to(device)
         )
         self.recall: Recall = cast(
-            Recall, Recall(task=task, average=average, num_classes=NUM_CLASSES).to(device)
+            Recall, Recall(task=task, average=average, num_classes=num_classes).to(device)
         )
         self.f1_score: F1Score = cast(
-            F1Score, F1Score(task=task, average=average, num_classes=NUM_CLASSES).to(device)
+            F1Score, F1Score(task=task, average=average, num_classes=num_classes).to(device)
         )
 
     def calculate_metrics(

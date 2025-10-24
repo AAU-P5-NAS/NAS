@@ -65,8 +65,8 @@ class CustomEnv(gym.Env):
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
-        self.data_importer = DataImporter(max_per_class=1000, dataset_option=DatasetOption.KAGGLE)
-        self.loader_tuple = self.data_importer.get_as_cnn(batch_size=64, test_split=0.2)
+        self.data_importer = DataImporter(dataset_option=DatasetOption.EMNIST_BALANCED)
+        self.loader_tuple = self.data_importer.get_dataloaders(batch_size=64)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
         self.console = Console()
@@ -228,6 +228,7 @@ class CustomEnv(gym.Env):
             model=model.to(device),
             loss_function=loss_function.to(device),
             optimizer=optimizer,
+            num_classes=self.data_importer.get_num_classes()[0],
         )
         num_epochs = 10
         start_time = time.time()
@@ -265,7 +266,9 @@ class CustomEnv(gym.Env):
             return -5.0
 
         try:
-            cnn_builder = CNNBuilder(rl_config=new_architecture)
+            cnn_builder = CNNBuilder(
+                rl_config=new_architecture, num_classes=self.data_importer.get_num_classes()[0]
+            )
             architecture = cnn_builder.build()
             optimizer = torch.optim.SGD(architecture.parameters(), lr=0.001, momentum=0.9)
 

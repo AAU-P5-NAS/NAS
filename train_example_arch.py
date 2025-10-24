@@ -27,6 +27,7 @@ def main():
         model=model,
         optimizer=optimizer,
         loss_function=torch.nn.CrossEntropyLoss(),
+        num_classes=number_of_classes,
     )
     for epoch in range(200):
         trainer.train()
