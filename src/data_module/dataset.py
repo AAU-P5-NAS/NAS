@@ -15,6 +15,10 @@ class DatasetOption(enum.Enum):
     EMNIST_BYMERGE = 4
 
     def get_mapping_string(self) -> str:
+        """
+        Returns the file path to the mapping file for the dataset option.
+        Used to map label indices to characters. Only used for visualization purposes.
+        """
         match self:
             case DatasetOption.EMNIST_MNIST:
                 return "src/data_module/emnist/emnist_mnist_mapping.txt"
@@ -30,6 +34,11 @@ class DatasetOption(enum.Enum):
                 raise ValueError(f"Unknown dataset option: {self}")
 
     def get_label_fn(self) -> Callable:
+        """
+        Returns a function that maps tensor indices to their corresponding label strings.
+        Only used for visualization purposes.
+
+        """
         match self:
             case DatasetOption.EMNIST_MNIST:
                 return lambda x: str(x)
