@@ -16,28 +16,9 @@ class DatasetOption(enum.Enum):
     EMNIST_BYCLASS = 3
     EMNIST_BYMERGE = 4
 
-    def get_mapping_string(self) -> str:
-        """
-        Returns the file path to the mapping file for the dataset option.
-        Used to map label indices to characters. Only used for visualization purposes.
-        """
-        match self:
-            case DatasetOption.EMNIST_MNIST:
-                return "src/data_module/emnist/emnist_mnist_mapping.txt"
-            case DatasetOption.EMNIST_LETTERS:
-                return "src/data_module/emnist/emnist_letters_mapping.txt"
-            case DatasetOption.EMNIST_BALANCED:
-                return "src/data_module/emnist/emnist_balanced_mapping.txt"
-            case DatasetOption.EMNIST_BYCLASS:
-                return "src/data_module/emnist/emnist_byclass_mapping.txt"
-            case DatasetOption.EMNIST_BYMERGE:
-                return "src/data_module/emnist/emnist_bymerge_mapping.txt"
-            case _:
-                raise ValueError(f"Unknown dataset option: {self}")
-
     def get_label_fn(self) -> Callable:
         """
-        Returns a function that maps tensor indices to their corresponding label strings.
+        Returns a function that maps label indices to their corresponding label strings in ascii.
         Only used for visualization purposes.
 
         """
@@ -45,24 +26,9 @@ class DatasetOption(enum.Enum):
             case DatasetOption.EMNIST_MNIST:
                 return lambda x: str(x)
             case DatasetOption.EMNIST_LETTERS:
-                mapping = pd.read_csv(
-                    self.get_mapping_string(),
-                    sep=r"\s+",  # handles multiple spaces
-                    header=None,
-                    names=["index", "uppercase_ascii", "lowercase_ascii"],
-                )
-                index_to_char = {
-                    row["index"] - 1: chr(row["uppercase_ascii"]) for _, row in mapping.iterrows()
-                }
-                return lambda x: index_to_char[x]
+                return three_column_mapping_func(self)
             case _:
-                mapping = pd.read_csv(
-                    self.get_mapping_string(), sep=r"\s+", header=None, names=["index", "ascii"]
-                )
-                index_to_char = {
-                    int(row["index"]): chr(int(row["ascii"])) for _, row in mapping.iterrows()
-                }
-                return lambda x: index_to_char[x]
+                return two_column_mapping_func(self)
 
     def import_data(
         self, max_per_class: int | None = None
@@ -89,3 +55,42 @@ class DatasetOption(enum.Enum):
                 return import_emnist_bymerge(max_per_class)
             case _:
                 raise ValueError(f"Unknown dataset option: {self}")
+
+
+def three_column_mapping_func(dataset: DatasetOption):
+    mapping = pd.read_csv(
+        get_mapping_string(dataset),
+        sep=r"\s+",
+        header=None,
+        names=["index", "uppercase_ascii", "lowercase_ascii"],
+    )
+    index_to_char = {row["index"] - 1: chr(row["uppercase_ascii"]) for _, row in mapping.iterrows()}
+    return lambda x: index_to_char[x]
+
+
+def two_column_mapping_func(dataset: DatasetOption):
+    mapping = pd.read_csv(
+        get_mapping_string(dataset), sep=r"\s+", header=None, names=["index", "ascii"]
+    )
+    index_to_char = {int(row["index"]): chr(int(row["ascii"])) for _, row in mapping.iterrows()}
+    return lambda x: index_to_char[x]
+
+
+def get_mapping_string(dataset_option: DatasetOption) -> str:
+    """
+    Returns the file path to the mapping file for the dataset option.
+    Used to map label indices to characters. Only used for visualization purposes.
+    """
+    match dataset_option:
+        case DatasetOption.EMNIST_MNIST:
+            return "src/data_module/emnist/emnist_mnist_mapping.txt"
+        case DatasetOption.EMNIST_LETTERS:
+            return "src/data_module/emnist/emnist_letters_mapping.txt"
+        case DatasetOption.EMNIST_BALANCED:
+            return "src/data_module/emnist/emnist_balanced_mapping.txt"
+        case DatasetOption.EMNIST_BYCLASS:
+            return "src/data_module/emnist/emnist_byclass_mapping.txt"
+        case DatasetOption.EMNIST_BYMERGE:
+            return "src/data_module/emnist/emnist_bymerge_mapping.txt"
+        case _:
+            raise ValueError(f"Unknown dataset option: {dataset_option}")
