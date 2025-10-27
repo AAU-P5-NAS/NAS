@@ -23,8 +23,10 @@ from src.utils.network_utils import (
     ActivationFunction,
 )
 from src.utils.arch_builder import arch_builder
-from torch.nn import CrossEntropyLoss
+from torch.nn import CrossEntropyLoss, Module
 from rich.console import Console
+from stable_baselines3.common.logger import Logger
+from torch.utils.tensorboard import SummaryWriter
 
 standard_actions = {
     "REMOVE_LAYER",
@@ -55,8 +57,22 @@ class CustomEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
     render_mode: str
     max_layers: int
+    logdir: str
+    info: Dict[str, Any] = {}
+    actions_taken: int = 0  # Track steps in episode
+    sum_reward: float = 0.0
+    sum_accuracy: float = 0.0
+    evaluation_count: int = 0
+    step_count: int = 0
 
-    def __init__(self, render_mode: str = "console", max_layers: int = 10):
+    newest_reward: Optional[float] = None
+    newest_metrics: Optional[Metrics] = None
+    newest_architecture: Optional[Module] = None
+    newest_actions_taken_on_evaluation: Optional[int] = None
+
+    evaluated_this_step: bool = False
+
+    def __init__(self, logdir: str, render_mode: str = "console", max_layers: int = 10):
         super().__init__()
 
         self.render_mode = render_mode
@@ -75,6 +91,7 @@ class CustomEnv(gym.Env):
         self.sum_reward = 0.0
         self.sum_accuracy = 0.0
         self.evaluation_count = 0
+        self.logdir = logdir
 
     def _get_action_space(self) -> spaces.Space:
         output_actions = (
@@ -108,24 +125,35 @@ class CustomEnv(gym.Env):
         flattened_obs = flatten_cnn_config(self.current_network_config, self.max_layers)
         return np.array(flattened_obs, dtype=np.float32)
 
-    def _get_info(self) -> Dict[str, Any]:
-        """Compute auxiliary information for debugging.
-
-        Returns:
-        - dict: Auxiliary information for debugging
-
+    def _write_summary(self, logger: Logger, summary_writer: SummaryWriter) -> None:
+        """
+        Write evaluation metrics and reward to TensorBoard summary, if evaluated_this_step is True.
         """
 
-        info = {}
+        if self.evaluated_this_step is False:
+            return
 
-        info["episode"] = {
-            "r": float(self.sum_reward),
-            "l": float(self.actions_taken),
-            "a": float(self.sum_accuracy),
-            "e": float(self.evaluation_count),
-        }
+        def record_optional(name: str, metric: Optional[float]) -> None:
+            if metric is not None:
+                logger.record(name, metric)
 
-        return info
+        record_optional("Custom/Reward", self.newest_reward)
+        record_optional("Custom/Actions Taken", self.newest_actions_taken_on_evaluation)
+
+        if self.newest_metrics is not None:
+            record_optional("Custom/Test Loss", self.newest_metrics.test_loss)
+            record_optional("Custom/Accuracy", self.newest_metrics.accuracy)
+            record_optional("Custom/Precision", self.newest_metrics.precision)
+            record_optional("Custom/Recall", self.newest_metrics.recall)
+            record_optional("Custom/F1 Score", self.newest_metrics.f1_score)
+            record_optional("Custom/FLOPs", self.newest_metrics.flops)
+            record_optional("Custom/Runtime", self.newest_metrics.runtime)
+            record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
+
+        logger.dump(step=self.step_count)
+
+        if self.newest_architecture is not None:
+            summary_writer.add_graph(self.newest_architecture, torch.zeros(1, 1, 28, 28))
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
         """Start a new episode.
@@ -144,8 +172,7 @@ class CustomEnv(gym.Env):
         self.actions_taken = 0
         self.current_network_config = NetworkConfig(layers=[])
         observation = self._get_observation()
-        info = self._get_info()
-        return observation, info
+        return observation, self.info
 
     def step(self, action_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
@@ -156,11 +183,20 @@ class CustomEnv(gym.Env):
         :Returns:
         - tuple: (observation, reward, terminated, truncated, info)
         """
+
+        self.evaluated_this_step = False
+
+        self.info = {}
+        self.step_count += 1
         self.actions_taken += 1
 
         with self.console.status(
-            f"[bold blue]Training model on action number {self.evaluation_count} ...[/bold blue]\nCurrent mean reward: {self.sum_reward}"
+            f"[bold blue]Training model on action number {self.evaluation_count + 1} ...[/bold blue]\nCurrent sum reward: {self.sum_reward}"
         ):
+            reward = 0.0
+            terminated = False
+            truncated = False
+
             try:
                 new_architecture, error = self.get_architecture(action_logits)
                 shouldEvaluate = (
@@ -169,24 +205,18 @@ class CustomEnv(gym.Env):
                     else False
                 )
                 if shouldEvaluate:
+                    self.evaluated_this_step = True
+
                     reward = self._evaluate_architecture(new_architecture)
                     terminated = True
-                    truncated = False
+                    self.newest_actions_taken_on_evaluation = self.actions_taken
                     self.actions_taken = 0  # Reset for next episode
-                else:
-                    reward = 0.0
-                    terminated = False
-                    truncated = False
             except Exception as e:
                 self.console.print(f"[bold red]Exception occurred: {e}[/bold red]")
-                reward = 0.0
-                terminated = True
-                truncated = False
 
-        info = self._get_info()
         obs = self._get_observation()
 
-        return obs, reward, terminated, truncated, info
+        return obs, reward, terminated, truncated, self.info
 
     def get_architecture(
         self, action_logits: np.ndarray
@@ -263,6 +293,8 @@ class CustomEnv(gym.Env):
         metrics.runtime = training_time
         metrics.training_time = training_time
 
+        self.newest_metrics = metrics
+
         return metrics
 
     def _evaluate_architecture(self, new_architecture: NetworkConfig) -> float:
@@ -280,12 +312,14 @@ class CustomEnv(gym.Env):
 
         try:
             cnn_builder = CNNBuilder(rl_config=new_architecture)
-            architecture = cnn_builder.build()
-            optimizer = torch.optim.SGD(architecture.parameters(), lr=0.001, momentum=0.9)
+            self.newest_architecture = cnn_builder.build()
+            optimizer = torch.optim.SGD(
+                self.newest_architecture.parameters(), lr=0.001, momentum=0.9
+            )
 
             training_results = self.train_classifier(
                 dataloaders=self.loader_tuple,
-                model=architecture,
+                model=self.newest_architecture,
                 loss_function=CrossEntropyLoss(),
                 optimizer=optimizer,
             )
@@ -294,6 +328,7 @@ class CustomEnv(gym.Env):
                     f"[bold green]Accuracy: {training_results.accuracy}[/bold green]"
                 )
                 reward = self._calculate_reward(training_results)
+
                 self.console.print(f"[bold green]Reward: {reward}[/bold green]")
                 return reward
             else:
@@ -343,6 +378,7 @@ class CustomEnv(gym.Env):
             else:
                 self.sum_accuracy += 0.0
 
+        self.newest_reward = float(reward)
         return reward
 
     def render(self):

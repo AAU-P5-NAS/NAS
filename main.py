@@ -24,7 +24,7 @@ def main():
 
     # Train the agent
     console.print("[bold green]Starting training...[/bold green]")
-    agent.train(total_timesteps=30)
+    agent.train(total_timesteps=30, log_interval=1)
 
     # Save the trained model
     agent.save_model()
