@@ -2,6 +2,7 @@ import torch
 from src.model_module.environment import CustomEnv
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy, ActorCriticPolicy
+from src.classification_module.reward import Weights
 import os
 
 
@@ -11,8 +12,19 @@ class SBThreeAgent:
         policy_algorithm_class: type[BaseAlgorithm],
         policy: type[BasePolicy] = ActorCriticPolicy,
         learning_rate: float = 0.001,
+        training_epochs: int = 15,
+        arch_learning_rate: float = 0.001,
+        arch_momentum: float = 0.9,
+        batch_size: int = 64,
+        reward_weights: Weights | None = None,
     ):
-        self.env: CustomEnv = CustomEnv()
+        self.env: CustomEnv = CustomEnv(
+            training_epochs=training_epochs,
+            arch_learning_rate=arch_learning_rate,
+            arch_momentum=arch_momentum,
+            batch_size=batch_size,
+            reward_weights=reward_weights,
+        )
         self.model = policy_algorithm_class(
             policy=policy,
             env=self.env,
