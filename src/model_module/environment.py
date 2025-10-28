@@ -17,21 +17,14 @@ from src.utils.network_utils import (
     NetworkConfig,
     OutChannels,
     KernelSize,
+    StandardAction,
     Stride,
     LinearUnits,
     PoolMode,
     ActivationFunction,
 )
-from src.utils.arch_builder import arch_builder
 from torch.nn import CrossEntropyLoss
 from rich.console import Console
-
-standard_actions = {
-    "REMOVE_LAYER",
-    "MODIFY_LAYER",
-    "ADD_LAYER",
-    "DO_NOTHING",
-}
 
 
 class CustomEnv(gym.Env):
@@ -65,7 +58,8 @@ class CustomEnv(gym.Env):
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
-        self.data_importer = DataImporter(dataset_option=DatasetOption.EMNIST_BYMERGE)
+        self.data_importer = DataImporter(dataset_option=DatasetOption.EMNIST_BALANCED)
+        self.action_builder = ActionBuilder(self.max_layers, "add_layer_sequential")
         self.loader_tuple = self.data_importer.get_dataloaders(batch_size=64)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
@@ -78,7 +72,7 @@ class CustomEnv(gym.Env):
 
     def _get_action_space(self) -> spaces.Space:
         output_actions = (
-            len(standard_actions)
+            len(StandardAction)
             + len(LayerType)
             + (self.max_layers - 1)  # One for each index (which index to apply action on)
             + len(OutChannels)
@@ -147,61 +141,49 @@ class CustomEnv(gym.Env):
         """
         self.actions_taken += 1
 
-        with self.console.status(
-            f"[bold blue]Training model on action number {self.evaluation_count} ...[/bold blue]"
-        ):
-            try:
-                new_architecture, error = self.get_architecture(action_logits)
-                shouldEvaluate = (
-                    True
-                    if error is not None or self.actions_taken >= self.max_actions_per_episode
-                    else False
-                )
-                if shouldEvaluate:
-                    reward = self._evaluate_architecture(new_architecture)
-                    terminated = True
-                    truncated = False
-                    self.actions_taken = 0  # Reset for next episode
-                else:
-                    reward = 0.0
-                    terminated = False
-                    truncated = False
-            except Exception as e:
-                self.console.print(f"[bold red]Exception occurred: {e}[/bold red]")
-                reward = 0.0
+        new_architecture, should_evaluate = self.get_new_architecture(action_logits)
+
+        if should_evaluate:
+            with self.console.status(
+                f"[bold blue]Training model on action number {self.evaluation_count} ...[/bold blue]"
+            ):
+                reward = self.evaluate_architecture(new_architecture)
                 terminated = True
                 truncated = False
+                self.actions_taken = 0  # Reset for next episode
+        else:
+            reward = 0.05
+            terminated = False
+            truncated = False
 
         info = self._get_info()
         obs = self._get_observation()
 
         return obs, reward, terminated, truncated, info
 
-    def get_architecture(
-        self, action_logits: np.ndarray
-    ) -> tuple[NetworkConfig, Optional[Exception]]:
+    def get_new_architecture(self, action_logits: np.ndarray):
         """Build a new architecture based on the agent's action logits.
 
         :Args:
         - action_logits: The logits produced by the agent's policy network.
 
         :Returns:
-        - tuple: (new_network_config, error)
-
+        - tuple: (new_network_config, should_evaluate)
         """
-        try:
-            observation = self._get_observation()
-            action_builder = ActionBuilder(10, "add_layer_sequential")
-            action = action_builder.build_action(
-                action_output=action_logits, observation=observation
-            )
-            new_network_config = arch_builder(
-                actions=action, partial_arch=self.current_network_config
-            )
-            self.current_network_config = new_network_config
-            return new_network_config, None
-        except Exception:
-            return self.current_network_config, Exception("No more layers can be added")
+        observation = self._get_observation()
+
+        action_to_apply = self.action_builder.build_action(
+            action_output=action_logits, observation=observation
+        )
+
+        if action_to_apply is None:
+            return self.current_network_config, True  # Stop and evaluate
+
+        new_network_config = self.current_network_config.extend(
+            action=action_to_apply, partial_arch=self.current_network_config
+        )
+        self.current_network_config = new_network_config
+        return new_network_config, False  # Do not evaluate yet
 
     def train_classifier(
         self,
@@ -234,14 +216,8 @@ class CustomEnv(gym.Env):
         start_time = time.time()
 
         for epoch in range(num_epochs):
-            try:
-                trainer.train()
-
-            except Exception as e:
-                self.console.print(
-                    f"[bold red]Training failed at epoch {epoch + 1}: {e}[/bold red]"
-                )
-                return -3.0  # Penalty for failed training
+            self.console.print(f"[bold blue]Epoch {epoch + 1}/{num_epochs}[/bold blue]")
+            trainer.train()
 
         end_time = time.time()
         training_time = end_time - start_time
@@ -252,7 +228,7 @@ class CustomEnv(gym.Env):
 
         return metrics
 
-    def _evaluate_architecture(self, new_architecture: NetworkConfig) -> float:
+    def evaluate_architecture(self, new_architecture: NetworkConfig) -> float:
         """Evaluate the given architecture by training and testing it, returning the computed reward.
 
         :Args:
@@ -261,53 +237,38 @@ class CustomEnv(gym.Env):
         :Returns:
         - float: The computed reward based on evaluation metrics.
         """
-        if len(new_architecture.layers) == 0:
-            self.console.print("[bold red]No layers in architecture - giving penalty[/bold red]")
-            return -5.0
+        cnn_builder = CNNBuilder(
+            rl_config=new_architecture, num_classes=self.data_importer.get_num_classes()[0]
+        )
+        architecture = cnn_builder.build()
+        optimizer = torch.optim.SGD(architecture.parameters(), lr=0.001, momentum=0.9)
+        training_results = self.train_classifier(
+            dataloaders=self.loader_tuple,
+            model=architecture,
+            loss_function=CrossEntropyLoss(),
+            optimizer=optimizer,
+        )
 
-        try:
-            cnn_builder = CNNBuilder(
-                rl_config=new_architecture, num_classes=self.data_importer.get_num_classes()[0]
-            )
-            architecture = cnn_builder.build()
-            optimizer = torch.optim.SGD(architecture.parameters(), lr=0.001, momentum=0.9)
+        if isinstance(training_results, Metrics):
+            self.console.print(f"[bold green]Accuracy: {training_results.accuracy}[/bold green]")
+            reward = self.calculate_reward(training_results)
+            self.console.print(f"[bold green]Reward: {reward}[/bold green]")
+            self.console.print("[bold green]Architecture:[/bold green]")
+            for i, layer in enumerate(new_architecture.layers, start=1):
+                self.console.print(f"  [bold yellow]Layer {i}:[/bold yellow] {layer}")
+            return reward
+        else:
+            return training_results  # Already a penalty value
 
-            training_results = self.train_classifier(
-                dataloaders=self.loader_tuple,
-                model=architecture,
-                loss_function=CrossEntropyLoss(),
-                optimizer=optimizer,
-            )
-            if isinstance(training_results, Metrics):
-                self.console.print(
-                    f"[bold green]Accuracy: {training_results.accuracy}[/bold green]"
-                )
-                reward = self._calculate_reward(training_results)
-                self.console.print(f"[bold green]Reward: {reward}[/bold green]")
-                if reward > 0.60:
-                    self.console.print(
-                        f"[bold magenta]New architecture accepted with reward {reward}[/bold magenta]"
-                    )
-                    self.console.print(
-                        f"[bold magenta]Architecture: {new_architecture}[/bold magenta]"
-                    )
-                return reward
-            else:
-                return training_results  # Already a penalty value
-
-        except Exception as e:
-            self.console.print(f"[bold red]Architecture evaluation failed: {e}[/bold red]")
-            return -5.0  # Penalty for invalid architecture
-
-    def _should_terminate(self) -> bool:
+    def should_terminate(self) -> bool:
         # Termination is now handled in step() method
         return False
 
-    def _has_truncated(self) -> bool:
+    def has_truncated(self) -> bool:
         # Truncation is now handled in step() method
         return False
 
-    def _calculate_reward(self, metrics: Metrics) -> float:
+    def calculate_reward(self, metrics: Metrics) -> float:
         """Calculate the reward based on evaluation metrics.
 
         :Args:

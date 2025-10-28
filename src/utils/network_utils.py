@@ -1,5 +1,5 @@
 import enum
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 import numpy as np
 from pydantic import BaseModel, field_validator, model_validator
 import torch.nn as nn
@@ -39,10 +39,10 @@ class LayerType(enum.Enum):
 
 class LinearUnits(enum.IntEnum):
     NONE = 0
-    LU_64 = 4  # 64
-    LU_128 = 5  # 128
-    LU_256 = 6  # 256
-    LU_512 = 7  # 512
+    LU_64 = 1  # 64
+    LU_128 = 2  # 128
+    LU_256 = 3  # 256
+    LU_512 = 4  # 512
 
     def to_units(self):
         mapping = [None, 64, 128, 256, 512]
@@ -116,24 +116,24 @@ def get_none_value_for_enum(enum_cls):
 
 class LayerConfig(BaseModel):
     layer_type: LayerType
-    out_channels: Optional[OutChannels] = None
-    kernel_size: Optional[KernelSize] = None
-    stride: Optional[Stride] = None
-    pool_mode: Optional[PoolMode] = None
-    activation: Optional[ActivationFunction] = ActivationFunction.NONE
-    linear_units: Optional[LinearUnits] = None
+    out_channels: OutChannels = OutChannels.NONE
+    kernel_size: KernelSize = KernelSize.NONE
+    stride: Stride = Stride.NONE
+    pool_mode: PoolMode = PoolMode.NONE
+    activation: ActivationFunction = ActivationFunction.NONE
+    linear_units: LinearUnits = LinearUnits.NONE
 
     @model_validator(mode="after")
     def validate_params(self):
         lt = self.layer_type
         if lt == LayerType.CONV:
-            if self.out_channels is None or self.kernel_size is None:
+            if self.out_channels == OutChannels.NONE or self.kernel_size == KernelSize.NONE:
                 raise InvalidLayerConfigError("Conv layer must define out_channels and kernel_size")
         elif lt == LayerType.POOL:
-            if self.pool_mode is None or self.kernel_size is None:
+            if self.pool_mode == PoolMode.NONE or self.kernel_size == KernelSize.NONE:
                 raise InvalidLayerConfigError("Pool layer must define pool_mode and kernel_size")
         elif lt == LayerType.LINEAR:
-            if self.linear_units is None:
+            if self.linear_units == LinearUnits.NONE:
                 raise InvalidLayerConfigError("Linear layer must define linear_units")
         return self
 
@@ -153,6 +153,64 @@ class NetworkConfig(BaseModel):
             if layer.layer_type == LayerType.LINEAR:
                 seen_linear = True
         return v
+
+    def extend(self, action: list[int], partial_arch: "NetworkConfig") -> "NetworkConfig":
+        """
+        Input: Takes a list of action and partially builds architecture
+
+        Output: Returns the partially built architecture with the new layer appended to it
+
+        Note:
+        The actions must be in the following order, otherwise, the method will fail when calling .build() on the constructed Network:
+        [action, layerIdx, layerType, outCh, kernelSize, stride, linearU, poolMode, actFun]
+
+        Currently, it only appends the layer at the end.
+        """
+        if action[0] == 0:
+            # no operation
+            return partial_arch
+        elif action[0] == 1:
+            # remove layer
+            return self.remove_layer(action)
+        elif action[0] == 2:
+            # modify layer
+            return self.modify_layer(action)
+        elif action[0] == 3:
+            # add layer
+            return self.add_layer(action, partial_arch)
+        return partial_arch
+
+    def remove_layer(self, action: list[int]) -> "NetworkConfig":
+        raise NotImplementedError
+
+    def modify_layer(self, action: list[int]) -> "NetworkConfig":
+        raise NotImplementedError
+
+    def add_layer(self, actions: list[int], partial_arch: "NetworkConfig") -> "NetworkConfig":
+        lt = LayerType(actions[2])
+        oc = OutChannels(actions[3])
+        ks = KernelSize(actions[4])
+        st = Stride(actions[5])
+        lu = LinearUnits(actions[6])
+        pm = PoolMode(actions[7])
+        act = ActivationFunction(actions[8])
+
+        layer_config = LayerConfig(
+            layer_type=lt,
+            out_channels=oc,
+            kernel_size=ks,
+            stride=st,
+            linear_units=lu,
+            pool_mode=pm,
+            activation=act,
+        )
+        layer_idx = actions[1]
+        if layer_idx == len(partial_arch.layers):
+            partial_arch.layers.append(layer_config)
+        else:
+            partial_arch.layers.insert(layer_idx, layer_config)
+
+        return partial_arch
 
 
 def update_spatial_dims(
@@ -180,14 +238,22 @@ def get_layer_from_index(observation: np.ndarray, index: int) -> LayerConfig:
         raise ValueError(f"Layer index {index} is out of bounds or undefined in the observation.")
     return LayerConfig(
         layer_type=LayerType(observation[start]),
-        out_channels=OutChannels(observation[start + 1]) if observation[start + 1] != 0 else None,
-        kernel_size=KernelSize(observation[start + 2]) if observation[start + 2] != 0 else None,
-        stride=Stride(observation[start + 3]) if observation[start + 3] != 0 else None,
-        pool_mode=PoolMode(observation[start + 4]) if observation[start + 4] != 0 else None,
+        out_channels=OutChannels(observation[start + 1])
+        if observation[start + 1] != 0
+        else OutChannels.NONE,
+        kernel_size=KernelSize(observation[start + 2])
+        if observation[start + 2] != 0
+        else KernelSize.NONE,
+        stride=Stride(observation[start + 3]) if observation[start + 3] != 0 else Stride.NONE,
+        pool_mode=PoolMode(observation[start + 4])
+        if observation[start + 4] != 0
+        else PoolMode.NONE,
         activation=ActivationFunction(observation[start + 5])
         if observation[start + 5] != 0
-        else None,
-        linear_units=LinearUnits(observation[start + 6]) if observation[start + 6] != 0 else None,
+        else ActivationFunction.NONE,
+        linear_units=LinearUnits(observation[start + 6])
+        if observation[start + 6] != 0
+        else LinearUnits.NONE,
     )
 
 
@@ -254,16 +320,20 @@ def get_latest_layer(observation: np.ndarray):
                 layer_type=LayerType(observation[idx]),
                 out_channels=OutChannels(observation[idx + 1])
                 if observation[idx + 1] != 0
-                else None,
-                kernel_size=KernelSize(observation[idx + 2]) if observation[idx + 2] != 0 else None,
-                stride=Stride(observation[idx + 3]) if observation[idx + 3] != 0 else None,
-                pool_mode=PoolMode(observation[idx + 4]) if observation[idx + 4] != 0 else None,
+                else OutChannels.NONE,
+                kernel_size=KernelSize(observation[idx + 2])
+                if observation[idx + 2] != 0
+                else KernelSize.NONE,
+                stride=Stride(observation[idx + 3]) if observation[idx + 3] != 0 else Stride.NONE,
+                pool_mode=PoolMode(observation[idx + 4])
+                if observation[idx + 4] != 0
+                else PoolMode.NONE,
                 activation=ActivationFunction(observation[idx + 5])
                 if observation[idx + 5] != 0
-                else None,
+                else ActivationFunction.NONE,
                 linear_units=LinearUnits(observation[idx + 6])
                 if observation[idx + 6] != 0
-                else None,
+                else LinearUnits.NONE,
             )
         elif observation[i] == 0 and i == 0:
             return None  # No layers defined yet

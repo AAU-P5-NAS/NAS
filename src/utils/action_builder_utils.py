@@ -42,6 +42,12 @@ class MaxLayersReachedException(Exception):
     pass
 
 
+class ArchitectureCompleteException(Exception):
+    """Raised when the architecture is complete and no further actions can be taken."""
+
+    pass
+
+
 class ActionStrategy(enum.Enum):
     ADD_LAYER_SEQUENTIAL = "add_layer_sequential"
     ADD_REMOVE_MODIFY = "add_remove_modify"
@@ -146,28 +152,33 @@ class MaskContext(BaseModel):
 
 
 def build_action_add_layer_sequential(ctx: MaskContext):
-    ctx.logits = mask_action_type_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "standard_actions"))
+    try:
+        ctx.logits = mask_action_type_sequential(ctx)
+        ctx.decisions.append(sample_action_from_slice(ctx, "standard_actions"))
+        if ctx.decisions[ACTION_CHOICE] == StandardAction.NONE.value:
+            raise ArchitectureCompleteException(
+                "Architecture is complete. No further actions can be taken."
+            )
 
-    if ctx.decisions[ACTION_CHOICE] == StandardAction.NONE.value:
-        raise ValueError("No action selected, cannot proceed to add layer.")
+        ctx.logits = mask_indexes_sequential(ctx)
+        ctx.decisions.append(sample_action_from_slice(ctx, "layer_index"))
+        ctx.logits = mask_layer_type_sequential(ctx)
+        ctx.decisions.append(sample_action_from_slice(ctx, "layer_type"))
+        ctx.logits = mask_out_channels_sequential(ctx)
+        ctx.decisions.append(sample_action_from_slice(ctx, "out_channels"))
+        ctx.logits = mask_kernel_size_sequential(ctx)
+        ctx.decisions.append(sample_action_from_slice(ctx, "kernel_size"))
+        ctx.logits = mask_stride_sequential(ctx)
+        ctx.decisions.append(sample_action_from_slice(ctx, "stride"))
+        ctx.logits = mask_linear_units_sequential(ctx)
+        ctx.decisions.append(sample_action_from_slice(ctx, "linear_units"))
+        ctx.logits = mask_pool_mode_sequential(ctx)
+        ctx.decisions.append(sample_action_from_slice(ctx, "pool_mode"))
+        ctx.logits = mask_activation_function_sequential(ctx)
+        ctx.decisions.append(sample_action_from_slice(ctx, "activation_function"))
 
-    ctx.logits = mask_indexes_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "layer_index"))
-    ctx.logits = mask_layer_type_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "layer_type"))
-    ctx.logits = mask_out_channels_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "out_channels"))
-    ctx.logits = mask_kernel_size_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "kernel_size"))
-    ctx.logits = mask_stride_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "stride"))
-    ctx.logits = mask_linear_units_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "linear_units"))
-    ctx.logits = mask_pool_mode_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "pool_mode"))
-    ctx.logits = mask_activation_function_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "activation_function"))
+    except Exception:
+        return None  # no action to perform.
 
     return ctx.decisions
 

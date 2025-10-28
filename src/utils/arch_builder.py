@@ -8,7 +8,6 @@ from src.utils.network_utils import (
     OutChannels,
     PoolMode,
     Stride,
-    InvalidLayerConfigError,
 )
 
 from src.utils.cnn_builder import CNNBuilder
@@ -18,70 +17,52 @@ class InvalidArchitectureAction(ValueError):
     pass
 
 
-def arch_builder(actions: list[int], partial_arch: NetworkConfig) -> NetworkConfig:
-    """
-    Input: Takes a list of action and partialy build arch
+class ArchBuilder:
+    def __init__(self):
+        pass
 
-    Output: Return the partually build with the new layer appended to it
+    def extend(self, actions: list[int], partial_arch: NetworkConfig) -> NetworkConfig:
+        """
+        Input: Takes a list of action and partially builds architecture
 
-    Note:
-    the actions must be in the following order, otherwise, the method will fail when calling .build() on the constructed Network
-    [action, layerIdx, layerType, outCh, kernelSize, stride, linearU,  poolMode, actFun]
+        Output: Returns the partially built architecture with the new layer appended to it
 
-    Also, currently it only append the layer at the end.
+        Note:
+        The actions must be in the following order, otherwise, the method will fail when calling .build() on the constructed Network:
+        [action, layerIdx, layerType, outCh, kernelSize, stride, linearU, poolMode, actFun]
 
-    """
-    if actions[0] == 0:
-        # no oberation
+        Currently, it only appends the layer at the end.
+        """
+        if actions[0] == 0:
+            # no operation
+            return partial_arch
+        elif actions[0] == 1:
+            # remove layer
+            return self.remove_layer(actions)
+        elif actions[0] == 2:
+            # modify layer
+            return self.modify_layer(actions)
+        elif actions[0] == 3:
+            # add layer
+            return self.add_layer(actions, partial_arch)
         return partial_arch
-    if actions[0] == 1:
-        # remove layer
-        pass
-    elif actions[0] == 2:
-        # modify layer
-        pass
-    elif actions[0] == 3:
-        # add layer
-        return add_layer(actions, partial_arch)
 
+    def remove_layer(self, actions: list[int]) -> NetworkConfig:
+        raise NotImplementedError
 
-def remove_layer(actions: list[int], partial_arch: NetworkConfig):
-    raise NotImplementedError
+    def modify_layer(self, actions: list[int]) -> NetworkConfig:
+        raise NotImplementedError
 
-
-def modify_layer(actions: list[int], partial_arch: NetworkConfig):
-    raise NotImplementedError
-
-
-def add_layer(actions: list[int], partial_arch: NetworkConfig):
-    try:
+    def add_layer(self, actions: list[int], partial_arch: NetworkConfig) -> NetworkConfig:
         lt = LayerType(actions[2])
-        try:
-            oc = OutChannels(actions[3])
-        except ValueError:
-            oc = None
-        try:
-            ks = KernelSize(actions[4])
-        except ValueError:
-            ks = None
-        try:
-            st = Stride(actions[5])
-        except ValueError:
-            st = None
-        try:
-            lu = LinearUnits(actions[6])
-        except ValueError:
-            lu = None
-        try:
-            pm = PoolMode(actions[7])
-        except ValueError:
-            pm = None
-        try:
-            act = ActivationFunction(actions[8])
-        except ValueError:
-            act = None
+        oc = OutChannels(actions[3])
+        ks = KernelSize(actions[4])
+        st = Stride(actions[5])
+        lu = LinearUnits(actions[6])
+        pm = PoolMode(actions[7])
+        act = ActivationFunction(actions[8])
 
-        layerConfig = LayerConfig(
+        layer_config = LayerConfig(
             layer_type=lt,
             out_channels=oc,
             kernel_size=ks,
@@ -90,26 +71,13 @@ def add_layer(actions: list[int], partial_arch: NetworkConfig):
             pool_mode=pm,
             activation=act,
         )
-    except ValueError:
-        raise InvalidArchitectureAction("Cannot add a layer of type None")
-
-    partial_arch.layers.append(layerConfig)
-
-    layer_idx = actions[1]
-    if layer_idx == len(partial_arch.layers):
-        partial_arch.layers.append(layerConfig)
-        return partial_arch
-    else:
-        partial_arch.layers.insert(layer_idx, layerConfig)
-        return partial_arch
-        if check_compatibility(partial_arch):
-            return partial_arch
+        layer_idx = actions[1]
+        if layer_idx == len(partial_arch.layers):
+            partial_arch.layers.append(layer_config)
         else:
-            raise InvalidLayerConfigError("The partial arch is not compatible")
+            partial_arch.layers.insert(layer_idx, layer_config)
 
-
-def check_compatibility(partial_arch) -> bool:
-    raise NotImplementedError
+        return partial_arch
 
 
 # ------------------------------------------------------------------------------------------------#
@@ -134,13 +102,16 @@ if __name__ == "__main__":
 
     for layer in config.layers:
         print(layer)
+
     cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
     model = cnn_builder.build()
     # Print the model architecture
 
     actions = [1, 2, 1, 0, 0, 0, 3, 0, 1]
     action1 = [1, 1, 2, 0, 1, 0, 0, 1, 3]
-    arch_builder(action1, config)
+
+    arch_builder = ArchBuilder()
+    arch_builder.extend(action1, config)
 
     for layer in config.layers:
         cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
