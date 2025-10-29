@@ -76,7 +76,6 @@ class CustomEnv(gym.Env):
         output_actions = (
             len(StandardAction)
             + len(LayerType)
-            + (self.max_layers - 1)  # One for each index (which index to apply action on)
             + len(OutChannels)
             + len(KernelSize)
             + len(Stride)
@@ -179,7 +178,7 @@ class CustomEnv(gym.Env):
             return self.current_network_config, True  # Stop and evaluate
 
         new_network_config = self.current_network_config.extend(
-            action=action_to_apply.to_int_list(), partial_arch=self.current_network_config
+            action=action_to_apply, partial_arch=self.current_network_config
         )
         self.current_network_config = new_network_config
         return new_network_config, False  # Do not evaluate yet

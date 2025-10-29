@@ -107,7 +107,6 @@ class LogitSlice:
 class Slices(BaseModel):
     standard_actions: LogitSlice
     layer_type: LogitSlice
-    layer_index: LogitSlice
     out_channels: LogitSlice
     kernel_size: LogitSlice
     stride: LogitSlice
@@ -121,7 +120,6 @@ def get_logit_slices(max_layers: int):
     sizes = {
         "standard_actions": len(StandardAction),
         "layer_type": len(LayerType),
-        "layer_index": max_layers - 1,
         "out_channels": len(OutChannels),
         "kernel_size": len(KernelSize),
         "stride": len(Stride),
@@ -140,7 +138,6 @@ def get_logit_slices(max_layers: int):
 
 class Decisions(BaseModel):
     action_choice: int
-    index_choice: int
     layer_type_choice: int
     out_channels_choice: int
     kernel_size_choice: int
@@ -150,23 +147,9 @@ class Decisions(BaseModel):
     activation_function_choice: int
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def to_int_list(self) -> list[int]:
-        return [
-            self.action_choice,
-            self.index_choice,
-            self.layer_type_choice,
-            self.out_channels_choice,
-            self.kernel_size_choice,
-            self.stride_choice,
-            self.linear_units_choice,
-            self.pool_mode_choice,
-            self.activation_function_choice,
-        ]
-
 
 EMPTY_DECISIONS = Decisions(
     action_choice=0,
-    index_choice=0,
     layer_type_choice=0,
     out_channels_choice=0,
     kernel_size_choice=0,
@@ -196,8 +179,6 @@ def build_action_add_layer_sequential(ctx: MaskContext):
                 "Architecture is complete. No further actions can be taken."
             )
 
-        ctx.logits = mask_indexes_sequential(ctx)
-        ctx.decisions.index_choice = sample_action_from_slice(ctx, "layer_index")
         ctx.logits = mask_layer_type_sequential(ctx)
         ctx.decisions.layer_type_choice = sample_action_from_slice(ctx, "layer_type")
         ctx.logits = mask_out_channels_sequential(ctx)
@@ -243,26 +224,6 @@ def mask_action_type_sequential(ctx: MaskContext):
         new_logits[ctx.slices.standard_actions.all] = -np.inf
         new_logits[ctx.slices.standard_actions[StandardAction.ADD_LAYER]] = 1
         return new_logits
-
-    modify_layer_index = ctx.slices.standard_actions[StandardAction.MODIFY_LAYER]
-    remove_layer_index = ctx.slices.standard_actions[StandardAction.REMOVE_LAYER]
-    new_logits[modify_layer_index] = -np.inf
-    new_logits[remove_layer_index] = -np.inf
-    return new_logits
-
-
-def mask_indexes_sequential(ctx: MaskContext):
-    new_logits = ctx.logits.copy()
-
-    latest_layer_index = get_latest_layer_index(ctx.observation)
-    if latest_layer_index == ctx.max_layers - 1:
-        raise MaxLayersReachedException("Maximum number of layers reached.")
-
-    next_layer_index = latest_layer_index + 1 if latest_layer_index is not None else 0
-    new_logits[ctx.slices.layer_index.all] = -np.inf
-
-    layer_index_start = ctx.slices.layer_index.start
-    new_logits[layer_index_start + next_layer_index] = 1  # only next index is valid
 
     return new_logits
 
