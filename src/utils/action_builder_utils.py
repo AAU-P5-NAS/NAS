@@ -60,6 +60,10 @@ MaskContext:
     A Pydantic model encapsulating the context needed for action masking.
     Contains logits, observation, slices, action strategy, sampling strategy, max layers, and decisions.
 
+Decisions:
+    A Pydantic model to store the choices made for each action type during the masking process.
+    Includes a method to convert decisions to a list of integers.
+
 The raw logits from the Agent are organized into a Slices object for easier management and sampling. 
 This helps with masking specific invalid actions. For example, to mask out linear units: 
     masked_logits = ctx.logits.copy()
@@ -134,42 +138,82 @@ def get_logit_slices(max_layers: int):
     return logit_slices
 
 
+class Decisions(BaseModel):
+    action_choice: int
+    index_choice: int
+    layer_type_choice: int
+    out_channels_choice: int
+    kernel_size_choice: int
+    stride_choice: int
+    linear_units_choice: int
+    pool_mode_choice: int
+    activation_function_choice: int
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def to_int_list(self) -> list[int]:
+        return [
+            self.action_choice,
+            self.index_choice,
+            self.layer_type_choice,
+            self.out_channels_choice,
+            self.kernel_size_choice,
+            self.stride_choice,
+            self.linear_units_choice,
+            self.pool_mode_choice,
+            self.activation_function_choice,
+        ]
+
+
+EMPTY_DECISIONS = Decisions(
+    action_choice=0,
+    index_choice=0,
+    layer_type_choice=0,
+    out_channels_choice=0,
+    kernel_size_choice=0,
+    stride_choice=0,
+    linear_units_choice=0,
+    pool_mode_choice=0,
+    activation_function_choice=0,
+)
+
+
 class MaskContext(BaseModel):
     logits: np.ndarray
     observation: np.ndarray
     slices: Slices
-    action_strategy: str
     sampling_strategy: Callable[[np.ndarray], int]
     max_layers: int
-    decisions: list[int] = []  # store sampled choice for each head
+    decisions: Decisions
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 def build_action_add_layer_sequential(ctx: MaskContext):
     try:
         ctx.logits = mask_action_type_sequential(ctx)
-        ctx.decisions.append(sample_action_from_slice(ctx, "standard_actions"))
-        if ctx.decisions[ACTION_CHOICE] == StandardAction.NONE.value:
+        ctx.decisions.action_choice = sample_action_from_slice(ctx, "standard_actions")
+        if ctx.decisions.action_choice == StandardAction.NONE.value:
             raise ArchitectureCompleteException(
                 "Architecture is complete. No further actions can be taken."
             )
 
         ctx.logits = mask_indexes_sequential(ctx)
-        ctx.decisions.append(sample_action_from_slice(ctx, "layer_index"))
+        ctx.decisions.index_choice = sample_action_from_slice(ctx, "layer_index")
         ctx.logits = mask_layer_type_sequential(ctx)
-        ctx.decisions.append(sample_action_from_slice(ctx, "layer_type"))
+        ctx.decisions.layer_type_choice = sample_action_from_slice(ctx, "layer_type")
         ctx.logits = mask_out_channels_sequential(ctx)
-        ctx.decisions.append(sample_action_from_slice(ctx, "out_channels"))
+        ctx.decisions.out_channels_choice = sample_action_from_slice(ctx, "out_channels")
         ctx.logits = mask_kernel_size_sequential(ctx)
-        ctx.decisions.append(sample_action_from_slice(ctx, "kernel_size"))
+        ctx.decisions.kernel_size_choice = sample_action_from_slice(ctx, "kernel_size")
         ctx.logits = mask_stride_sequential(ctx)
-        ctx.decisions.append(sample_action_from_slice(ctx, "stride"))
+        ctx.decisions.stride_choice = sample_action_from_slice(ctx, "stride")
         ctx.logits = mask_linear_units_sequential(ctx)
-        ctx.decisions.append(sample_action_from_slice(ctx, "linear_units"))
+        ctx.decisions.linear_units_choice = sample_action_from_slice(ctx, "linear_units")
         ctx.logits = mask_pool_mode_sequential(ctx)
-        ctx.decisions.append(sample_action_from_slice(ctx, "pool_mode"))
+        ctx.decisions.pool_mode_choice = sample_action_from_slice(ctx, "pool_mode")
         ctx.logits = mask_activation_function_sequential(ctx)
-        ctx.decisions.append(sample_action_from_slice(ctx, "activation_function"))
+        ctx.decisions.activation_function_choice = sample_action_from_slice(
+            ctx, "activation_function"
+        )
 
     except Exception:
         return None  # no action to perform.
@@ -226,7 +270,7 @@ def mask_indexes_sequential(ctx: MaskContext):
 def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
-    if ctx.decisions[ACTION_CHOICE] == StandardAction.NONE.value:
+    if ctx.decisions.action_choice == StandardAction.NONE.value:
         new_logits[ctx.slices.layer_type.all] = -np.inf
         new_logits[ctx.slices.layer_type[LayerType.NONE]] = 1
         return new_logits
@@ -253,8 +297,8 @@ def mask_out_channels_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
     if (
-        ctx.decisions[LAYER_TYPE_CHOICE] == LayerType.LINEAR.value
-        or ctx.decisions[LAYER_TYPE_CHOICE] == LayerType.NONE.value
+        ctx.decisions.out_channels_choice == LayerType.LINEAR.value
+        or ctx.decisions.out_channels_choice == LayerType.NONE.value
     ):
         new_logits[ctx.slices.out_channels.all] = -np.inf
         new_logits[ctx.slices.out_channels[OutChannels.NONE]] = 1
@@ -268,8 +312,8 @@ def mask_kernel_size_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
     if (
-        ctx.decisions[LAYER_TYPE_CHOICE] == LayerType.NONE.value
-        or ctx.decisions[LAYER_TYPE_CHOICE] == LayerType.LINEAR.value
+        ctx.decisions.kernel_size_choice == LayerType.NONE.value
+        or ctx.decisions.kernel_size_choice == LayerType.LINEAR.value
     ):
         # mask all kernel sizes
         new_logits[ctx.slices.kernel_size.all] = -np.inf
@@ -292,15 +336,15 @@ def mask_stride_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
     if (
-        ctx.decisions[LAYER_TYPE_CHOICE] == LayerType.NONE.value
-        or ctx.decisions[LAYER_TYPE_CHOICE] == LayerType.LINEAR.value
+        ctx.decisions.layer_type_choice == LayerType.NONE.value
+        or ctx.decisions.layer_type_choice == LayerType.LINEAR.value
     ):
         # mask all strides
         new_logits[ctx.slices.stride.all] = -np.inf
         new_logits[ctx.slices.stride[Stride.NONE]] = 1
         return new_logits
 
-    kernel_size_chosen = KernelSize(ctx.decisions[KERNEL_SIZE_CHOICE])
+    kernel_size_chosen = KernelSize(ctx.decisions.kernel_size_choice)
     latest_output_dims = get_output_dimensions(ctx.observation)
     valid_strides = get_valid_strides(latest_output_dims, kernel_size_chosen)
     invalid_strides = [s for s in Stride if s not in valid_strides]
@@ -316,7 +360,7 @@ def mask_stride_sequential(ctx: MaskContext):
 def mask_linear_units_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
-    if ctx.decisions[LAYER_TYPE_CHOICE] != LayerType.LINEAR.value:
+    if ctx.decisions.linear_units_choice != LayerType.LINEAR.value:
         new_logits[ctx.slices.linear_units.all] = -np.inf
         new_logits[ctx.slices.linear_units[LinearUnits.NONE]] = 1
         return new_logits
@@ -328,7 +372,7 @@ def mask_linear_units_sequential(ctx: MaskContext):
 def mask_pool_mode_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
-    if ctx.decisions[LAYER_TYPE_CHOICE] != LayerType.POOL.value:
+    if ctx.decisions.pool_mode_choice != LayerType.POOL.value:
         new_logits[ctx.slices.pool_mode.all] = -np.inf
         new_logits[ctx.slices.pool_mode[PoolMode.NONE]] = 1
         return new_logits
