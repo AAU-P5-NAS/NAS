@@ -80,7 +80,10 @@ class Trainer:
 
         # Predictions and labels are now on the same device as the metrics
         metrics: Metrics = self.evaluator.calculate_metrics(
-            self.model, all_preds_flattened, all_labels_flattened
+            self.model,
+            all_preds_flattened,
+            all_labels_flattened,
+            [m for m in self.chosen_metrics if m != "test_loss"],
         )
         if "test_loss" in self.chosen_metrics:
             metrics.__setattr__("test_loss", test_loss)
