@@ -9,6 +9,8 @@ from stable_baselines3.common.logger import TensorBoardOutputFormat
 
 import os
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 class CustomEnvCallBack(BaseCallback):
     def __init__(self, verbose=0):
@@ -50,7 +52,7 @@ class SBThreeAgent:
             policy=policy,
             env=self.env,
             verbose=1,
-            device="cuda" if torch.cuda.is_available() else "cpu",
+            device=device,
             learning_rate=learning_rate,
             tensorboard_log=self.TB_LOG_DIRECTORY,
         )

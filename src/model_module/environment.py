@@ -27,6 +27,7 @@ from torch.nn import CrossEntropyLoss, Module
 from rich.console import Console
 from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
+from src.model_module.sb_three import device
 
 standard_actions = {
     "REMOVE_LAYER",
@@ -153,7 +154,9 @@ class CustomEnv(gym.Env):
         logger.dump(step=self.step_count)
 
         if self.newest_architecture is not None:
-            summary_writer.add_graph(self.newest_architecture, torch.zeros(1, 1, 28, 28))
+            summary_writer.add_graph(
+                self.newest_architecture, torch.zeros(1, 1, 28, 28).to(device=device)
+            )
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
         """Start a new episode.
