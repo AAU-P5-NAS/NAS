@@ -26,14 +26,13 @@ from src.utils.network_utils import (
 )
 
 ACTION_CHOICE = 0
-INDEX_CHOICE = 1
-LAYER_TYPE_CHOICE = 2
-OUT_CHANNELS_CHOICE = 3
-KERNEL_SIZE_CHOICE = 4
-STRIDE_CHOICE = 5
-LINEAR_UNITS_CHOICE = 6
-POOL_MODE_CHOICE = 7
-ACTIVATION_FUNCTION_CHOICE = 8
+LAYER_TYPE_CHOICE = 1
+OUT_CHANNELS_CHOICE = 2
+KERNEL_SIZE_CHOICE = 3
+STRIDE_CHOICE = 4
+LINEAR_UNITS_CHOICE = 5
+POOL_MODE_CHOICE = 6
+ACTIVATION_FUNCTION_CHOICE = 7
 
 
 class MaxLayersReachedException(Exception):
@@ -46,11 +45,6 @@ class ArchitectureCompleteException(Exception):
     """Raised when the architecture is complete and no further actions can be taken."""
 
     pass
-
-
-class ActionStrategy(enum.Enum):
-    ADD_LAYER_SEQUENTIAL = "add_layer_sequential"
-    ADD_REMOVE_MODIFY = "add_remove_modify"
 
 
 """

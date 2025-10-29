@@ -5,6 +5,12 @@ from pydantic import BaseModel, field_validator, model_validator
 import torch.nn as nn
 
 
+class InvalidActionError(Exception):
+    """Raised when an invalid action is provided to modify the network architecture."""
+
+    pass
+
+
 class InvalidLayerConfigError(Exception):
     """Raised when a single CNN layer has invalid parameters."""
 
@@ -25,9 +31,7 @@ class CNNExportError(Exception):
 
 class StandardAction(enum.Enum):
     NONE = 0
-    REMOVE_LAYER = 1
-    MODIFY_LAYER = 2
-    ADD_LAYER = 3
+    ADD_LAYER = 1
 
 
 class LayerType(enum.Enum):
@@ -56,10 +60,9 @@ class OutChannels(enum.IntEnum):
     CH_64 = 3  # 64
     CH_128 = 4  # 128
     CH_256 = 5  # 256
-    CH_512 = 6  # 512
 
     def to_channels(self):
-        mapping = [None, 16, 32, 64, 128, 256, 512]
+        mapping = [None, 16, 32, 64, 128, 256]
         return mapping[self.value]
 
 
@@ -110,10 +113,6 @@ class ActivationFunction(enum.Enum):
         return mapping[self.value]()
 
 
-def get_none_value_for_enum(enum_cls):
-    return len(enum_cls)
-
-
 class LayerConfig(BaseModel):
     layer_type: LayerType
     out_channels: OutChannels = OutChannels.NONE
@@ -162,29 +161,16 @@ class NetworkConfig(BaseModel):
 
         Note:
         The actions must be in the following order, otherwise, the method will fail when calling .build() on the constructed Network:
-        [action, layerIdx, layerType, outCh, kernelSize, stride, linearU, poolMode, actFun]
+        [action, layerType, outCh, kernelSize, stride, linearU, poolMode, actFun]
 
         Currently, it only appends the layer at the end.
         """
-        if action[0] == 0:
-            # no operation
-            return partial_arch
-        elif action[0] == 1:
-            # remove layer
-            return self.remove_layer(action)
-        elif action[0] == 2:
-            # modify layer
-            return self.modify_layer(action)
-        elif action[0] == 3:
+        if action[0] == 1:
             # add layer
             return self.add_layer(action, partial_arch)
-        return partial_arch
-
-    def remove_layer(self, action: list[int]) -> "NetworkConfig":
-        raise NotImplementedError
-
-    def modify_layer(self, action: list[int]) -> "NetworkConfig":
-        raise NotImplementedError
+        else:
+            # no operation
+            return partial_arch
 
     def add_layer(self, actions: list[int], partial_arch: "NetworkConfig") -> "NetworkConfig":
         lt = LayerType(actions[2])
@@ -204,11 +190,8 @@ class NetworkConfig(BaseModel):
             pool_mode=pm,
             activation=act,
         )
-        layer_idx = actions[1]
-        if layer_idx == len(partial_arch.layers):
-            partial_arch.layers.append(layer_config)
-        else:
-            partial_arch.layers.insert(layer_idx, layer_config)
+
+        partial_arch.layers.append(layer_config)
 
         return partial_arch
 
