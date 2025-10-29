@@ -6,7 +6,7 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
-from model_module.action_builder import transform_logits_to_action
+from src.model_module.action_builder import transform_logits_to_action
 from src.classification_module.metrics import Metrics
 from src.classification_module.reward import RewardCalculator
 from src.classification_module.train import Trainer
@@ -23,10 +23,12 @@ from src.utils.network_utils import (
     PoolMode,
     ActivationFunction,
 )
-from torch.nn import CrossEntropyLoss
+from torch.nn import CrossEntropyLoss, Module
 from rich.console import Console
+from stable_baselines3.common.logger import Logger
+from torch.utils.tensorboard import SummaryWriter
 
-from utils.action_builder_utils import get_logit_slices
+from src.utils.action_builder_utils import get_logit_slices
 
 
 class CustomEnv(gym.Env):
@@ -50,10 +52,29 @@ class CustomEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
     render_mode: str
     max_layers: int
+    logdir: str
+    info: Dict[str, Any] = {}
+    actions_taken: int = 0  # Track steps in episode
+    sum_reward: float = 0.0
+    sum_accuracy: float = 0.0
+    evaluation_count: int = 0
+    step_count: int = 0
 
-    def __init__(self, render_mode: str = "console", max_layers: int = 16):
+    newest_reward: Optional[float] = None
+    newest_metrics: Optional[Metrics] = None
+    newest_architecture: Optional[Module] = None
+    newest_actions_taken_on_evaluation: Optional[int] = None
+
+    evaluated_this_step: bool = False
+
+    device: str
+
+    def __init__(
+        self, logdir: str, device: str, render_mode: str = "console", max_layers: int = 16
+    ):
         super().__init__()
 
+        self.device = device
         self.render_mode = render_mode
         self.max_layers = max_layers
         self.max_actions_per_episode = (
@@ -61,7 +82,7 @@ class CustomEnv(gym.Env):
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
         self.data_importer = DataImporter(dataset_option=DatasetOption.EMNIST_BALANCED)
-        self.logit_slices = get_logit_slices(self.max_layers)
+        self.logit_slices = get_logit_slices()
         self.loader_tuple = self.data_importer.get_dataloaders(batch_size=64)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
@@ -71,12 +92,12 @@ class CustomEnv(gym.Env):
         self.sum_reward = 0.0
         self.sum_accuracy = 0.0
         self.evaluation_count = 0
+        self.logdir = logdir
 
     def _get_action_space(self) -> spaces.Space:
         output_actions = (
             len(StandardAction)
             + len(LayerType)
-            + (self.max_layers - 1)  # One for each index (which index to apply action on)
             + len(OutChannels)
             + len(KernelSize)
             + len(Stride)
@@ -104,13 +125,37 @@ class CustomEnv(gym.Env):
         flattened_obs = flatten_cnn_config(self.current_network_config, self.max_layers)
         return np.array(flattened_obs, dtype=np.float32)
 
-    def _get_info(self) -> Dict[str, Any]:
-        """Compute auxiliary information for debugging.
-
-        Returns:
-
+    def _write_summary(self, logger: Logger, summary_writer: SummaryWriter) -> None:
         """
-        return {}
+        Write evaluation metrics and reward to TensorBoard summary, if evaluated_this_step is True.
+        """
+
+        if self.evaluated_this_step is False:
+            return
+
+        def record_optional(name: str, metric: Optional[float]) -> None:
+            if metric is not None:
+                logger.record(name, metric)
+
+        record_optional("Custom/Reward", self.newest_reward)
+        record_optional("Custom/Actions Taken", self.newest_actions_taken_on_evaluation)
+
+        if self.newest_metrics is not None:
+            record_optional("Custom/Test Loss", self.newest_metrics.test_loss)
+            record_optional("Custom/Accuracy", self.newest_metrics.accuracy)
+            record_optional("Custom/Precision", self.newest_metrics.precision)
+            record_optional("Custom/Recall", self.newest_metrics.recall)
+            record_optional("Custom/F1 Score", self.newest_metrics.f1_score)
+            record_optional("Custom/FLOPs", self.newest_metrics.flops)
+            record_optional("Custom/Runtime", self.newest_metrics.runtime)
+            record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
+
+        logger.dump(step=self.step_count)
+
+        if self.newest_architecture is not None:
+            summary_writer.add_graph(
+                self.newest_architecture, torch.zeros(1, 1, 28, 28).to(device=self.device)
+            )
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
         """Start a new episode.
@@ -129,8 +174,7 @@ class CustomEnv(gym.Env):
         self.actions_taken = 0
         self.current_network_config = NetworkConfig(layers=[])
         observation = self._get_observation()
-        info = self._get_info()
-        return observation, info
+        return observation, self.info
 
     def step(self, action_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
@@ -141,13 +185,18 @@ class CustomEnv(gym.Env):
         :Returns:
         - tuple: (observation, reward, terminated, truncated, info)
         """
+
+        self.evaluated_this_step = False
+
+        self.info = {}
+        self.step_count += 1
         self.actions_taken += 1
 
         new_architecture, should_evaluate = self._get_new_architecture(action_logits)
 
         if should_evaluate:
             with self.console.status(
-                f"[bold blue]Training model on action number {self.evaluation_count} ...[/bold blue]"
+                f"[bold blue]Training model on action number {self.evaluation_count + 1} ...[/bold blue]\nCurrent sum reward: {self.sum_reward}"
             ):
                 reward = self._evaluate_architecture(new_architecture)
                 terminated = True
@@ -158,10 +207,9 @@ class CustomEnv(gym.Env):
             terminated = False
             truncated = False
 
-        info = self._get_info()
         obs = self._get_observation()
 
-        return obs, reward, terminated, truncated, info
+        return obs, reward, terminated, truncated, self.info
 
     def _get_new_architecture(self, action_logits: np.ndarray):
         """Build a new architecture based on the agent's action logits.
@@ -174,12 +222,10 @@ class CustomEnv(gym.Env):
         """
         observation = self._get_observation()
         action_to_apply = transform_logits_to_action(action_logits, observation, self.max_layers)
-
         if action_to_apply is None:
             return self.current_network_config, True  # Stop and evaluate
-
         new_network_config = self.current_network_config.extend(
-            action=action_to_apply.to_int_list(), partial_arch=self.current_network_config
+            action=action_to_apply, partial_arch=self.current_network_config
         )
         self.current_network_config = new_network_config
         return new_network_config, False  # Do not evaluate yet
@@ -225,6 +271,8 @@ class CustomEnv(gym.Env):
         metrics.runtime = training_time
         metrics.training_time = training_time
 
+        self.newest_metrics = metrics
+
         return metrics
 
     def _evaluate_architecture(self, new_architecture: NetworkConfig) -> float:
@@ -254,7 +302,18 @@ class CustomEnv(gym.Env):
             self.console.print(f"[bold green]Reward: {reward}[/bold green]")
             self.console.print("[bold green]Architecture:[/bold green]")
             for i, layer in enumerate(new_architecture.layers, start=1):
-                self.console.print(f"  [bold yellow]Layer {i}:[/bold yellow] {layer}")
+                if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
+                    self.console.print(
+                        f"[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
+                    )
+                elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
+                    self.console.print(
+                        f"[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
+                    )
+                else:
+                    self.console.print(
+                        f"[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Activation: {layer.activation.name}"
+                    )
             return reward
         else:
             return training_results  # Already a penalty value
@@ -299,6 +358,7 @@ class CustomEnv(gym.Env):
             else:
                 self.sum_accuracy += 0.0
 
+        self.newest_reward = float(reward)
         return reward
 
     def render(self):

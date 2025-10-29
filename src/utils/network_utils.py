@@ -1,7 +1,7 @@
 import enum
 from typing import List, Tuple
 import numpy as np
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 import torch.nn as nn
 
 
@@ -137,6 +137,30 @@ class LayerConfig(BaseModel):
         return self
 
 
+class Decisions(BaseModel):
+    action_choice: StandardAction
+    layer_type_choice: LayerType
+    out_channels_choice: OutChannels
+    kernel_size_choice: KernelSize
+    stride_choice: Stride
+    linear_units_choice: LinearUnits
+    pool_mode_choice: PoolMode
+    activation_function_choice: ActivationFunction
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+EMPTY_DECISIONS = Decisions(
+    action_choice=StandardAction.NONE,
+    layer_type_choice=LayerType.NONE,
+    out_channels_choice=OutChannels.NONE,
+    kernel_size_choice=KernelSize.NONE,
+    stride_choice=Stride.NONE,
+    linear_units_choice=LinearUnits.NONE,
+    pool_mode_choice=PoolMode.NONE,
+    activation_function_choice=ActivationFunction.NONE,
+)
+
+
 class NetworkConfig(BaseModel):
     layers: List[LayerConfig]
 
@@ -153,7 +177,7 @@ class NetworkConfig(BaseModel):
                 seen_linear = True
         return v
 
-    def extend(self, action: list[int], partial_arch: "NetworkConfig"):
+    def extend(self, action: Decisions, partial_arch: "NetworkConfig"):
         """
         Input: Takes a list of action and partially builds architecture
 
@@ -165,21 +189,19 @@ class NetworkConfig(BaseModel):
 
         Currently, it only appends the layer at the end.
         """
-        if action[0] == 1:
-            # add layer
-            return self.add_layer(action, partial_arch)
-        else:
-            # no operation
+        if action.action_choice == StandardAction.NONE:
             return partial_arch
 
-    def add_layer(self, actions: list[int], partial_arch: "NetworkConfig") -> "NetworkConfig":
-        lt = LayerType(actions[2])
-        oc = OutChannels(actions[3])
-        ks = KernelSize(actions[4])
-        st = Stride(actions[5])
-        lu = LinearUnits(actions[6])
-        pm = PoolMode(actions[7])
-        act = ActivationFunction(actions[8])
+        return self.add_layer(action, partial_arch)
+
+    def add_layer(self, actions: Decisions, partial_arch: "NetworkConfig") -> "NetworkConfig":
+        lt = LayerType(actions.layer_type_choice)
+        oc = OutChannels(actions.out_channels_choice)
+        ks = KernelSize(actions.kernel_size_choice)
+        st = Stride(actions.stride_choice)
+        lu = LinearUnits(actions.linear_units_choice)
+        pm = PoolMode(actions.pool_mode_choice)
+        act = ActivationFunction(actions.activation_function_choice)
 
         layer_config = LayerConfig(
             layer_type=lt,
