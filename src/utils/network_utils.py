@@ -154,7 +154,7 @@ class NetworkConfig(BaseModel):
                 seen_linear = True
         return v
 
-    def extend(self, action: list[int], partial_arch: "NetworkConfig") -> "NetworkConfig":
+    def extend(self, action: list[int], partial_arch: "NetworkConfig"):
         """
         Input: Takes a list of action and partially builds architecture
 

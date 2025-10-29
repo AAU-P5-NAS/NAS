@@ -141,13 +141,13 @@ class CustomEnv(gym.Env):
         """
         self.actions_taken += 1
 
-        new_architecture, should_evaluate = self.get_new_architecture(action_logits)
+        new_architecture, should_evaluate = self._get_new_architecture(action_logits)
 
         if should_evaluate:
             with self.console.status(
                 f"[bold blue]Training model on action number {self.evaluation_count} ...[/bold blue]"
             ):
-                reward = self.evaluate_architecture(new_architecture)
+                reward = self._evaluate_architecture(new_architecture)
                 terminated = True
                 truncated = False
                 self.actions_taken = 0  # Reset for next episode
@@ -161,7 +161,7 @@ class CustomEnv(gym.Env):
 
         return obs, reward, terminated, truncated, info
 
-    def get_new_architecture(self, action_logits: np.ndarray):
+    def _get_new_architecture(self, action_logits: np.ndarray):
         """Build a new architecture based on the agent's action logits.
 
         :Args:
@@ -185,7 +185,7 @@ class CustomEnv(gym.Env):
         self.current_network_config = new_network_config
         return new_network_config, False  # Do not evaluate yet
 
-    def train_classifier(
+    def _train_classifier(
         self,
         dataloaders: Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader],
         model: torch.nn.Module,
@@ -228,7 +228,7 @@ class CustomEnv(gym.Env):
 
         return metrics
 
-    def evaluate_architecture(self, new_architecture: NetworkConfig) -> float:
+    def _evaluate_architecture(self, new_architecture: NetworkConfig) -> float:
         """Evaluate the given architecture by training and testing it, returning the computed reward.
 
         :Args:
@@ -242,7 +242,7 @@ class CustomEnv(gym.Env):
         )
         architecture = cnn_builder.build()
         optimizer = torch.optim.SGD(architecture.parameters(), lr=0.001, momentum=0.9)
-        training_results = self.train_classifier(
+        training_results = self._train_classifier(
             dataloaders=self.loader_tuple,
             model=architecture,
             loss_function=CrossEntropyLoss(),
@@ -251,7 +251,7 @@ class CustomEnv(gym.Env):
 
         if isinstance(training_results, Metrics):
             self.console.print(f"[bold green]Accuracy: {training_results.accuracy}[/bold green]")
-            reward = self.calculate_reward(training_results)
+            reward = self._calculate_reward(training_results)
             self.console.print(f"[bold green]Reward: {reward}[/bold green]")
             self.console.print("[bold green]Architecture:[/bold green]")
             for i, layer in enumerate(new_architecture.layers, start=1):
@@ -260,15 +260,15 @@ class CustomEnv(gym.Env):
         else:
             return training_results  # Already a penalty value
 
-    def should_terminate(self) -> bool:
+    def _should_terminate(self) -> bool:
         # Termination is now handled in step() method
         return False
 
-    def has_truncated(self) -> bool:
+    def _has_truncated(self) -> bool:
         # Truncation is now handled in step() method
         return False
 
-    def calculate_reward(self, metrics: Metrics) -> float:
+    def _calculate_reward(self, metrics: Metrics) -> float:
         """Calculate the reward based on evaluation metrics.
 
         :Args:
