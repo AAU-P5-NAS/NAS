@@ -6,7 +6,7 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
-from src.model_module.action_builder import ActionBuilder
+from model_module.action_builder import transform_logits_to_action
 from src.classification_module.metrics import Metrics
 from src.classification_module.reward import RewardCalculator
 from src.classification_module.train import Trainer
@@ -25,6 +25,8 @@ from src.utils.network_utils import (
 )
 from torch.nn import CrossEntropyLoss
 from rich.console import Console
+
+from utils.action_builder_utils import get_logit_slices
 
 
 class CustomEnv(gym.Env):
@@ -59,7 +61,7 @@ class CustomEnv(gym.Env):
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
         self.data_importer = DataImporter(dataset_option=DatasetOption.EMNIST_BALANCED)
-        self.action_builder = ActionBuilder(self.max_layers, "add_layer_sequential")
+        self.logit_slices = get_logit_slices(self.max_layers)
         self.loader_tuple = self.data_importer.get_dataloaders(batch_size=64)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
@@ -171,16 +173,13 @@ class CustomEnv(gym.Env):
         - tuple: (new_network_config, should_evaluate)
         """
         observation = self._get_observation()
-
-        action_to_apply = self.action_builder.build_action(
-            action_output=action_logits, observation=observation
-        )
+        action_to_apply = transform_logits_to_action(action_logits, observation, self.max_layers)
 
         if action_to_apply is None:
             return self.current_network_config, True  # Stop and evaluate
 
         new_network_config = self.current_network_config.extend(
-            action=action_to_apply, partial_arch=self.current_network_config
+            action=action_to_apply.to_int_list(), partial_arch=self.current_network_config
         )
         self.current_network_config = new_network_config
         return new_network_config, False  # Do not evaluate yet
@@ -216,7 +215,7 @@ class CustomEnv(gym.Env):
         start_time = time.time()
 
         for epoch in range(num_epochs):
-            self.console.print(f"[bold blue]Epoch {epoch + 1}/{num_epochs}[/bold blue]")
+            self.console.status(f"[bold blue]Epoch {epoch + 1}/{num_epochs}[/bold blue]")
             trainer.train()
 
         end_time = time.time()
