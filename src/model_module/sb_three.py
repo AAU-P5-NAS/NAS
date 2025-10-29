@@ -47,7 +47,7 @@ class SBThreeAgent:
         policy: type[BasePolicy] = ActorCriticPolicy,
         learning_rate: float = 0.001,
     ):
-        self.env: CustomEnv = CustomEnv(logdir=self.TB_LOG_DIRECTORY)
+        self.env: CustomEnv = CustomEnv(device=device, logdir=self.TB_LOG_DIRECTORY)
         self.model = policy_algorithm_class(
             policy=policy,
             env=self.env,
