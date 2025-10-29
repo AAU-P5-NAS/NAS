@@ -6,7 +6,7 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
-from model_module.action_builder import transform_logits_to_action
+from src.model_module.action_builder import transform_logits_to_action
 from src.classification_module.metrics import Metrics
 from src.classification_module.reward import RewardCalculator
 from src.classification_module.train import Trainer

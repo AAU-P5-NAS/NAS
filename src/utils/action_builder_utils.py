@@ -1,6 +1,7 @@
 import enum
 from typing import Callable
 from pydantic import BaseModel, ConfigDict
+from src.utils.network_utils import Decisions
 import numpy as np
 
 import sys
@@ -134,30 +135,6 @@ def get_logit_slices(max_layers: int):
         idx += size
     logit_slices = Slices(**logit_slices)
     return logit_slices
-
-
-class Decisions(BaseModel):
-    action_choice: int
-    layer_type_choice: int
-    out_channels_choice: int
-    kernel_size_choice: int
-    stride_choice: int
-    linear_units_choice: int
-    pool_mode_choice: int
-    activation_function_choice: int
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
-EMPTY_DECISIONS = Decisions(
-    action_choice=0,
-    layer_type_choice=0,
-    out_channels_choice=0,
-    kernel_size_choice=0,
-    stride_choice=0,
-    linear_units_choice=0,
-    pool_mode_choice=0,
-    activation_function_choice=0,
-)
 
 
 class MaskContext(BaseModel):

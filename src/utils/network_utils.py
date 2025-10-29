@@ -1,9 +1,8 @@
 import enum
 from typing import List, Tuple
 import numpy as np
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 import torch.nn as nn
-from action_builder_utils import Decisions
 
 
 class InvalidActionError(Exception):
@@ -28,6 +27,30 @@ class CNNExportError(Exception):
     """Raised when CNN layers are in an invalid order (e.g. Conv after Linear)."""
 
     pass
+
+
+class Decisions(BaseModel):
+    action_choice: int
+    layer_type_choice: int
+    out_channels_choice: int
+    kernel_size_choice: int
+    stride_choice: int
+    linear_units_choice: int
+    pool_mode_choice: int
+    activation_function_choice: int
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+EMPTY_DECISIONS = Decisions(
+    action_choice=0,
+    layer_type_choice=0,
+    out_channels_choice=0,
+    kernel_size_choice=0,
+    stride_choice=0,
+    linear_units_choice=0,
+    pool_mode_choice=0,
+    activation_function_choice=0,
+)
 
 
 class StandardAction(enum.Enum):
