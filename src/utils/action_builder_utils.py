@@ -221,7 +221,7 @@ def mask_action_type_sequential(ctx: MaskContext):
         new_logits[ctx.slices.standard_actions.all] = -np.inf
         new_logits[ctx.slices.standard_actions[StandardAction.ADD_LAYER]] = 1
         return new_logits
-        # Layers exist, can ADD_LAYER or NONE
+
     return new_logits
 
 

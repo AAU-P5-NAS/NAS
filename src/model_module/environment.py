@@ -195,13 +195,10 @@ class CustomEnv(gym.Env):
         new_architecture, should_evaluate = self._get_new_architecture(action_logits)
 
         if should_evaluate:
-            with self.console.status(
-                f"[bold blue]Training model on action number {self.evaluation_count + 1} ...[/bold blue]\nCurrent sum reward: {self.sum_reward}"
-            ):
-                reward = self._evaluate_architecture(new_architecture)
-                terminated = True
-                truncated = False
-                self.actions_taken = 0  # Reset for next episode
+            reward = self._evaluate_architecture(new_architecture)
+            terminated = True
+            truncated = False
+            self.actions_taken = 0  # Reset for next episode
         else:
             reward = 0.05
             terminated = False
@@ -261,8 +258,11 @@ class CustomEnv(gym.Env):
         start_time = time.time()
 
         for epoch in range(num_epochs):
-            self.console.status(f"[bold blue]Epoch {epoch + 1}/{num_epochs}[/bold blue]")
-            trainer.train()
+            progress = (epoch + 1) / num_epochs * 100
+            with self.console.status(
+                f"[bold blue]Training model on action number {self.evaluation_count + 1}: Progress {int(progress)}%[/bold blue]"
+            ):
+                trainer.train()
 
         end_time = time.time()
         training_time = end_time - start_time
@@ -297,23 +297,15 @@ class CustomEnv(gym.Env):
         )
 
         if isinstance(training_results, Metrics):
-            self.console.print(f"[bold green]Accuracy: {training_results.accuracy}[/bold green]")
+            self.console.print(
+                f"[bold green]Training of action {self.evaluation_count + 1} successful![/bold green]"
+            )
+            self.console.print(f"[bold blue]Accuracy: {training_results.accuracy}[/bold blue]")
             reward = self._calculate_reward(training_results)
-            self.console.print(f"[bold green]Reward: {reward}[/bold green]")
-            self.console.print("[bold green]Architecture:[/bold green]")
-            for i, layer in enumerate(new_architecture.layers, start=1):
-                if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
-                    self.console.print(
-                        f"[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
-                    )
-                elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
-                    self.console.print(
-                        f"[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
-                    )
-                else:
-                    self.console.print(
-                        f"[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Activation: {layer.activation.name}"
-                    )
+            self.console.print(f"[bold blue]Reward: {reward}[/bold blue]")
+            self.console.print("[bold yellow]Architecture:[/bold yellow]")
+            self.print_layers(new_architecture.layers)
+
             return reward
         else:
             return training_results  # Already a penalty value
@@ -369,6 +361,27 @@ class CustomEnv(gym.Env):
             pass
         else:
             raise NotImplementedError
+
+    def print_layers(self, layers):
+        """
+        Print details of each layer to the console.
+        Args:
+            layers (list): List of layer objects.
+        """
+        indent = "    "
+        for i, layer in enumerate(layers):
+            if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
+                self.console.print(
+                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
+                )
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
+                self.console.print(
+                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
+                )
+            else:
+                self.console.print(
+                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Activation: {layer.activation.name}"
+                )
 
 
 """ 
