@@ -1,7 +1,7 @@
 import torch
 from src.model_module.environment import CustomEnv
 from stable_baselines3.common.base_class import BaseAlgorithm
-from stable_baselines3.common.policies import BasePolicy, ActorCriticPolicy
+from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
@@ -44,7 +44,7 @@ class SBThreeAgent:
     def __init__(
         self,
         policy_algorithm_class: type[BaseAlgorithm],
-        policy: type[BasePolicy] = ActorCriticPolicy,
+        policy: type[BasePolicy] | str = "MlpPolicy",
         learning_rate: float = 0.001,
     ):
         self.env: CustomEnv = CustomEnv(device=device, logdir=self.TB_LOG_DIRECTORY)
@@ -52,7 +52,8 @@ class SBThreeAgent:
             policy=policy,
             env=self.env,
             verbose=1,
-            device=device,
+            gamma=1,  # type: ignore # extremely important to have gamma=1 for maximum discount
+            device="cpu",
             learning_rate=learning_rate,
             tensorboard_log=self.TB_LOG_DIRECTORY,
         )

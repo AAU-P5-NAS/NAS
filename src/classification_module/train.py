@@ -15,6 +15,7 @@ class Trainer:
         model: nn.Module,
         loss_function: _Loss,
         optimizer: Optimizer,
+        num_classes: int,
         chosen_metrics: List[Metric_literal] = [
             "accuracy",
             "precision",
@@ -32,7 +33,9 @@ class Trainer:
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
         # IMPORTANT: Pass device to evaluator so metrics are on same device as model
-        self.evaluator: MetrcicsEvaluator = MetrcicsEvaluator(device=self.device)
+        self.evaluator: MetrcicsEvaluator = MetrcicsEvaluator(
+            device=self.device, num_classes=num_classes
+        )
         self.model.to(self.device)
         self.loss_function: _Loss = loss_function.to(self.device)
         self.optimizer: Optimizer = optimizer
@@ -77,7 +80,10 @@ class Trainer:
 
         # Predictions and labels are now on the same device as the metrics
         metrics: Metrics = self.evaluator.calculate_metrics(
-            self.model, all_preds_flattened, all_labels_flattened
+            self.model,
+            all_preds_flattened,
+            all_labels_flattened,
+            [m for m in self.chosen_metrics if m != "test_loss"],
         )
         if "test_loss" in self.chosen_metrics:
             metrics.__setattr__("test_loss", test_loss)

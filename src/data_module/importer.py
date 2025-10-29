@@ -1,120 +1,69 @@
-from typing import Optional
-import torch
-import pandas as pd
+from typing import Tuple
 from rich.console import Console
-from pydantic import BaseModel, ConfigDict
+from data_module.dataset import DatasetOption
+from data_module.import_utils import visualize_samples
+import torch
 
-CSV_DEFAULT_PATH: str = "src/data_module/az_images_data.csv"
-GRAYSCALE_NUM_CHANNELS: int = 1
-IMG_DEFAULT_SIZE: tuple[int, int] = (28, 28)
-NUM_CLASSES: int = 26
-DEFAULT_H: int
-DEFAULT_W: int
-DEFAULT_H, DEFAULT_W = IMG_DEFAULT_SIZE
 console = Console()
-
-
-class ConvolutionalArguments(BaseModel):
-    in_channels: int = 1
-    out_channels: int = 32
-    kernel_size: int | tuple[int, int] = (3, 3)
-    stride: int = 1
-    padding: int = 0
-    dilation: int = 1
-    groups: int = 1
-    bias: bool = True
-    padding_mode: str = "zeros"
-    device: str | None = None
-    dtype: torch.dtype | None = None
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
-class CSVFilepathDoesntExist(Exception):
-    def __init__(self, data):
-        msg = f"The provided filepath '{data}' does not exist."
-        super().__init__(msg)
-        self.data = data
 
 
 class DataImporter:
     """
     Imports data from a CSV file and provides DataLoaders for training and testing CNNs.
     Can optionally limit the number of samples per class.
+    Can also visualize sample images from the dataset for inspection.
     """
 
     def __init__(
         self,
-        filepath: str = CSV_DEFAULT_PATH,
+        dataset_option: DatasetOption,
         max_per_class: int | None = None,
     ):
-        with console.status(f"[bold blue]Loading data from {filepath}..."):
-            try:
-                data_file = pd.read_csv(filepath, header=None)
-            except FileNotFoundError:
-                raise CSVFilepathDoesntExist(filepath) from None
+        if dataset_option is None:
+            raise ValueError("dataset_option must be provided")
+        self.dataset_option = dataset_option
+        self.train_dataset, self.test_dataset, self.train_num_classes, self.test_num_classes = (
+            dataset_option.import_data(max_per_class)
+        )
+        self.label_fn = dataset_option.get_label_fn()
 
-            data = data_file.values.astype("float32")
-            # Keep tensors on CPU - Trainer will move them to the correct device
-            labels = torch.tensor(data[:, 0], dtype=torch.long)
-            values = torch.tensor(data[:, 1:] / 255.0)
-            values = values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W)
-
-            if max_per_class is not None:
-                # Limit the number of samples per class
-                selected_indices = []
-                for label in labels.unique():
-                    label_indices = torch.where(labels == label)[0]
-                    n_select = min(max_per_class, len(label_indices))
-                    selected_indices.append(label_indices[:n_select])
-                selected_indices = torch.cat(selected_indices)
-
-                values = values[selected_indices]
-                labels = labels[selected_indices]
-
-            self.data = values
-            self.labels = labels
-            self.dataset = torch.utils.data.TensorDataset(values, labels)
         console.print(
             f"[bold green]Data loaded ✔ (classes limited to {max_per_class} samples each)[/bold green]"
             if max_per_class
             else "[bold green]Data loaded ✔[/bold green]"
         )
 
-    def get_as_cnn(
-        self, batch_size: int, test_split: float, seed: Optional[int] = None, shuffle: bool = True
-    ):
+    def get_dataloaders(self, batch_size: int, shuffle: bool = True):
         """
         Returns a DataLoader for both the training_data and test_data, shaped for CNN input.
 
         :Arguments:
         - batch_size: Batch size for the DataLoaders.
-        - test_split: Fraction of data to use as test set (between 0 and 1).
-        - seed (optional): Random seed for reproducibility.
         - shuffle (optional): Whether to shuffle the training data. Default is True.
 
         :Returns:
         - tuple of (train_dataloader, test_dataloader): DataLoaders for training and test data.
 
         :Raises:
-        - ValueError: If batch_size is not a positive integer or if test_split is not between 0 and 1.
-
+        - ValueError: If batch_size is not a positive integer.
         """
+
         if batch_size <= 0:
             raise ValueError("batch_size must be a positive integer")
 
-        if not 0 < test_split < 1:
-            raise ValueError("test_split must be between 0 and 1 (exclusive)")
-
-        generator = torch.Generator().manual_seed(seed) if seed is not None else torch.Generator()
-
-        train_size = int(len(self.dataset) * (1 - test_split))
-        test_size = len(self.dataset) - train_size
-        train_dataset, test_dataset = torch.utils.data.random_split(
-            self.dataset, [train_size, test_size], generator=generator
-        )
-
         train_dataloader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=shuffle
+            self.train_dataset, batch_size=batch_size, shuffle=shuffle
         )
-        test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
+        test_dataloader = torch.utils.data.DataLoader(self.test_dataset, batch_size=batch_size)
+
+        visualize_samples(train_dataloader, self.dataset_option.get_label_fn(), num_samples=30)
+
         return train_dataloader, test_dataloader
+
+    def get_num_classes(self) -> Tuple[int, int]:
+        """Returns the number of unique classes in the dataset.
+
+        :Returns:
+        - tuple of (train_num_classes, test_num_classes): Number of unique classes in training and test datasets.
+        """
+        return self.train_num_classes, self.test_num_classes

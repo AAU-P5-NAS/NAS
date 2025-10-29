@@ -23,8 +23,8 @@ class CNNBuilder:
     def __init__(
         self,
         rl_config: NetworkConfig,
+        num_classes: int,
         input_size: Tuple[int, int] = (28, 28),
-        num_classes: int = 26,
     ):
         self.rl_config = rl_config
         self.input_size = input_size

@@ -2,7 +2,7 @@ import os
 
 from src.model_module.sb_three import SBThreeAgent
 from rich.console import Console
-from stable_baselines3 import A2C  # Add this import
+from stable_baselines3 import PPO  # Add this import
 import warnings
 
 warnings.filterwarnings("ignore", message="Unsupported operator aten::tanh")
@@ -20,7 +20,7 @@ def main():
         console.print("[yellow]Deleted old saved models[/yellow]")
 
     # Initialize agent with PPO algorithm
-    agent = SBThreeAgent(policy_algorithm_class=A2C)
+    agent = SBThreeAgent(policy_algorithm_class=PPO)
 
     # Train the agent
     console.print("[bold green]Starting training...[/bold green]")
