@@ -1,7 +1,7 @@
 """Multi-stage training system that alternates between architecture search and hyperparameter optimization"""
 
 from __future__ import annotations
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from pydantic import BaseModel
 from rich.console import Console
 from rich.table import Table
@@ -9,9 +9,10 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3 import A2C
 from src.model_module.sb_three import SBThreeAgent
 from src.model_module.hyperparameter_tuning import (
-    HyperparameterOptimizer,
-    HyperparameterSearchSpace,
+    SLHyperparameterOptimizer,
+    RLHyperparameterOptimizer,
 )
+from src.model_module.hyperparameters import HyperparameterSearchSpace
 from src.classification_module.reward import Weights
 import json
 import os
@@ -97,7 +98,7 @@ class MultiStageTrainer:
         }
         self.stage_history.append(stage_info)
 
-        self.console.print(f"\n[bold green]✓ Stage 1 Complete[/bold green]")
+        self.console.print("\n[bold green]✓ Stage 1 Complete[/bold green]")
         self.console.print(f"[bold green]Average reward: {avg_reward:.4f}[/bold green]")
 
         if avg_reward > self.best_architecture_reward:
@@ -108,30 +109,56 @@ class MultiStageTrainer:
 
     def stage_2_hyperparameter_optimization(
         self,
-        timesteps: int = 10000,
-        n_trials: int = 10,
+        sl_trials: int = 20,
+        rl_trials: int = 5,
+        rl_timesteps: int = 10000,
+        optimize_rl: bool = False,
     ) -> Dict[str, Any]:
-        """Stage 2: Optimize hyperparameters using Bayesian optimization"""
+        """Stage 2: Optimize SL hyperparameters (and optionally RL)"""
 
         self.console.print("\n[bold cyan]╔════════════════════════════════════════╗[/bold cyan]")
         self.console.print("[bold cyan]║  Stage 2: Hyperparameter Optimization  ║[/bold cyan]")
         self.console.print("[bold cyan]╚════════════════════════════════════════╝[/bold cyan]\n")
 
-        self.console.print("[yellow]Running Bayesian optimization...[/yellow]")
-
-        # Run hyperparameter optimization
-        optimizer = HyperparameterOptimizer(
+        self.console.print("[yellow]Step 1: Optimizing SL hyperparameters...[/yellow]")
+        sl_optimizer = SLHyperparameterOptimizer(
             search_space=self.search_space,
-            n_trials=n_trials,
+            n_trials=sl_trials,
         )
 
-        best_params = optimizer.optimize(
-            agent_class=self.agent_class,
-            total_timesteps=timesteps,
-            study_name="multi_stage_optimization",
+        sl_best_params = sl_optimizer.optimize(
+            study_name="multi_stage_sl_optimization",
         )
 
-        # Save best parameters
+        rl_best_params = {}
+        if optimize_rl:
+            self.console.print(
+                "\n[yellow]Step 2: Optimizing RL hyperparameters (discrete choices only)...[/yellow]"
+            )
+            self.console.print(
+                "[bold yellow]Warning: This is computationally expensive![/bold yellow]"
+            )
+
+            rl_optimizer = RLHyperparameterOptimizer(
+                search_space=self.search_space,
+                n_trials=rl_trials,
+            )
+
+            rl_best_params = rl_optimizer.optimize(
+                agent_class=self.agent_class,
+                sl_hyperparams=sl_best_params,
+                total_timesteps=rl_timesteps,
+                study_name="multi_stage_rl_optimization",
+            )
+        else:
+            self.console.print(
+                "\n[yellow]Step 2: Skipping RL hyperparameter optimization (too expensive)[/yellow]"
+            )
+            self.console.print("[yellow]Using default RL hyperparameters[/yellow]")
+            rl_best_params = {"rl_lr": 0.001}
+
+        best_params = {**sl_best_params, **rl_best_params}
+
         params_file = os.path.join(self.output_dir, "stage2_best_hyperparameters.json")
         with open(params_file, "w") as f:
             json.dump(best_params, f, indent=4)
@@ -142,11 +169,13 @@ class MultiStageTrainer:
             "stage": 2,
             "type": "hyperparameter_optimization",
             "best_hyperparameters": best_params,
+            "sl_params": sl_best_params,
+            "rl_params": rl_best_params,
             "params_file": params_file,
         }
         self.stage_history.append(stage_info)
 
-        self.console.print(f"\n[bold green]✓ Stage 2 Complete[/bold green]")
+        self.console.print("\n[bold green]✓ Stage 2 Complete[/bold green]")
         self.console.print(f"[bold green]Best hyperparameters saved to {params_file}[/bold green]")
 
         return stage_info
@@ -210,7 +239,7 @@ class MultiStageTrainer:
         }
         self.stage_history.append(stage_info)
 
-        self.console.print(f"\n[bold green]✓ Stage 3 Complete[/bold green]")
+        self.console.print("\n[bold green]✓ Stage 3 Complete[/bold green]")
         self.console.print(f"[bold green]Average reward: {avg_reward:.4f}[/bold green]")
 
         if avg_reward > self.best_architecture_reward:
@@ -250,21 +279,12 @@ class MultiStageTrainer:
         stage2_timesteps: int = 10000,
         stage2_trials: int = 10,
         stage3_timesteps: int = 50000,
+        optimize_rl: bool = False,
         max_iterations: int = 5,
         improvement_threshold: float = 0.001,
         no_improvement_limit: int = 2,
     ):
-        """Run iterative multi-stage training until convergence
-
-        Args:
-            stage1_timesteps: Timesteps for initial architecture search
-            stage2_timesteps: Timesteps for hyperparameter optimization
-            stage2_trials: Number of optimization trials
-            stage3_timesteps: Timesteps for architecture search iterations
-            max_iterations: Maximum number of iterations (architecture + hyperparam pairs)
-            improvement_threshold: Minimum improvement to consider significant
-            no_improvement_limit: Stop after N iterations without improvement
-        """
+        """Run iterative multi-stage training until convergence"""
 
         self.console.print(
             "[bold blue]╔══════════════════════════════════════════════════╗[/bold blue]"
@@ -285,37 +305,33 @@ class MultiStageTrainer:
             "[bold blue]╚══════════════════════════════════════════════════╝[/bold blue]\n"
         )
 
-        # Stage 1: Initial architecture search
         stage1_results = self.stage_1_architecture_search(timesteps=stage1_timesteps)
-        last_best_reward = self.best_architecture_reward
         last_arch_reward = self.best_architecture_reward
         iterations_without_improvement = 0
 
-        # Stage 2: Initial hyperparameter optimization
         stage2_results = self.stage_2_hyperparameter_optimization(
-            timesteps=stage2_timesteps,
-            n_trials=stage2_trials,
+            sl_trials=stage2_trials,
+            rl_trials=5,
+            rl_timesteps=stage2_timesteps,
+            optimize_rl=optimize_rl,
         )
 
-        # Iterative improvement loop
         iteration = 1
         while iteration <= max_iterations:
             self.console.print(
-                f"\n[bold cyan]═══════════════════════════════════════════════════[/bold cyan]"
+                "\n[bold cyan]═══════════════════════════════════════════════════[/bold cyan]"
             )
             self.console.print(
                 f"[bold cyan]Iteration {iteration}/{max_iterations} - Searching with optimized parameters[/bold cyan]"
             )
             self.console.print(
-                f"[bold cyan]═══════════════════════════════════════════════════[/bold cyan]\n"
+                "[bold cyan]═══════════════════════════════════════════════════[/bold cyan]\n"
             )
 
-            # Architecture search with current best hyperparameters
-            arch_results = self.stage_3_architecture_with_optimized_params(
+            self.stage_3_architecture_with_optimized_params(
                 timesteps=stage3_timesteps,
             )
 
-            # Check for improvement
             current_reward = self.best_architecture_reward
             improvement = current_reward - last_arch_reward
 
@@ -326,12 +342,13 @@ class MultiStageTrainer:
                 iterations_without_improvement = 0
                 last_arch_reward = current_reward
 
-                # Re-optimize hyperparameters with new architecture insights
                 if iteration < max_iterations:
                     self.console.print("\n[yellow]Re-optimizing hyperparameters...[/yellow]")
-                    hyperparam_results = self.stage_2_hyperparameter_optimization(
-                        timesteps=stage2_timesteps,
-                        n_trials=stage2_trials,
+                    self.stage_2_hyperparameter_optimization(
+                        sl_trials=stage2_trials,
+                        rl_trials=5,
+                        rl_timesteps=stage2_timesteps,
+                        optimize_rl=False,
                     )
             else:
                 iterations_without_improvement += 1
@@ -348,16 +365,16 @@ class MultiStageTrainer:
                     )
                     break
 
-            # Continue alternating between architecture search and hyperparameter optimization
             if iteration < max_iterations:
-                hyperparam_results = self.stage_2_hyperparameter_optimization(
-                    timesteps=stage2_timesteps,
-                    n_trials=stage2_trials,
+                self.stage_2_hyperparameter_optimization(
+                    sl_trials=stage2_trials,
+                    rl_trials=5,
+                    rl_timesteps=stage2_timesteps,
+                    optimize_rl=False,
                 )
 
             iteration += 1
 
-        # Print summary
         self.print_summary()
 
         return {
