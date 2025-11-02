@@ -5,20 +5,11 @@ import optuna
 from typing import Dict, Any, Optional
 from rich.console import Console
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
 from stable_baselines3.common.base_class import BaseAlgorithm
 
-from src.model_module.hyperparameters import (
-    RLHyperParameters,
-    SLHyperParameters,
-    RewardWeightsConfig,
-    HyperparameterSearchSpace,
-)
-from src.model_module.environment import CustomEnv
+from src.model_module.hyperparameters import HyperparameterSearchSpace
 from src.classification_module.reward import Weights, RewardCalculator
 from src.classification_module.train import Trainer
-from src.classification_module.metrics import Metrics
 from src.data_module.importer import DataImporter
 from src.utils.network_utils import (
     NetworkConfig,
@@ -234,9 +225,9 @@ class SLHyperparameterOptimizer:
         self.best_params = study.best_params
         self.best_value = study.best_value
 
-        self.console.print(f"[bold green]Optimization complete![/bold green]")
+        self.console.print("[bold green]Optimization complete![/bold green]")
         self.console.print(f"[bold green]Best value: {self.best_value:.4f}[/bold green]")
-        self.console.print(f"[bold cyan]Best SL parameters:[/bold cyan]")
+        self.console.print("[bold cyan]Best SL parameters:[/bold cyan]")
         for param, value in self.best_params.items():
             self.console.print(f"  {param}: {value}")
 
@@ -267,8 +258,6 @@ class RLHyperparameterOptimizer:
         sl_hyperparams: Dict[str, Any],
     ) -> float:
         """Objective function for RL hyperparameter optimization"""
-
-        rl = self.search_space.rl_hyperparameters
 
         learning_rate_choice = trial.suggest_categorical(
             "rl_lr",
@@ -323,9 +312,9 @@ class RLHyperparameterOptimizer:
         self.best_params = study.best_params
         self.best_value = study.best_value
 
-        self.console.print(f"[bold green]Optimization complete![/bold green]")
+        self.console.print("[bold green]Optimization complete![/bold green]")
         self.console.print(f"[bold green]Best value: {self.best_value:.4f}[/bold green]")
-        self.console.print(f"[bold cyan]Best RL parameters:[/bold cyan]")
+        self.console.print("[bold cyan]Best RL parameters:[/bold cyan]")
         for param, value in self.best_params.items():
             self.console.print(f"  {param}: {value}")
 
