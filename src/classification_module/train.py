@@ -9,6 +9,7 @@ from src.classification_module.metrics import MetrcicsEvaluator
 from src.classification_module.metrics import Metric_literal, Metrics
 from threading import Event, Timer
 
+
 class Trainer:
     def __init__(
         self,
@@ -17,6 +18,7 @@ class Trainer:
         loss_function: _Loss,
         optimizer: Optimizer,
         num_classes: int,
+        dimensions: tuple[int, int, int],
         chosen_metrics: List[Metric_literal] = [
             "accuracy",
             "precision",
@@ -35,7 +37,7 @@ class Trainer:
         )
         # IMPORTANT: Pass device to evaluator so metrics are on same device as model
         self.evaluator: MetrcicsEvaluator = MetrcicsEvaluator(
-            device=self.device, num_classes=num_classes
+            device=self.device, num_classes=num_classes, dimensions=dimensions
         )
         self.model.to(self.device)
         self.loss_function: _Loss = loss_function.to(self.device)
@@ -75,7 +77,7 @@ class Trainer:
         # Clear timer
         if timer is not None:
             timer.cancel()
-        
+
         # Return if stopped prematurely
         return stopped_by_timeout
 

@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from rich.console import Console
 from data_module.import_utils import (
-    fetch_csv_from_url,
+    fetch_dataset_from_url,
     GRAYSCALE_NUM_CHANNELS,
     DEFAULT_H,
     DEFAULT_W,
@@ -30,7 +30,7 @@ def import_emnist_mnist(max_per_class: int | None = None):
     if not Path(EMNIST_MNIST_TRAIN_PATH).is_file():
         console.print("[bold yellow]EMNIST MNIST train data not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST MNIST train data...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_MNIST_TRAIN_URL, EMNIST_MNIST_TRAIN_PATH)
+            fetch_dataset_from_url(EMNIST_MNIST_TRAIN_URL, EMNIST_MNIST_TRAIN_PATH)
             console.print("[bold green]EMNIST MNIST train data downloaded ✔[/bold green]")
     else:
         console.print("[bold green]EMNIST MNIST train data found ✔[/bold green]")
@@ -38,7 +38,7 @@ def import_emnist_mnist(max_per_class: int | None = None):
     if not Path(EMNIST_MNIST_TEST_PATH).is_file():
         console.print("[bold yellow]EMNIST MNIST test data not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST MNIST test data...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_MNIST_TEST_URL, EMNIST_MNIST_TEST_PATH)
+            fetch_dataset_from_url(EMNIST_MNIST_TEST_URL, EMNIST_MNIST_TEST_PATH)
             console.print("[bold green]EMNIST MNIST test data downloaded ✔[/bold green]")
     else:
         console.print("[bold green]EMNIST MNIST test data found ✔[/bold green]")

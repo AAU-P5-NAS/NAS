@@ -1,4 +1,5 @@
 from torch.utils.data import TensorDataset
+from data_module.cifar.cifar10 import import_cifar10
 from data_module.emnist.emnist_balanced import import_emnist_balanced
 from data_module.emnist.emnist_byclass import import_emnist_byclass
 from data_module.emnist.emnist_bymerge import import_emnist_bymerge
@@ -15,6 +16,7 @@ class DatasetOption(enum.Enum):
     EMNIST_BALANCED = 2
     EMNIST_BYCLASS = 3
     EMNIST_BYMERGE = 4
+    CIFAR_10 = 5
 
     def get_label_fn(self) -> Callable:
         """
@@ -27,6 +29,8 @@ class DatasetOption(enum.Enum):
                 return lambda x: str(x)
             case DatasetOption.EMNIST_LETTERS:
                 return three_column_mapping_func(self)
+            case DatasetOption.CIFAR_10:
+                return cifar_label_mapping_func()
             case _:
                 return two_column_mapping_func(self)
 
@@ -53,6 +57,8 @@ class DatasetOption(enum.Enum):
                 return import_emnist_byclass(max_per_class)
             case DatasetOption.EMNIST_BYMERGE:
                 return import_emnist_bymerge(max_per_class)
+            case DatasetOption.CIFAR_10:
+                return import_cifar10(max_per_class)
             case _:
                 raise ValueError(f"Unknown dataset option: {self}")
 
@@ -94,3 +100,19 @@ def get_mapping_string(dataset_option: DatasetOption) -> str:
             return "src/data_module/emnist/emnist_bymerge_mapping.txt"
         case _:
             raise ValueError(f"Unknown dataset option: {dataset_option}")
+
+
+def cifar_label_mapping_func():
+    index_to_label = {
+        0: "airplane",
+        1: "automobile",
+        2: "bird",
+        3: "cat",
+        4: "deer",
+        5: "dog",
+        6: "frog",
+        7: "horse",
+        8: "ship",
+        9: "truck",
+    }
+    return lambda x: index_to_label[x]

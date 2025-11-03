@@ -289,9 +289,8 @@ def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig)
     return h, w
 
 
-def get_output_dimensions(observation: np.ndarray):
+def get_output_dimensions(observation: np.ndarray, input_dims: tuple[int, int]) -> tuple[int, int]:
     """Calculate the output dimensions after applying all layers in the observation."""
-    input_dims = (28, 28)  # Assuming starting with 28x28 input
     for i in range(0, len(observation), 7):
         if observation[i] == 0:
             break  # No more layers defined

@@ -1,5 +1,5 @@
 import enum
-from typing import Callable, Type, TypeVar
+from typing import Callable, Tuple, Type, TypeVar
 from pydantic import BaseModel, ConfigDict
 import numpy as np
 
@@ -144,6 +144,7 @@ class MaskContext(BaseModel):
     sampling_strategy: Callable[[np.ndarray], int]
     max_layers: int
     decisions: Decisions
+    input_dimensions: Tuple[int, int, int]
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
@@ -280,7 +281,7 @@ def mask_kernel_size_sequential(ctx: MaskContext):
         new_logits[ctx.slices.kernel_size[KernelSize.NONE]] = 1
         return new_logits
 
-    latest_output_dims = get_output_dimensions(ctx.observation)
+    latest_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
     valid_kernels = get_valid_kernel_sizes(latest_output_dims)
     invalid_kernels = [k for k in KernelSize if k not in valid_kernels]
 
@@ -304,7 +305,7 @@ def mask_stride_sequential(ctx: MaskContext):
         return new_logits
 
     kernel_size_chosen = KernelSize(ctx.decisions.kernel_size_choice)
-    latest_output_dims = get_output_dimensions(ctx.observation)
+    latest_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
     valid_strides = get_valid_strides(latest_output_dims, kernel_size_chosen)
     invalid_strides = [s for s in Stride if s not in valid_strides]
 

@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from rich.console import Console
 from data_module.import_utils import (
-    fetch_csv_from_url,
+    fetch_dataset_from_url,
     GRAYSCALE_NUM_CHANNELS,
     DEFAULT_H,
     DEFAULT_W,
@@ -40,7 +40,7 @@ def import_emnist_bymerge(max_per_class: int | None = None):
             with console.status(
                 "[bold yellow]Downloading EMNIST ByMerge train data...[/bold yellow]"
             ):
-                fetch_csv_from_url(EMNIST_BYMERGE_TRAIN_URL, EMNIST_BYMERGE_TRAIN_PATH)
+                fetch_dataset_from_url(EMNIST_BYMERGE_TRAIN_URL, EMNIST_BYMERGE_TRAIN_PATH)
                 console.print("[bold green]EMNIST ByMerge train data downloaded ✔[/bold green]")
         else:
             console.print("[bold red]Aborting. train data is required.[/bold red]")
@@ -49,13 +49,13 @@ def import_emnist_bymerge(max_per_class: int | None = None):
     if not Path(EMNIST_BYMERGE_TEST_PATH).is_file():
         console.print("[bold yellow]EMNIST ByMerge test data not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST ByMerge test data...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_BYMERGE_TEST_URL, EMNIST_BYMERGE_TEST_PATH)
+            fetch_dataset_from_url(EMNIST_BYMERGE_TEST_URL, EMNIST_BYMERGE_TEST_PATH)
             console.print("[bold green]EMNIST ByMerge test data downloaded ✔[/bold green]")
 
     if not Path(EMNIST_BYMERGE_MAPPING_PATH).is_file():
         console.print("[bold yellow]EMNIST ByMerge Mapping not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST ByMerge Mapping...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_BYMERGE_MAPPING_URL, EMNIST_BYMERGE_MAPPING_PATH)
+            fetch_dataset_from_url(EMNIST_BYMERGE_MAPPING_URL, EMNIST_BYMERGE_MAPPING_PATH)
             console.print("[bold green]EMNIST ByMerge Mapping downloaded ✔[/bold green]")
 
     with console.status("[bold blue]Loading EMNIST ByMerge data...[/bold blue]"):

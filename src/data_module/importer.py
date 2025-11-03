@@ -1,7 +1,7 @@
 from typing import Tuple
 from rich.console import Console
 from data_module.dataset import DatasetOption
-from data_module.import_utils import visualize_samples
+from data_module.import_utils import visualize_cifar_samples, visualize_samples
 import torch
 
 console = Console()
@@ -56,7 +56,12 @@ class DataImporter:
         )
         test_dataloader = torch.utils.data.DataLoader(self.test_dataset, batch_size=batch_size)
 
-        visualize_samples(train_dataloader, self.dataset_option.get_label_fn(), num_samples=30)
+        if self.dataset_option == DatasetOption.CIFAR_10:
+            visualize_cifar_samples(
+                train_dataloader, self.dataset_option.get_label_fn(), num_samples=30
+            )
+        else:
+            visualize_samples(train_dataloader, self.dataset_option.get_label_fn(), num_samples=30)
 
         return train_dataloader, test_dataloader
 
@@ -67,3 +72,15 @@ class DataImporter:
         - tuple of (train_num_classes, test_num_classes): Number of unique classes in training and test datasets.
         """
         return self.train_num_classes, self.test_num_classes
+
+    def get_dimensions(self) -> Tuple[int, int, int]:
+        """Returns the dimensions of the input data (channels, height, width).
+
+        :Returns:
+        - tuple of (num_channels, height, width): Dimensions of the input data.
+        """
+        match self.dataset_option:
+            case DatasetOption.CIFAR_10:
+                return 3, 32, 32
+            case _:
+                return 1, 28, 28

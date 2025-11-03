@@ -15,7 +15,12 @@ def standard_stochastic_sampling(logits: np.ndarray) -> int:
     return np.random.choice(len(logits), p=probs)  # sample index based on probs and return idx
 
 
-def transform_logits_to_action(action_output: np.ndarray, observation: np.ndarray, max_layers: int):
+def transform_logits_to_action(
+    action_output: np.ndarray,
+    observation: np.ndarray,
+    max_layers: int,
+    dimensions: tuple[int, int, int],
+):
     ctx = MaskContext(
         logits=action_output,
         observation=observation,
@@ -23,5 +28,6 @@ def transform_logits_to_action(action_output: np.ndarray, observation: np.ndarra
         sampling_strategy=standard_stochastic_sampling,
         max_layers=max_layers,
         decisions=EMPTY_DECISIONS,
+        input_dimensions=dimensions,
     )
     return build_action_add_layer_sequential(ctx)
