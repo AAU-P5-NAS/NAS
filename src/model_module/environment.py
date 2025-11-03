@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Optional
 import torch
 from src.model_module.action_builder import transform_logits_to_action
 from src.classification_module.metrics import Metrics
-from src.classification_module.reward import RewardCalculator
+from src.classification_module.reward import RewardCalculator, Weights
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
 from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
@@ -70,13 +70,27 @@ class CustomEnv(gym.Env):
     device: str
 
     def __init__(
-        self, logdir: str, device: str, render_mode: str = "console", max_layers: int = 16
+        self,
+        logdir: str,
+        device: str,
+        render_mode: str = "console",
+        max_layers: int = 16,
+        training_epochs: int = 15,
+        arch_learning_rate: float = 0.001,
+        arch_momentum: float = 0.9,
+        batch_size: int = 64,
+        reward_weights: Weights | None = None,
     ):
         super().__init__()
 
         self.device = device
         self.render_mode = render_mode
         self.max_layers = max_layers
+        self.training_epochs = training_epochs
+        self.arch_learning_rate = arch_learning_rate
+        self.arch_momentum = arch_momentum
+        self.batch_size = batch_size
+        self.reward_weights = reward_weights
         self.max_actions_per_episode = (
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
@@ -154,7 +168,8 @@ class CustomEnv(gym.Env):
 
         if self.newest_architecture is not None:
             summary_writer.add_graph(
-                self.newest_architecture, torch.zeros(1, 1, 28, 28).to(device=self.device)
+                self.newest_architecture,
+                torch.zeros(1, 1, 28, 28).to(device=self.device),
             )
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
@@ -254,7 +269,7 @@ class CustomEnv(gym.Env):
             optimizer=optimizer,
             num_classes=self.data_importer.get_num_classes()[0],
         )
-        num_epochs = 10
+        num_epochs = self.training_epochs
         start_time = time.time()
 
         for epoch in range(num_epochs):
@@ -285,10 +300,15 @@ class CustomEnv(gym.Env):
         - float: The computed reward based on evaluation metrics.
         """
         cnn_builder = CNNBuilder(
-            rl_config=new_architecture, num_classes=self.data_importer.get_num_classes()[0]
+            rl_config=new_architecture,
+            num_classes=self.data_importer.get_num_classes()[0],
         )
         architecture = cnn_builder.build()
-        optimizer = torch.optim.SGD(architecture.parameters(), lr=0.001, momentum=0.9)
+        optimizer = torch.optim.SGD(
+            architecture.parameters(),
+            lr=self.arch_learning_rate,
+            momentum=self.arch_momentum,
+        )
         training_results = self._train_classifier(
             dataloaders=self.loader_tuple,
             model=architecture,
@@ -327,7 +347,11 @@ class CustomEnv(gym.Env):
         :Returns:
         - float: The computed reward.
         """
-        rewardCalculator = RewardCalculator()
+        rewardCalculator = (
+            RewardCalculator(weights=self.reward_weights)
+            if self.reward_weights
+            else RewardCalculator()
+        )
         reward: float = rewardCalculator.compute_reward(metrics)
         self.evaluation_count += 1
 

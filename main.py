@@ -1,20 +1,19 @@
 import os
-
-from src.model_module.sb_three import SBThreeAgent
 from rich.console import Console
 from stable_baselines3 import PPO  # Add this import
 import warnings
+import shutil
+
+from src.model_module.sb_three import SBThreeAgent
 
 warnings.filterwarnings("ignore", message="Unsupported operator aten::tanh")
 console = Console()
 
 
-# TODO: fix this shit
 def main():
-    console.print("[bold blue]Initializing NAS RL Agent...[/bold blue]")
+    console.print("[bold blue]Initializing Neural Architecture Search...[/bold blue]")
 
-    import shutil
-
+    # Clean up old models
     if os.path.exists("saved_models"):
         shutil.rmtree("saved_models")
         console.print("[yellow]Deleted old saved models[/yellow]")
