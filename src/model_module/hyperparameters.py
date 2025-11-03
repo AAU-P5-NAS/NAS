@@ -9,7 +9,7 @@ class RLHyperParameters(BaseModel):
     """Hyperparameters for Reinforcement Learning agent"""
 
     learning_rate: float = 0.001
-    learning_rate_choice: Literal[1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3] | None = None
+    learning_rate_choice: Literal[1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3] | None = None  # type: ignore
 
     def get_learning_rate(self) -> float:
         if self.learning_rate_choice is not None:
