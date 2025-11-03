@@ -7,6 +7,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
+from src.classification_module.reward import Weights
 import os
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -46,8 +47,21 @@ class SBThreeAgent:
         policy_algorithm_class: type[BaseAlgorithm],
         policy: type[BasePolicy] | str = "MlpPolicy",
         learning_rate: float = 0.001,
+        training_epochs: int = 15,
+        arch_learning_rate: float = 0.001,
+        arch_momentum: float = 0.9,
+        batch_size: int = 64,
+        reward_weights: Weights | None = None,
     ):
-        self.env: CustomEnv = CustomEnv(device=device, logdir=self.TB_LOG_DIRECTORY)
+        self.env: CustomEnv = CustomEnv(
+            device=device,
+            logdir=self.TB_LOG_DIRECTORY,
+            training_epochs=training_epochs,
+            arch_learning_rate=arch_learning_rate,
+            arch_momentum=arch_momentum,
+            batch_size=batch_size,
+            reward_weights=reward_weights,
+        )
         self.model = policy_algorithm_class(
             policy=policy,
             env=self.env,
