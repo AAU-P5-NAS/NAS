@@ -1,5 +1,5 @@
 import enum
-from typing import Callable
+from typing import Callable, Type, TypeVar
 from pydantic import BaseModel, ConfigDict
 import numpy as np
 
@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 
 from src.utils.network_utils import (
+    Decisions,
     StandardAction,
     LayerType,
     OutChannels,
@@ -25,6 +26,15 @@ from src.utils.network_utils import (
     get_valid_strides,
 )
 
+ACTION_CHOICE = 0
+LAYER_TYPE_CHOICE = 1
+OUT_CHANNELS_CHOICE = 2
+KERNEL_SIZE_CHOICE = 3
+STRIDE_CHOICE = 4
+LINEAR_UNITS_CHOICE = 5
+POOL_MODE_CHOICE = 6
+ACTIVATION_FUNCTION_CHOICE = 7
+
 
 class MaxLayersReachedException(Exception):
     """Raised when the maximum number of layers is reached."""
@@ -32,81 +42,85 @@ class MaxLayersReachedException(Exception):
     pass
 
 
-class ActionStrategy(enum.Enum):
-    ADD_LAYER_SEQUENTIAL = "add_layer_sequential"
-    ADD_REMOVE_MODIFY = "add_remove_modify"
+class ArchitectureCompleteException(Exception):
+    """Raised when the architecture is complete and no further actions can be taken."""
+
+    pass
 
 
-class SliceWithIndex:
+"""
+LogitSlice: 
+    An enhanced slice wrapper to manage action logits for different action types.
+    Provides methods to get absolute indices and access slice properties.
+
+Slices:
+    A Pydantic model to hold LogitSlice instances for various action categories.
+    Enables structured access to different action slices.
+
+MaskContext:
+    A Pydantic model encapsulating the context needed for action masking.
+    Contains logits, observation, slices, action strategy, sampling strategy, max layers, and decisions.
+
+Decisions:
+    A Pydantic model to store the choices made for each action type during the masking process.
+    Includes a method to convert decisions to a list of integers.
+
+The raw logits from the Agent are organized into a Slices object for easier management and sampling. 
+This helps with masking specific invalid actions. For example, to mask out linear units: 
+    masked_logits = ctx.logits.copy()
+    masked_logits[ctx.slices.linear_units.all] = -np.inf # mask all linear units
+    masked_logits[ctx.slices.linear_units.idx(LinearUnits.UNIT_128)] = 1  # explicitly allow 128 units
+    masked_logits[ctx.slices.linear_units[LinearUnits.UNIT_128]] = -np.inf  # Can also use indexing with [] (same as above)
+    return masked_logits 
+"""
+
+
+class LogitSlice:
     def __init__(self, slc: slice):
         self._slice = slc
 
-    def get_index(self, enum_value) -> int:
+    def idx(self, enum_value) -> int:
         """Get the absolute index for an enum value within this slice."""
         return self._slice.start + enum_value.value
 
     @property
+    def all(self) -> slice:
+        """Property access to the full slice."""
+        return self._slice
+
+    @property
     def start(self) -> int:
+        """Get the first index of the slice."""
         return self._slice.start
 
     @property
     def stop(self) -> int:
+        """Get the last index of the slice."""
         return self._slice.stop
 
-    def __getitem__(self, key):
-        """Support creating sub-slices or accessing specific indices."""
-        if isinstance(key, slice):
-            # Create a new slice within the bounds of this slice
-            start = self._slice.start + (key.start or 0)
-            stop = min(
-                self._slice.start + (key.stop or (self._slice.stop - self._slice.start)),
-                self._slice.stop,
-            )
-            return slice(start, stop, key.step)
-        elif isinstance(key, int):
-            # Return the absolute index for a relative position
-            if key < 0:
-                key = (self._slice.stop - self._slice.start) + key
-            return self._slice.start + key
-        else:
-            raise TypeError(f"Unsupported key type: {type(key)}")
+    def __getitem__(self, key: int | enum.Enum) -> int:
+        """Allow [] indexing with enum or int."""
+        if isinstance(key, enum.Enum):
+            return self.idx(key)
+        return self._slice.start + key
 
 
-class LogitSlices(BaseModel):
-    standard_actions: SliceWithIndex
-    layer_type: SliceWithIndex
-    layer_index: SliceWithIndex
-    out_channels: SliceWithIndex
-    kernel_size: SliceWithIndex
-    stride: SliceWithIndex
-    linear_units: SliceWithIndex
-    pool_mode: SliceWithIndex
-    activation_function: SliceWithIndex
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    def get_index(self, name: str, idx: int) -> int:
-        """Safely get an integer index from the named slice."""
-        slc = getattr(self, name)
-        # For slices, this computes the actual index
-        return int(slc.start + idx)
-
-
-class MaskContext(BaseModel):
-    logits: np.ndarray
-    observation: np.ndarray
-    slices: LogitSlices
-    action_strategy: str
-    sampling_strategy: Callable[[np.ndarray], int]
-    max_layers: int
-    decisions: list[int] = []  # store sampled choice for each head
+class Slices(BaseModel):
+    standard_actions: LogitSlice
+    layer_type: LogitSlice
+    out_channels: LogitSlice
+    kernel_size: LogitSlice
+    stride: LogitSlice
+    linear_units: LogitSlice
+    pool_mode: LogitSlice
+    activation_function: LogitSlice
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-def get_logit_slices(max_layers: int):
+def get_logit_slices():
     sizes = {
         "standard_actions": len(StandardAction),
         "layer_type": len(LayerType),
-        "layer_index": max_layers - 1,
         "out_channels": len(OutChannels),
         "kernel_size": len(KernelSize),
         "stride": len(Stride),
@@ -115,148 +129,155 @@ def get_logit_slices(max_layers: int):
         "activation_function": len(ActivationFunction),
     }
     idx = 0
-    slices = {}
+    logit_slices = {}
     for name, size in sizes.items():
-        slices[name] = SliceWithIndex(slice(idx, idx + size))
+        logit_slices[name] = LogitSlice(slice(idx, idx + size))
         idx += size
-    logit_slices = LogitSlices(**slices)
+    logit_slices = Slices(**logit_slices)
     return logit_slices
 
 
+class MaskContext(BaseModel):
+    logits: np.ndarray
+    observation: np.ndarray
+    slices: Slices
+    sampling_strategy: Callable[[np.ndarray], int]
+    max_layers: int
+    decisions: Decisions
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
 def build_action_add_layer_sequential(ctx: MaskContext):
-    ctx.logits = mask_action_type_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "standard_actions"))
+    try:
+        ctx.logits = mask_action_type_sequential(ctx)
+        ctx.decisions.action_choice = sample_action_from_slice_v2(
+            ctx, StandardAction, "standard_actions"
+        )
+        if ctx.decisions.action_choice == StandardAction.NONE:
+            raise ArchitectureCompleteException(
+                "Architecture is complete. No further actions can be taken."
+            )
 
-    if ctx.decisions[0] == StandardAction.NONE.value:
-        raise ValueError("No action selected, cannot proceed to add layer.")
+        ctx.logits = mask_layer_type_sequential(ctx)
+        ctx.decisions.layer_type_choice = sample_action_from_slice_v2(ctx, LayerType, "layer_type")
+        ctx.logits = mask_out_channels_sequential(ctx)
+        ctx.decisions.out_channels_choice = sample_action_from_slice_v2(
+            ctx, OutChannels, "out_channels"
+        )
+        ctx.logits = mask_kernel_size_sequential(ctx)
+        ctx.decisions.kernel_size_choice = sample_action_from_slice_v2(
+            ctx, KernelSize, "kernel_size"
+        )
+        ctx.logits = mask_stride_sequential(ctx)
+        ctx.decisions.stride_choice = sample_action_from_slice_v2(ctx, Stride, "stride")
 
-    ctx.logits = mask_indexes_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "layer_index"))
-    ctx.logits = mask_layer_type_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "layer_type"))
-    ctx.logits = mask_out_channels_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "out_channels"))
-    ctx.logits = mask_kernel_size_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "kernel_size"))
-    ctx.logits = mask_stride_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "stride"))
-    ctx.logits = mask_linear_units_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "linear_units"))
-    ctx.logits = mask_pool_mode_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "pool_mode"))
-    ctx.logits = mask_activation_function_sequential(ctx)
-    ctx.decisions.append(sample_action_from_slice(ctx, "activation_function"))
+        ctx.logits = mask_linear_units_sequential(ctx)
+        ctx.decisions.linear_units_choice = sample_action_from_slice_v2(
+            ctx, LinearUnits, "linear_units"
+        )
+        ctx.logits = mask_pool_mode_sequential(ctx)
+        ctx.decisions.pool_mode_choice = sample_action_from_slice_v2(ctx, PoolMode, "pool_mode")
+        ctx.logits = mask_activation_function_sequential(ctx)
+        ctx.decisions.activation_function_choice = sample_action_from_slice_v2(
+            ctx, ActivationFunction, "activation_function"
+        )
+        return ctx.decisions
 
-    return ctx.decisions
+    except Exception:
+        return None  # no action to perform.
 
 
-def get_logits_for_slice(ctx: MaskContext, slice_name: str) -> np.ndarray:
-    slc = getattr(ctx.slices, slice_name)
-    return ctx.logits[slc.start : slc.stop]
-
-
-def sample_action_from_slice(ctx: MaskContext, slice_name: str) -> int:
-    logits = get_logits_for_slice(ctx, slice_name)
+""" def sample_action_from_slice(ctx: MaskContext, slice_name: str) -> int:
+    logits = ctx.logits[getattr(ctx.slices, slice_name).all]
     if np.all(logits == -np.inf):
         choice = 0  # No valid actions available
     else:
         choice = int(ctx.sampling_strategy(logits))
-    return choice
+    return choice """
+
+
+E = TypeVar("E", bound=enum.Enum)
+
+
+def sample_action_from_slice_v2(ctx: MaskContext, enum_class: Type[E], slice_name: str) -> E:
+    logits = ctx.logits[getattr(ctx.slices, slice_name).all]
+    valid_indices = np.where(logits > -np.inf)[0]
+    if len(valid_indices) == 0:
+        return enum_class(0)  # No valid actions, return NONE.
+    else:
+        return enum_class(int(ctx.sampling_strategy(logits)))
 
 
 def mask_action_type_sequential(ctx: MaskContext):
     """Mask action types based on current observation and strategy. Raises MaxLayersReachedException if max layers reached."""
     new_logits = ctx.logits.copy()
+
     latest_layer_index = get_latest_layer_index(ctx.observation)
     if latest_layer_index == ctx.max_layers - 1:
         raise MaxLayersReachedException("Maximum number of layers reached.")
+
     if latest_layer_index is None:
         # No layers yet, can only add
-        new_logits[ctx.slices.standard_actions.get_index(StandardAction.ADD_LAYER)] = 1
-        new_logits[ctx.slices.standard_actions.get_index(StandardAction.NONE)] = -np.inf
-        new_logits[ctx.slices.standard_actions.get_index(StandardAction.MODIFY_LAYER)] = -np.inf
-        new_logits[ctx.slices.standard_actions.get_index(StandardAction.REMOVE_LAYER)] = -np.inf
+        new_logits[ctx.slices.standard_actions.all] = -np.inf
+        new_logits[ctx.slices.standard_actions[StandardAction.ADD_LAYER]] = 1
         return new_logits
-    modify_layer_index = ctx.slices.standard_actions.get_index(StandardAction.MODIFY_LAYER)
-    remove_layer_index = ctx.slices.standard_actions.get_index(StandardAction.REMOVE_LAYER)
-    new_logits[modify_layer_index] = -np.inf
-    new_logits[remove_layer_index] = -np.inf
-    return new_logits
-
-
-def mask_indexes_sequential(ctx: MaskContext):
-    new_logits = ctx.logits.copy()
-    latest_layer_index = get_latest_layer_index(ctx.observation)
-    if latest_layer_index == ctx.max_layers - 1:
-        raise MaxLayersReachedException("Maximum number of layers reached.")
-
-    next_layer_index = latest_layer_index + 1 if latest_layer_index is not None else 0
-
-    layer_index_start = ctx.slices.layer_index.start
-    layer_index_end = ctx.slices.layer_index.stop
-
-    new_logits[layer_index_start:layer_index_end] = -np.inf
-    new_logits[layer_index_start + next_layer_index] = 1  # only next index is valid
 
     return new_logits
 
 
 def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
-    if ctx.decisions[0] == StandardAction.NONE.value:
-        # mask all layer types except NONE
-        layer_type_start = ctx.slices.layer_type.start
-        layer_type_end = ctx.slices.layer_type.stop
-        new_logits[layer_type_start:layer_type_end] = -np.inf
-        new_logits[ctx.slices.layer_type.get_index(LayerType.NONE)] = 1
+
+    if ctx.decisions.action_choice == StandardAction.NONE:
+        new_logits[ctx.slices.layer_type.all] = -np.inf
+        new_logits[ctx.slices.layer_type[LayerType.NONE]] = 1
         return new_logits
 
     linear_layer_exists = any(
         ctx.observation[i] == LayerType.LINEAR.value for i in range(0, len(ctx.observation), 7)
     )
     if linear_layer_exists:
-        layer_type_start = ctx.slices.layer_type.start
-        layer_type_end = ctx.slices.layer_type.stop
-        new_logits[layer_type_start:layer_type_end] = -np.inf
-        linear_index = ctx.slices.layer_type.get_index(LayerType.LINEAR)
-        new_logits[linear_index] = 1  # only linear is valid
+        new_logits[ctx.slices.layer_type.all] = -np.inf
+        new_logits[ctx.slices.layer_type[LayerType.LINEAR]] = 1  # only linear is valid
+
+        return new_logits
 
     previous_layer = get_latest_layer(ctx.observation)
     if previous_layer is None or previous_layer.layer_type != LayerType.CONV:
         # if no previous layer or previous layer is not conv, cannot add pool
-        pool_index = ctx.slices.layer_type.get_index(LayerType.POOL)
-        new_logits[pool_index] = -np.inf
+        new_logits[ctx.slices.layer_type[LayerType.POOL]] = -np.inf
 
-    none_layer_index = ctx.slices.layer_type.get_index(LayerType.NONE)
-    new_logits[none_layer_index] = -np.inf  # NONE is not valid when adding a layer
+    new_logits[
+        ctx.slices.layer_type[LayerType.NONE]
+    ] = -np.inf  # NONE is not valid when adding a layer
     return new_logits
 
 
 def mask_out_channels_sequential(ctx: MaskContext):
-    if ctx.decisions[2] == LayerType.LINEAR.value or ctx.decisions[2] == LayerType.NONE.value:
-        # mask all out_channels
-        out_channels_start = ctx.slices.out_channels.start
-        out_channels_end = ctx.slices.out_channels.stop
-        new_logits = ctx.logits.copy()
-        new_logits[out_channels_start:out_channels_end] = -np.inf
-        new_logits[ctx.slices.out_channels.get_index(OutChannels.NONE)] = 1
+    new_logits = ctx.logits.copy()
+
+    if (
+        ctx.decisions.out_channels_choice == LayerType.LINEAR
+        or ctx.decisions.out_channels_choice == LayerType.NONE
+    ):
+        new_logits[ctx.slices.out_channels.all] = -np.inf
+        new_logits[ctx.slices.out_channels[OutChannels.NONE]] = 1
         return new_logits
 
-    new_logits = ctx.logits.copy()
-    none_index = ctx.slices.out_channels.get_index(OutChannels.NONE)
-    new_logits[none_index] = -np.inf  # NONE is not valid when adding
+    new_logits[ctx.slices.out_channels[OutChannels.NONE]] = -np.inf  # NONE is not valid when adding
     return new_logits
 
 
 def mask_kernel_size_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
-    if ctx.decisions[2] == LayerType.NONE.value or ctx.decisions[2] == LayerType.LINEAR.value:
+    if (
+        ctx.decisions.kernel_size_choice == LayerType.NONE
+        or ctx.decisions.kernel_size_choice == LayerType.LINEAR
+    ):
         # mask all kernel sizes
-        kernel_size_start = ctx.slices.kernel_size.start
-        kernel_size_end = ctx.slices.kernel_size.stop
-        new_logits[kernel_size_start:kernel_size_end] = -np.inf
-        new_logits[ctx.slices.kernel_size.get_index(KernelSize.NONE)] = 1
+        new_logits[ctx.slices.kernel_size.all] = -np.inf
+        new_logits[ctx.slices.kernel_size[KernelSize.NONE]] = 1
         return new_logits
 
     latest_output_dims = get_output_dimensions(ctx.observation)
@@ -264,68 +285,67 @@ def mask_kernel_size_sequential(ctx: MaskContext):
     invalid_kernels = [k for k in KernelSize if k not in valid_kernels]
 
     for kernel in invalid_kernels:
-        invalid_kernel_index = ctx.slices.kernel_size.get_index(kernel.value)
+        invalid_kernel_index = ctx.slices.kernel_size[kernel]
         new_logits[invalid_kernel_index] = -np.inf
 
-    new_logits[ctx.slices.kernel_size.get_index(KernelSize.NONE)] = -np.inf
+    new_logits[ctx.slices.kernel_size[KernelSize.NONE]] = -np.inf
     return new_logits
 
 
 def mask_stride_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
-    if ctx.decisions[2] == LayerType.NONE.value or ctx.decisions[2] == LayerType.LINEAR.value:
-        # mask all strides
-        stride_start = ctx.slices.stride.start
-        stride_end = ctx.slices.stride.stop
-        new_logits[stride_start:stride_end] = -np.inf
-        new_logits[ctx.slices.stride.get_index(Stride.NONE)] = 1
+    if (
+        ctx.decisions.layer_type_choice == LayerType.NONE
+        or ctx.decisions.layer_type_choice == LayerType.LINEAR
+    ):
+        new_logits[ctx.slices.stride.all] = -np.inf
+        new_logits[ctx.slices.stride[Stride.NONE]] = 1
         return new_logits
 
-    kernel_size_chosen = KernelSize(ctx.decisions[4])
+    kernel_size_chosen = KernelSize(ctx.decisions.kernel_size_choice)
     latest_output_dims = get_output_dimensions(ctx.observation)
     valid_strides = get_valid_strides(latest_output_dims, kernel_size_chosen)
     invalid_strides = [s for s in Stride if s not in valid_strides]
 
     for stride in invalid_strides:
-        invalid_stride_index = ctx.slices.stride.get_index(stride.value)
+        invalid_stride_index = ctx.slices.stride[stride.value]
         new_logits[invalid_stride_index] = -np.inf
 
-    new_logits[ctx.slices.stride.get_index(Stride.NONE)] = -np.inf
+    new_logits[ctx.slices.stride[Stride.NONE]] = -np.inf
+
     return new_logits
 
 
 def mask_linear_units_sequential(ctx: MaskContext):
-    if ctx.decisions[2] != LayerType.LINEAR.value:
-        new_logits = ctx.logits.copy()
-        linear_units_start = ctx.slices.linear_units.start
-        linear_units_end = ctx.slices.linear_units.stop
-        new_logits[linear_units_start:linear_units_end] = -np.inf
-        new_logits[ctx.slices.linear_units.get_index(LinearUnits.NONE)] = 1
+    new_logits = ctx.logits.copy()
+
+    if ctx.decisions.layer_type_choice != LayerType.LINEAR:
+        new_logits[ctx.slices.linear_units.all] = -np.inf
+        new_logits[ctx.slices.linear_units[LinearUnits.NONE]] = 1
         return new_logits
 
-    new_logits = ctx.logits.copy()
-    new_logits[ctx.slices.linear_units.get_index(LinearUnits.NONE)] = -np.inf
-
+    new_logits[ctx.slices.linear_units[LinearUnits.NONE]] = -np.inf
     return new_logits
 
 
 def mask_pool_mode_sequential(ctx: MaskContext):
-    if ctx.decisions[2] != LayerType.POOL.value:
-        new_logits = ctx.logits.copy()
-        pool_mode_start = ctx.slices.pool_mode.start
-        pool_mode_end = ctx.slices.pool_mode.stop
-        new_logits[pool_mode_start:pool_mode_end] = -np.inf
-        new_logits[ctx.slices.pool_mode.get_index(PoolMode.NONE)] = 1
+    new_logits = ctx.logits.copy()
+
+    if ctx.decisions.layer_type_choice != LayerType.POOL:
+        new_logits[ctx.slices.pool_mode.all] = -np.inf
+        new_logits[ctx.slices.pool_mode[PoolMode.NONE]] = 1
         return new_logits
 
-    return ctx.logits
+    new_logits[ctx.slices.pool_mode[PoolMode.NONE]] = -np.inf
+    return new_logits
 
 
 def mask_activation_function_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
     # Mask NONE activation - not useful for hidden layers
-    new_logits[ctx.slices.activation_function.get_index(ActivationFunction.NONE)] = -np.inf
+    new_logits[ctx.slices.activation_function[ActivationFunction.NONE]] = -np.inf
     # Mask SOFTMAX activation - should only be used in output layer, not hidden layers
-    new_logits[ctx.slices.activation_function.get_index(ActivationFunction.SOFTMAX)] = -np.inf
+    new_logits[ctx.slices.activation_function[ActivationFunction.SOFTMAX]] = -np.inf
+
     return new_logits

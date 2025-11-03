@@ -6,32 +6,29 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
-from src.model_module.action_builder import ActionBuilder
+from src.model_module.action_builder import transform_logits_to_action
 from src.classification_module.metrics import Metrics
 from src.classification_module.reward import RewardCalculator, Weights
 from src.classification_module.train import Trainer
-from src.data_module.importer import DataImporter
+from src.data_module.importer import DataImporter, DatasetOption
 from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
 from src.utils.network_utils import (
     LayerType,
     NetworkConfig,
     OutChannels,
     KernelSize,
+    StandardAction,
     Stride,
     LinearUnits,
     PoolMode,
     ActivationFunction,
 )
-from src.utils.arch_builder import arch_builder
-from torch.nn import CrossEntropyLoss
+from torch.nn import CrossEntropyLoss, Module
 from rich.console import Console
+from stable_baselines3.common.logger import Logger
+from torch.utils.tensorboard import SummaryWriter
 
-standard_actions = {
-    "REMOVE_LAYER",
-    "MODIFY_LAYER",
-    "ADD_LAYER",
-    "DO_NOTHING",
-}
+from src.utils.action_builder_utils import get_logit_slices
 
 
 class CustomEnv(gym.Env):
@@ -55,11 +52,29 @@ class CustomEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
     render_mode: str
     max_layers: int
+    logdir: str
+    info: Dict[str, Any] = {}
+    actions_taken: int = 0  # Track steps in episode
+    sum_reward: float = 0.0
+    sum_accuracy: float = 0.0
+    evaluation_count: int = 0
+    step_count: int = 0
+
+    newest_reward: Optional[float] = None
+    newest_metrics: Optional[Metrics] = None
+    newest_architecture: Optional[Module] = None
+    newest_actions_taken_on_evaluation: Optional[int] = None
+
+    evaluated_this_step: bool = False
+
+    device: str
 
     def __init__(
         self,
+        logdir: str,
+        device: str,
         render_mode: str = "console",
-        max_layers: int = 10,
+        max_layers: int = 16,
         training_epochs: int = 15,
         arch_learning_rate: float = 0.001,
         arch_momentum: float = 0.9,
@@ -68,6 +83,7 @@ class CustomEnv(gym.Env):
     ):
         super().__init__()
 
+        self.device = device
         self.render_mode = render_mode
         self.max_layers = max_layers
         self.training_epochs = training_epochs
@@ -79,8 +95,9 @@ class CustomEnv(gym.Env):
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
-        self.data_importer = DataImporter(max_per_class=1000)
-        self.loader_tuple = self.data_importer.get_as_cnn(batch_size=batch_size, test_split=0.2)
+        self.data_importer = DataImporter(dataset_option=DatasetOption.EMNIST_BALANCED)
+        self.logit_slices = get_logit_slices()
+        self.loader_tuple = self.data_importer.get_dataloaders(batch_size=64)
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
         self.console = Console()
@@ -89,12 +106,12 @@ class CustomEnv(gym.Env):
         self.sum_reward = 0.0
         self.sum_accuracy = 0.0
         self.evaluation_count = 0
+        self.logdir = logdir
 
     def _get_action_space(self) -> spaces.Space:
         output_actions = (
-            len(standard_actions)
+            len(StandardAction)
             + len(LayerType)
-            + (self.max_layers - 1)  # One for each index (which index to apply action on)
             + len(OutChannels)
             + len(KernelSize)
             + len(Stride)
@@ -122,13 +139,38 @@ class CustomEnv(gym.Env):
         flattened_obs = flatten_cnn_config(self.current_network_config, self.max_layers)
         return np.array(flattened_obs, dtype=np.float32)
 
-    def _get_info(self) -> Dict[str, Any]:
-        """Compute auxiliary information for debugging.
-
-        Returns:
-
+    def _write_summary(self, logger: Logger, summary_writer: SummaryWriter) -> None:
         """
-        return {}
+        Write evaluation metrics and reward to TensorBoard summary, if evaluated_this_step is True.
+        """
+
+        if self.evaluated_this_step is False:
+            return
+
+        def record_optional(name: str, metric: Optional[float]) -> None:
+            if metric is not None:
+                logger.record(name, metric)
+
+        record_optional("Custom/Reward", self.newest_reward)
+        record_optional("Custom/Actions Taken", self.newest_actions_taken_on_evaluation)
+
+        if self.newest_metrics is not None:
+            record_optional("Custom/Test Loss", self.newest_metrics.test_loss)
+            record_optional("Custom/Accuracy", self.newest_metrics.accuracy)
+            record_optional("Custom/Precision", self.newest_metrics.precision)
+            record_optional("Custom/Recall", self.newest_metrics.recall)
+            record_optional("Custom/F1 Score", self.newest_metrics.f1_score)
+            record_optional("Custom/FLOPs", self.newest_metrics.flops)
+            record_optional("Custom/Runtime", self.newest_metrics.runtime)
+            record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
+
+        logger.dump(step=self.step_count)
+
+        if self.newest_architecture is not None:
+            summary_writer.add_graph(
+                self.newest_architecture,
+                torch.zeros(1, 1, 28, 28).to(device=self.device),
+            )
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
         """Start a new episode.
@@ -147,8 +189,7 @@ class CustomEnv(gym.Env):
         self.actions_taken = 0
         self.current_network_config = NetworkConfig(layers=[])
         observation = self._get_observation()
-        info = self._get_info()
-        return observation, info
+        return observation, self.info
 
     def step(self, action_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
@@ -159,65 +200,49 @@ class CustomEnv(gym.Env):
         :Returns:
         - tuple: (observation, reward, terminated, truncated, info)
         """
+
+        self.evaluated_this_step = False
+
+        self.info = {}
+        self.step_count += 1
         self.actions_taken += 1
 
-        with self.console.status(
-            f"[bold blue]Training model on action number {self.evaluation_count} ...[/bold blue]"
-        ):
-            try:
-                new_architecture, error = self.get_architecture(action_logits)
-                shouldEvaluate = (
-                    True
-                    if error is not None or self.actions_taken >= self.max_actions_per_episode
-                    else False
-                )
-                if shouldEvaluate:
-                    reward = self._evaluate_architecture(new_architecture)
-                    terminated = True
-                    truncated = False
-                    self.actions_taken = 0  # Reset for next episode
-                else:
-                    reward = 0.0
-                    terminated = False
-                    truncated = False
-            except Exception as e:
-                self.console.print(f"[bold red]Exception occurred: {e}[/bold red]")
-                reward = 0.0
-                terminated = True
-                truncated = False
+        new_architecture, should_evaluate = self._get_new_architecture(action_logits)
 
-        info = self._get_info()
+        if should_evaluate:
+            reward = self._evaluate_architecture(new_architecture)
+            terminated = True
+            truncated = False
+            self.actions_taken = 0  # Reset for next episode
+        else:
+            reward = 0.05
+            terminated = False
+            truncated = False
+
         obs = self._get_observation()
 
-        return obs, reward, terminated, truncated, info
+        return obs, reward, terminated, truncated, self.info
 
-    def get_architecture(
-        self, action_logits: np.ndarray
-    ) -> tuple[NetworkConfig, Optional[Exception]]:
+    def _get_new_architecture(self, action_logits: np.ndarray):
         """Build a new architecture based on the agent's action logits.
 
         :Args:
         - action_logits: The logits produced by the agent's policy network.
 
         :Returns:
-        - tuple: (new_network_config, error)
-
+        - tuple: (new_network_config, should_evaluate)
         """
-        try:
-            observation = self._get_observation()
-            action_builder = ActionBuilder(10, "add_layer_sequential")
-            action = action_builder.build_action(
-                action_output=action_logits, observation=observation
-            )
-            new_network_config = arch_builder(
-                actions=action, partial_arch=self.current_network_config
-            )
-            self.current_network_config = new_network_config
-            return new_network_config, None
-        except Exception:
-            return self.current_network_config, Exception("No more layers can be added")
+        observation = self._get_observation()
+        action_to_apply = transform_logits_to_action(action_logits, observation, self.max_layers)
+        if action_to_apply is None:
+            return self.current_network_config, True  # Stop and evaluate
+        new_network_config = self.current_network_config.extend(
+            action=action_to_apply, partial_arch=self.current_network_config
+        )
+        self.current_network_config = new_network_config
+        return new_network_config, False  # Do not evaluate yet
 
-    def train_classifier(
+    def _train_classifier(
         self,
         dataloaders: Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader],
         model: torch.nn.Module,
@@ -242,19 +267,17 @@ class CustomEnv(gym.Env):
             model=model.to(device),
             loss_function=loss_function.to(device),
             optimizer=optimizer,
+            num_classes=self.data_importer.get_num_classes()[0],
         )
         num_epochs = self.training_epochs
         start_time = time.time()
 
         for epoch in range(num_epochs):
-            try:
+            progress = (epoch + 1) / num_epochs * 100
+            with self.console.status(
+                f"[bold blue]Training model on action number {self.evaluation_count + 1}: Progress {int(progress)}%[/bold blue]"
+            ):
                 trainer.train()
-
-            except Exception as e:
-                self.console.print(
-                    f"[bold red]Training failed at epoch {epoch + 1}: {e}[/bold red]"
-                )
-                return -3.0  # Penalty for failed training
 
         end_time = time.time()
         training_time = end_time - start_time
@@ -262,6 +285,8 @@ class CustomEnv(gym.Env):
 
         metrics.runtime = training_time
         metrics.training_time = training_time
+
+        self.newest_metrics = metrics
 
         return metrics
 
@@ -274,38 +299,36 @@ class CustomEnv(gym.Env):
         :Returns:
         - float: The computed reward based on evaluation metrics.
         """
-        if len(new_architecture.layers) == 0:
-            self.console.print("[bold red]No layers in architecture - giving penalty[/bold red]")
-            return -5.0
+        cnn_builder = CNNBuilder(
+            rl_config=new_architecture,
+            num_classes=self.data_importer.get_num_classes()[0],
+        )
+        architecture = cnn_builder.build()
+        optimizer = torch.optim.SGD(
+            architecture.parameters(),
+            lr=self.arch_learning_rate,
+            momentum=self.arch_momentum,
+        )
+        training_results = self._train_classifier(
+            dataloaders=self.loader_tuple,
+            model=architecture,
+            loss_function=CrossEntropyLoss(),
+            optimizer=optimizer,
+        )
 
-        try:
-            cnn_builder = CNNBuilder(rl_config=new_architecture)
-            architecture = cnn_builder.build()
-            optimizer = torch.optim.SGD(
-                architecture.parameters(),
-                lr=self.arch_learning_rate,
-                momentum=self.arch_momentum,
+        if isinstance(training_results, Metrics):
+            self.console.print(
+                f"[bold green]Training of action {self.evaluation_count + 1} successful![/bold green]"
             )
+            self.console.print(f"[bold blue]Accuracy: {training_results.accuracy}[/bold blue]")
+            reward = self._calculate_reward(training_results)
+            self.console.print(f"[bold blue]Reward: {reward}[/bold blue]")
+            self.console.print("[bold yellow]Architecture:[/bold yellow]")
+            self.print_layers(new_architecture.layers)
 
-            training_results = self.train_classifier(
-                dataloaders=self.loader_tuple,
-                model=architecture,
-                loss_function=CrossEntropyLoss(),
-                optimizer=optimizer,
-            )
-            if isinstance(training_results, Metrics):
-                self.console.print(
-                    f"[bold green]Accuracy: {training_results.accuracy}[/bold green]"
-                )
-                reward = self._calculate_reward(training_results)
-                self.console.print(f"[bold green]Reward: {reward}[/bold green]")
-                return reward
-            else:
-                return training_results  # Already a penalty value
-
-        except Exception as e:
-            self.console.print(f"[bold red]Architecture evaluation failed: {e}[/bold red]")
-            return -5.0  # Penalty for invalid architecture
+            return reward
+        else:
+            return training_results  # Already a penalty value
 
     def _should_terminate(self) -> bool:
         # Termination is now handled in step() method
@@ -351,6 +374,7 @@ class CustomEnv(gym.Env):
             else:
                 self.sum_accuracy += 0.0
 
+        self.newest_reward = float(reward)
         return reward
 
     def render(self):
@@ -361,6 +385,27 @@ class CustomEnv(gym.Env):
             pass
         else:
             raise NotImplementedError
+
+    def print_layers(self, layers):
+        """
+        Print details of each layer to the console.
+        Args:
+            layers (list): List of layer objects.
+        """
+        indent = "    "
+        for i, layer in enumerate(layers):
+            if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
+                self.console.print(
+                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
+                )
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
+                self.console.print(
+                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
+                )
+            else:
+                self.console.print(
+                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Activation: {layer.activation.name}"
+                )
 
 
 """ 

@@ -7,6 +7,7 @@ from rich.console import Console
 import torch
 from stable_baselines3.common.base_class import BaseAlgorithm
 
+from data_module.dataset import DatasetOption
 from src.model_module.hyperparameters import HyperparameterSearchSpace
 from src.classification_module.reward import Weights, RewardCalculator
 from src.classification_module.train import Trainer
@@ -150,7 +151,14 @@ class SLHyperparameterOptimizer:
         )
 
         try:
-            cnn_builder = CNNBuilder(rl_config=self.standard_architecture)
+            data_importer = DataImporter(
+                max_per_class=1000, dataset_option=DatasetOption.EMNIST_BALANCED
+            )
+            train_loader, test_loader = data_importer.get_dataloaders(batch_size=batch_size)
+            train_num_classes, test_num_classes = data_importer.get_num_classes()
+            cnn_builder = CNNBuilder(
+                rl_config=self.standard_architecture, num_classes=train_num_classes
+            )
             model = cnn_builder.build()
 
             if optimizer_type == "SGD":
@@ -170,17 +178,13 @@ class SLHyperparameterOptimizer:
                     momentum=momentum,
                 )
 
-            data_importer = DataImporter(max_per_class=1000)
-            train_loader, test_loader = data_importer.get_as_cnn(
-                batch_size=batch_size, test_split=0.2
-            )
-
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             trainer = Trainer(
                 dataloaders=(train_loader, test_loader),
                 model=model.to(device),
                 loss_function=CrossEntropyLoss().to(device),
                 optimizer=optimizer,
+                num_classes=train_num_classes,
             )
 
             for epoch in range(training_epochs):
