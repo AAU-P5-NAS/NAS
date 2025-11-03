@@ -4,10 +4,10 @@ import torch
 from rich.console import Console
 
 from data_module.import_utils import (
-    fetch_csv_from_url,
     GRAYSCALE_NUM_CHANNELS,
     DEFAULT_H,
     DEFAULT_W,
+    fetch_dataset_from_url,
 )
 
 console = Console()
@@ -31,19 +31,19 @@ def import_emnist_balanced(max_per_class: int | None = None):
     if not Path(EMNIST_BALANCED_TRAIN_PATH).is_file():
         console.print("[bold yellow]EMNIST Balanced train data not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST Balanced train data...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_BALANCED_TRAIN_URL, EMNIST_BALANCED_TRAIN_PATH)
+            fetch_dataset_from_url(EMNIST_BALANCED_TRAIN_URL, EMNIST_BALANCED_TRAIN_PATH)
             console.print("[bold green]EMNIST Balanced train data downloaded ✔[/bold green]")
 
     if not Path(EMNIST_BALANCED_TEST_PATH).is_file():
         console.print("[bold yellow]EMNIST Balanced test data not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST Balanced test data...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_BALANCED_TEST_URL, EMNIST_BALANCED_TEST_PATH)
+            fetch_dataset_from_url(EMNIST_BALANCED_TEST_URL, EMNIST_BALANCED_TEST_PATH)
             console.print("[bold green]EMNIST Balanced test data downloaded ✔[/bold green]")
 
     if not Path(EMNIST_BALANCED_MAPPING_PATH).is_file():
         console.print("[bold yellow]EMNIST Balanced Mapping not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST Balanced Mapping...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_BALANCED_MAPPING_URL, EMNIST_BALANCED_MAPPING_PATH)
+            fetch_dataset_from_url(EMNIST_BALANCED_MAPPING_URL, EMNIST_BALANCED_MAPPING_PATH)
             console.print("[bold green]EMNIST Balanced Mapping downloaded ✔[/bold green]")
 
     with console.status("[bold blue]Loading EMNIST Balanced data...[/bold blue]"):

@@ -4,7 +4,7 @@ import torch
 from rich.console import Console
 
 from data_module.import_utils import (
-    fetch_csv_from_url,
+    fetch_dataset_from_url,
     GRAYSCALE_NUM_CHANNELS,
     DEFAULT_H,
     DEFAULT_W,
@@ -40,7 +40,7 @@ def import_emnist_byclass(max_per_class: int | None = None):
             with console.status(
                 "[bold yellow]Downloading EMNIST ByClass train data...[/bold yellow]"
             ):
-                fetch_csv_from_url(EMNIST_BYCLASS_TRAIN_URL, EMNIST_BYCLASS_TRAIN_PATH)
+                fetch_dataset_from_url(EMNIST_BYCLASS_TRAIN_URL, EMNIST_BYCLASS_TRAIN_PATH)
                 console.print("[bold green]EMNIST ByClass train data downloaded ✔[/bold green]")
         else:
             console.print("[bold red]Aborting. train data is required.[/bold red]")
@@ -49,13 +49,13 @@ def import_emnist_byclass(max_per_class: int | None = None):
     if not Path(EMNIST_BYCLASS_TEST_PATH).is_file():
         console.print("[bold yellow]EMNIST ByClass test data not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST ByClass test data...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_BYCLASS_TEST_URL, EMNIST_BYCLASS_TEST_PATH)
+            fetch_dataset_from_url(EMNIST_BYCLASS_TEST_URL, EMNIST_BYCLASS_TEST_PATH)
             console.print("[bold green]EMNIST ByClass test data downloaded ✔[/bold green]")
 
     if not Path(EMNIST_BYCLASS_MAPPING_PATH).is_file():
         console.print("[bold yellow]EMNIST ByClass Mapping not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST ByClass Mapping...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_BYCLASS_MAPPING_URL, EMNIST_BYCLASS_MAPPING_PATH)
+            fetch_dataset_from_url(EMNIST_BYCLASS_MAPPING_URL, EMNIST_BYCLASS_MAPPING_PATH)
             console.print("[bold green]EMNIST ByClass Mapping downloaded ✔[/bold green]")
 
     with console.status("[bold blue]Loading EMNIST ByClass data...[/bold blue]"):

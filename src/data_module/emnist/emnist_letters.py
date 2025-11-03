@@ -6,7 +6,7 @@ from data_module.import_utils import (
     DEFAULT_H,
     DEFAULT_W,
     GRAYSCALE_NUM_CHANNELS,
-    fetch_csv_from_url,
+    fetch_dataset_from_url,
 )
 
 console = Console()
@@ -29,18 +29,18 @@ def import_emnist_letters(max_per_class: int | None = None):
     if not Path(EMNIST_LETTERS_TRAIN_PATH).is_file():
         console.print("[bold yellow]EMNIST Letters train data not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST Letters train data...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_TRAIN_URL, EMNIST_LETTERS_TRAIN_PATH)
+            fetch_dataset_from_url(EMNIST_TRAIN_URL, EMNIST_LETTERS_TRAIN_PATH)
             console.print("[bold green]EMNIST Letters train data downloaded ✔[/bold green]")
     if not Path(EMNIST_LETTERS_TEST_PATH).is_file():
         console.print("[bold yellow]EMNIST Letters test data not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST Letters test data...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_TEST_URL, EMNIST_LETTERS_TEST_PATH)
+            fetch_dataset_from_url(EMNIST_TEST_URL, EMNIST_LETTERS_TEST_PATH)
             console.print("[bold green]EMNIST Letters test data downloaded ✔[/bold green]")
 
     if not Path(EMNIST_MAPPING_PATH).is_file():
         console.print("[bold yellow]EMNIST Letters Mapping not found.[/bold yellow]")
         with console.status("[bold yellow]Downloading EMNIST Letters Mapping...[/bold yellow]"):
-            fetch_csv_from_url(EMNIST_MAPPING_URL, EMNIST_MAPPING_PATH)
+            fetch_dataset_from_url(EMNIST_MAPPING_URL, EMNIST_MAPPING_PATH)
             console.print("[bold green]EMNIST Letters Mapping downloaded ✔[/bold green]")
 
     with console.status("[bold blue]Loading EMNIST Letters data...[/bold blue]"):

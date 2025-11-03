@@ -95,9 +95,10 @@ class CustomEnv(gym.Env):
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
-        self.data_importer = DataImporter(dataset_option=DatasetOption.EMNIST_BALANCED)
+        self.data_importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
         self.logit_slices = get_logit_slices()
         self.loader_tuple = self.data_importer.get_dataloaders(batch_size=64)
+        self.dimensions = self.data_importer.get_dimensions()
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
         self.console = Console()
@@ -167,9 +168,10 @@ class CustomEnv(gym.Env):
         logger.dump(step=self.step_count)
 
         if self.newest_architecture is not None:
+            channels, h, w = self.dimensions
             summary_writer.add_graph(
                 self.newest_architecture,
-                torch.zeros(1, 1, 28, 28).to(device=self.device),
+                torch.zeros(1, channels, h, w).to(device=self.device),
             )
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
@@ -233,7 +235,9 @@ class CustomEnv(gym.Env):
         - tuple: (new_network_config, should_evaluate)
         """
         observation = self._get_observation()
-        action_to_apply = transform_logits_to_action(action_logits, observation, self.max_layers)
+        action_to_apply = transform_logits_to_action(
+            action_logits, observation, self.max_layers, dimensions=self.dimensions
+        )
         if action_to_apply is None:
             return self.current_network_config, True  # Stop and evaluate
         new_network_config = self.current_network_config.extend(
@@ -268,6 +272,7 @@ class CustomEnv(gym.Env):
             loss_function=loss_function.to(device),
             optimizer=optimizer,
             num_classes=self.data_importer.get_num_classes()[0],
+            dimensions=self.dimensions,
         )
         num_epochs = self.training_epochs
         start_time = time.time()
@@ -301,6 +306,7 @@ class CustomEnv(gym.Env):
         """
         cnn_builder = CNNBuilder(
             rl_config=new_architecture,
+            dimensions=self.dimensions,
             num_classes=self.data_importer.get_num_classes()[0],
         )
         architecture = cnn_builder.build()
@@ -402,9 +408,9 @@ class CustomEnv(gym.Env):
                 self.console.print(
                     f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
                 )
-            else:
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
                 self.console.print(
-                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Activation: {layer.activation.name}"
+                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
                 )
 
 

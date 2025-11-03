@@ -33,8 +33,8 @@ def transform_google_drive_url_to_direct_download(url: str) -> str:
     return direct_download_url
 
 
-def fetch_csv_from_url(src: str, dest: str):
-    """Fetches a CSV file from a public Google Drive link and saves it to dest"""
+def fetch_dataset_from_url(src: str, dest: str):
+    """Fetches a dataset from a public Google Drive link and saves it to dest"""
     download_src = transform_google_drive_url_to_direct_download(src)
     response = requests.get(download_src)
     response.raise_for_status()
@@ -66,6 +66,33 @@ def visualize_samples(
         ax.axis("off")
 
     # turn of unused subplots, if num_samples is not perfect square
+    for j in range(i + 1, len(axes)):
+        axes[j].axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def visualize_cifar_samples(
+    dataloader: torch.utils.data.DataLoader, label_fn: Callable, num_samples: int = 9
+):
+    images, labels = next(iter(dataloader))
+    n = min(num_samples, images.size(0))
+
+    rows = int(n**0.5) or 1
+    cols = int(np.ceil(n / rows))
+
+    _, axes = plt.subplots(rows, cols, figsize=(cols * 2, rows * 2))
+    axes = np.array(axes).reshape(-1)
+
+    for i in range(n):
+        img = images[i].permute(1, 2, 0).cpu().numpy()  # CHW -> HWC
+        lbl = labels[i].item()
+        ax = axes[i]
+        ax.imshow(img)
+        ax.set_title(label_fn(lbl))
+        ax.axis("off")
+
     for j in range(i + 1, len(axes)):
         axes[j].axis("off")
 

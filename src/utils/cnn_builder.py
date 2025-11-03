@@ -3,7 +3,7 @@ import torch.onnx
 import onnx
 import os
 import warnings
-from typing import Optional, Tuple
+from typing import Optional
 
 from src.utils.network_utils import (
     ActivationFunction,
@@ -24,17 +24,16 @@ class CNNBuilder:
         self,
         rl_config: NetworkConfig,
         num_classes: int,
-        input_size: Tuple[int, int] = (28, 28),
+        dimensions: tuple[int, int, int],
     ):
         self.rl_config = rl_config
-        self.input_size = input_size
+        self.h, self.w = dimensions[1], dimensions[2]
+        self.in_channels = dimensions[0]
         self.num_classes = num_classes
         self.model: Optional[nn.Sequential] = None
 
     def build(self):
         layers = []
-        current_in_channels = 1
-        h, w = self.input_size
         conv_pool_layers = [
             layer
             for layer in self.rl_config.layers
@@ -54,10 +53,10 @@ class CNNBuilder:
                 assert layer.out_channels is not None
                 out_ch = layer.out_channels.to_channels()
                 assert out_ch is not None
-                assert current_in_channels is not None
+                assert self.in_channels is not None
                 layers.append(
                     nn.Conv2d(
-                        in_channels=current_in_channels,
+                        in_channels=self.in_channels,
                         out_channels=out_ch,
                         kernel_size=kernel,
                         stride=stride,
@@ -66,8 +65,8 @@ class CNNBuilder:
                 )
                 assert layer.activation is not None
                 layers.append(layer.activation.to_module())
-                current_in_channels = out_ch
-                h, w = update_spatial_dims(h, w, kernel, stride, padding)
+                self.in_channels = out_ch
+                self.h, self.w = update_spatial_dims(self.h, self.w, kernel, stride, padding)
 
             elif layer.layer_type is LayerType.POOL:
                 assert layer.kernel_size is not None
@@ -84,12 +83,12 @@ class CNNBuilder:
                     layers.append(nn.AvgPool2d(kernel, stride))
 
                 assert stride is not None
-                h, w = update_spatial_dims(h, w, kernel, stride)
+                self.h, self.w = update_spatial_dims(self.h, self.w, kernel, stride)
 
         layers.append(nn.Flatten())
-        assert current_in_channels is not None
+        assert self.in_channels is not None
 
-        in_features = current_in_channels * h * w
+        in_features = self.in_channels * self.h * self.w
 
         for layer in linear_layers:
             assert in_features is not None
