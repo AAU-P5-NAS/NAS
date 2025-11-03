@@ -1,3 +1,4 @@
+from typing import Optional
 import torch
 from torch import nn, Tensor
 from torch.utils.data import DataLoader
@@ -6,7 +7,7 @@ from torch.optim.optimizer import Optimizer
 from typing import Tuple, List
 from src.classification_module.metrics import MetrcicsEvaluator
 from src.classification_module.metrics import Metric_literal, Metrics
-
+from threading import Event, Timer
 
 class Trainer:
     def __init__(
@@ -41,9 +42,25 @@ class Trainer:
         self.optimizer: Optimizer = optimizer
         self.chosen_metrics: List[Metric_literal] = chosen_metrics
 
-    def train(self):
+    def train(self, max_training_time: Optional[int] = 300):
+        # Set up max training timer
+        stop_event = Event()
+        timer = None
+        if max_training_time is not None:
+            timer = Timer(max_training_time, stop_event.set)
+            timer.daemon = True
+            timer.start()
+
+        stopped_by_timeout = False
+
+        # Train the model
         self.model.train()
         for X, Y in self.train_loader:
+            # Stop training if it takes too long
+            if stop_event.is_set():
+                stopped_by_timeout = True
+                break
+
             X = X.to(self.device, non_blocking=True)
             Y = Y.to(self.device, non_blocking=True)
 
@@ -55,6 +72,12 @@ class Trainer:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+        # Clear timer
+        if timer is not None:
+            timer.cancel()
+        
+        # Return if stopped prematurely
+        return stopped_by_timeout
 
     def test(self) -> Metrics:
         self.model.eval()
