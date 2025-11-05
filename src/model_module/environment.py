@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Optional
 import torch
 from src.model_module.action_builder import transform_logits_to_action
 from src.classification_module.metrics import Metrics
-from src.classification_module.reward import RewardCalculator, Weights
+from src.classification_module.reward import FirstBasicRewardStrategy, Weights
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
 from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
@@ -354,9 +354,9 @@ class CustomEnv(gym.Env):
         - float: The computed reward.
         """
         rewardCalculator = (
-            RewardCalculator(weights=self.reward_weights)
+            FirstBasicRewardStrategy(weights=self.reward_weights)
             if self.reward_weights
-            else RewardCalculator()
+            else FirstBasicRewardStrategy()
         )
         reward: float = rewardCalculator.compute_reward(metrics)
         self.evaluation_count += 1

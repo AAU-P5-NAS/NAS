@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from src.classification_module.metrics import Metrics
 import numpy as np
+import abc
 
 
 class Weights(BaseModel):
@@ -23,7 +24,14 @@ class Baselines(BaseModel):
     max_test_loss: float = 3.0  # Clip losses above this
 
 
-class RewardCalculator:
+class RewardStrategy(abc.ABC):
+    @abc.abstractmethod
+    def compute_reward(self, metrics: Metrics) -> tuple[float, dict[str, float]]:
+        """Compute reward based on provided metrics."""
+        raise NotImplementedError
+
+
+class FirstBasicRewardStrategy(RewardStrategy):
     def __init__(self, weights: Weights = Weights(), baselines: Baselines = Baselines()):
         self.weights = weights
         self.baselines = baselines
