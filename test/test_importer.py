@@ -9,17 +9,27 @@ import matplotlib.pyplot as plt
 # Fixes import issues when running tests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.data_module.importer import (
-    DataImporter,
-    CSVFilepathDoesntExist,
-)
+from data_module.dataset import DatasetOption
+from src.data_module.importer import DataImporter
 
+def test_get_dataloaders():
+    with pytest.raises(ValueError):
+        DataImporter(DatasetOption.CIFAR_10).get_dataloaders(batch_size=0)
+        
+    assert DataImporter(DatasetOption.CIFAR_10).get_dataloaders(batch_size=1) is not None
+
+def test_get_num_classes():
+    assert DataImporter(DatasetOption.EMNIST_BALANCED).get_num_classes() == (47, 47)
+
+def test_get_dimensions():
+    assert DataImporter(DatasetOption.EMNIST_LETTERS).get_dimensions() == (1, 28, 28)
+
+"""
+
+OLD TESTS:
 
 def print_image_grid(image_tensor):
-    """
-    Display a 28x28 image tensor using matplotlib.
-    image_tensor: torch.Tensor of shape [1, 28, 28] or [28, 28]
-    """
+
     if image_tensor.dim() == 3:
         image_tensor = image_tensor.squeeze(0)
     plt.imshow(image_tensor.numpy(), cmap="gray")
@@ -55,35 +65,10 @@ CSV_DATA_SINGLE_IMAGE = "0," + ",".join(
 )
 CSV_DATA = generate_csv_data(num_images=128)
 
-
-@pytest.fixture
-def importer(tmp_path):
-    # write small CSV to temp file
-    csv_file = tmp_path / "test.csv"
-    csv_file.write_text(CSV_DATA)
-    return DataImporter(filepath=str(csv_file))
-
-
 def test_data_imports_correctly(importer):
     assert hasattr(importer, "data")
     assert isinstance(importer.data, torch.Tensor)
     assert importer.data.shape == (128, 1, 28, 28)  # 128 images of shape [1, 28, 28]
-
-
-def test_invalid_filepath_raises_exception():
-    try:
-        DataImporter(filepath="non_existent_file.csv")
-    except CSVFilepathDoesntExist as e:
-        assert isinstance(e, CSVFilepathDoesntExist)
-        assert "The provided filepath" in str(e)
-
-
-def test_single_image_data(tmp_path):
-    # write single image CSV to temp file
-    csv_file = tmp_path / "single_image.csv"
-    csv_file.write_text(CSV_DATA_SINGLE_IMAGE)
-    importer = DataImporter(filepath=str(csv_file))
-    assert importer.data.shape == (1, 1, 28, 28)  # 1 image of shape [1, 28, 28]
 
 
 @pytest.mark.parametrize("batch_size,test_split", [(16, 0.2), (32, 0.25)])
@@ -102,8 +87,7 @@ def test_batch_sizes(importer, batch_size, test_split):
         images, _ = batch
         assert images.shape[1:] == (1, 28, 28)
 
-
-""" def test_batch_size_1(importer):
+def test_batch_size_1(importer):
     batch_size = 16
     train_loader, test_loader = importer.get_as_cnn(batch_size=batch_size, test_split=0.2, seed=42)
     assert len(train_loader) == math.ceil(128 * 0.8 / batch_size)
@@ -120,7 +104,7 @@ def test_batch_size_2(importer):
     assert len(test_loader) == math.ceil(128 * 0.25 / batch_size)
     for batch in train_loader:
         images, _ = batch
-        assert images.shape[1:] == (1, 28, 28) """
+        assert images.shape[1:] == (1, 28, 28) 
 
 
 @pytest.mark.parametrize("batch_size", [0, -5])
@@ -206,3 +190,4 @@ def test_shuffle_effect(
 # test batch size gives correct number of batches
 # test train/test split sizes
 # test random seed is working
+"""
