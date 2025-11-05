@@ -2,23 +2,23 @@ import pytest
 import torch
 from torch import nn
 from src.classification_module.metrics import MetrcicsEvaluator, Metrics, InvalidMetricError
-from src.data_module.importer import NUM_CLASSES
 
+NUM_CLASSES = 28
 
 @pytest.fixture
 def evaluator():
-    return MetrcicsEvaluator(device=torch.device("cpu"))
+    return MetrcicsEvaluator(num_classes=NUM_CLASSES, dimensions=(3, 28, 28), device=torch.device("cpu"))
 
 
 @pytest.fixture
 def dummy_CNN_small():
-    return nn.Sequential(nn.ReLU(), nn.Flatten(), nn.Linear(28 * 28, NUM_CLASSES))
+    return nn.Sequential(nn.ReLU(), nn.Flatten(), nn.Linear(3 * 28 * 28, NUM_CLASSES))
 
 
 @pytest.fixture
 def dummy_CNN_large():
     return nn.Sequential(
-        nn.Conv2d(1, 16, 3, 1),
+        nn.Conv2d(3, 16, 3, 1),
         nn.ReLU(),
         nn.Conv2d(16, 32, 3, 1),
         nn.ReLU(),
