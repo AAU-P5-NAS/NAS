@@ -216,6 +216,7 @@ class CustomEnv(gym.Env):
         new_architecture, should_evaluate = self._get_new_architecture(action_logits)
 
         if should_evaluate:
+            self.evaluated_this_step = True
             reward = self._evaluate_architecture(new_architecture)
             terminated = True
             truncated = False
