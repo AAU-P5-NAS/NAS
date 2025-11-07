@@ -9,7 +9,7 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 
 from data_module.dataset import DatasetOption
 from src.model_module.hyperparameters import HyperparameterSearchSpace
-from src.classification_module.reward import Weights, RewardCalculator
+from src.classification_module.reward import Weights, FirstBasicRewardStrategy
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter
 from src.utils.network_utils import (
@@ -199,7 +199,7 @@ class SLHyperparameterOptimizer:
                 flops=flops_weight,
                 runtime=runtime_weight,
             )
-            reward_calculator = RewardCalculator(weights=reward_weights)
+            reward_calculator = FirstBasicRewardStrategy(weights=reward_weights)
             reward = reward_calculator.compute_reward(metrics)
 
             return float(reward)
