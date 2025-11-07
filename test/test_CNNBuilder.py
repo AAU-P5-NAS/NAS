@@ -18,6 +18,7 @@ from src.utils.network_utils import (
     InvalidLayerConfigError,
     InvalidLayerOrderError,
     CNNExportError,
+    Stride,
 )
 
 from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
@@ -33,16 +34,19 @@ def valid_rl_config():
                 out_channels=OutChannels.CH_16,
                 kernel_size=KernelSize.KS_3,
                 activation=ActivationFunction.RELU,
+                stride=Stride.S_1,
             ),
             LayerConfig(
                 layer_type=LayerType.POOL,
                 pool_mode=PoolMode.MAX,
                 kernel_size=KernelSize.KS_1,
+                stride=Stride.S_1,
             ),
             LayerConfig(
                 layer_type=LayerType.LINEAR,
                 linear_units=LinearUnits.LU_64,
                 activation=ActivationFunction.TANH,
+                stride=Stride.NONE,
             ),
         ]
     )
@@ -50,7 +54,7 @@ def valid_rl_config():
 
 def test_valid_cnn_build(valid_rl_config):
     """Test a valid RLConfig builds correctly"""
-    cnn_builder = CNNBuilder(valid_rl_config, input_size=(28, 28), num_classes=26)
+    cnn_builder = CNNBuilder(valid_rl_config, num_classes=26, dimensions=(1, 28, 28))
     model = cnn_builder.build()
 
     assert isinstance(model, nn.Sequential)
@@ -88,7 +92,7 @@ def test_invalid_layer_order_raises_error():
 @pytest.mark.parametrize("save_separate", [True, False])
 def test_onnx_export(valid_rl_config, tmp_path, save_separate):
     """Test ONNX export works and creates a valid file"""
-    builder = CNNBuilder(valid_rl_config)
+    builder = CNNBuilder(valid_rl_config, num_classes=26, dimensions=(1, 28, 28))
     builder.build()
 
     path = builder.export_to_onnx(save_in_seperate_file=save_separate)
@@ -102,7 +106,7 @@ def test_onnx_export(valid_rl_config, tmp_path, save_separate):
 
 
 def test_onnx_export_raises_CNNExportError(valid_rl_config):
-    builder = CNNBuilder(valid_rl_config)
+    builder = CNNBuilder(valid_rl_config, num_classes=26, dimensions=(1, 28, 28))
 
     with pytest.raises(CNNExportError):
         builder.export_to_onnx()

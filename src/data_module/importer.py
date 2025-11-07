@@ -1,7 +1,7 @@
 from typing import Tuple
 from rich.console import Console
-from data_module.dataset import DatasetOption
-from data_module.import_utils import visualize_cifar_samples, visualize_samples
+from src.data_module.dataset import DatasetOption
+from src.data_module.import_utils import visualize_cifar_samples, visualize_samples
 import torch
 
 console = Console()

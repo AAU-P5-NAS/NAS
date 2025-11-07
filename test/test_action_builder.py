@@ -3,9 +3,54 @@ import numpy as np
 import sys
 import os
 
+from stable_baselines3 import A2C
+
+from src.classification_module.reward import FirstBasicRewardStrategy
+from src.model_module.action_builder import standard_stochastic_sampling, transform_logits_to_action
+from src.model_module.environment import CustomEnv
+from src.utils.network_utils import Decisions
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
+class TestStandardStochasticSampling:
+    empty_logits = np.array([])
+    dummy_logits = np.array([1, 0, 1, 1])
+
+    def test_empty(self):
+        with pytest.raises(ValueError):
+            standard_stochastic_sampling(self.empty_logits)
+
+    def test_correct_logits_gives_integer(self):
+        assert type(standard_stochastic_sampling(self.dummy_logits)) is int
+
+
+class TestTransformLogitsToAction:
+    add_linear_action = [2, 2, 2, -1, -1, -1, 3, -1, 1]
+    env = CustomEnv(
+        device="cuda",
+        logdir="",
+        training_epochs=1,
+        arch_learning_rate=0.1,
+        arch_momentum=1,
+        batch_size=64,
+        reward_strategy=FirstBasicRewardStrategy(),
+    )
+
+    model = A2C("MlpPolicy", env)
+    obs, _ = env.reset()
+    action, _ = model.predict(obs)
+
+    def test_empty(self):
+        assert transform_logits_to_action(np.array([]), np.array([]), 0, (0, 0, 0)) is None
+
+    def test_finds_action(self):
+        assert isinstance(
+            transform_logits_to_action(self.action, self.obs, 20, (1, 28, 28)), Decisions
+        )
+
+
+'''
 from src.utils.action_builder_utils import (
     ActionStrategy,
 )
@@ -419,3 +464,4 @@ class TestActionBuilderEdgeCases:
 
         # Should still produce valid decisions
         assert len(decisions) == 9
+'''

@@ -196,7 +196,7 @@ if __name__ == "__main__":
     )
 
     # Instantiate the CNN builder
-    cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
+    cnn_builder = CNNBuilder(rl_config=config, num_classes=26, dimensions=(3, 28, 28))
 
     # Build the PyTorch model
     model = cnn_builder.build()
