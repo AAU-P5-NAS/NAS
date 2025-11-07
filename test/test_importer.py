@@ -9,20 +9,24 @@ import matplotlib.pyplot as plt
 # Fixes import issues when running tests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from data_module.dataset import DatasetOption
+from src.data_module.dataset import DatasetOption
 from src.data_module.importer import DataImporter
+
 
 def test_get_dataloaders():
     with pytest.raises(ValueError):
         DataImporter(DatasetOption.CIFAR_10).get_dataloaders(batch_size=0)
-        
+
     assert DataImporter(DatasetOption.CIFAR_10).get_dataloaders(batch_size=1) is not None
+
 
 def test_get_num_classes():
     assert DataImporter(DatasetOption.EMNIST_BALANCED).get_num_classes() == (47, 47)
 
+
 def test_get_dimensions():
     assert DataImporter(DatasetOption.EMNIST_LETTERS).get_dimensions() == (1, 28, 28)
+
 
 """
 

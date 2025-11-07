@@ -4,11 +4,6 @@ import pytest
 
 import copy
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-NUM_CLASSES = 28
-dimensions = (3, 28, 28)
-
 from src.utils.network_utils import (
     LayerType,
     OutChannels,
@@ -23,13 +18,17 @@ from src.utils.network_utils import (
 
 from src.utils.cnn_builder import CNNBuilder
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+NUM_CLASSES = 28
+dimensions = (3, 28, 28)
 
 partial_arch1 = NetworkConfig(
     layers=[
         LayerConfig(
             layer_type=LayerType.LINEAR,
             activation=ActivationFunction.RELU,
-            linear_units=LinearUnits.LU_256
+            linear_units=LinearUnits.LU_256,
         )
     ]
 )
@@ -40,7 +39,7 @@ partial_arch2 = NetworkConfig(
             layer_type=LayerType.POOL,
             kernel_size=KernelSize.KS_3,
             activation=ActivationFunction.RELU,
-            pool_mode=PoolMode.AVG
+            pool_mode=PoolMode.AVG,
         ),
     ]
 )
@@ -65,9 +64,9 @@ def test_arch_builder_given_valid_input(actions: list[int], partial_arch: Networ
     old_arhc = copy.deepcopy(partial_arch)
     new_arch = CNNBuilder(partial_arch, NUM_CLASSES, dimensions)
     assert len(new_arch.rl_config.layers) == len(old_arhc.layers)
-    
+
     # If no layers, then we can't check the layer
-    if (not new_arch.rl_config.layers):
+    if not new_arch.rl_config.layers:
         return
 
     new_layer = new_arch.rl_config.layers[-1]
