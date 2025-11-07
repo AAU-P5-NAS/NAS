@@ -211,3 +211,9 @@ __marimo__/
 # vscode settings
 #.vscode/
 tensorboard_logs
+src/data_module/cifar/data_batch_1
+src/data_module/cifar/data_batch_2
+src/data_module/cifar/data_batch_3
+src/data_module/cifar/data_batch_4
+src/data_module/cifar/data_batch_5
+src/data_module/cifar/test_batch

@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Optional
 import torch
 from src.model_module.action_builder import transform_logits_to_action
 from src.classification_module.metrics import Metrics
-from src.classification_module.reward import RewardCalculator, Weights
+from src.classification_module.reward import RewardStrategy
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
 from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
@@ -55,7 +55,8 @@ class CustomEnv(gym.Env):
     logdir: str
     info: Dict[str, Any] = {}
     actions_taken: int = 0  # Track steps in episode
-    sum_reward: float = 0.0
+    sum_reward_float: float = 0.0
+    sum_reward_dict: dict[str, float] = {}
     sum_accuracy: float = 0.0
     evaluation_count: int = 0
     step_count: int = 0
@@ -73,13 +74,13 @@ class CustomEnv(gym.Env):
         self,
         logdir: str,
         device: str,
+        reward_strategy: RewardStrategy,
         render_mode: str = "console",
         max_layers: int = 16,
         training_epochs: int = 15,
         arch_learning_rate: float = 0.001,
         arch_momentum: float = 0.9,
         batch_size: int = 64,
-        reward_weights: Weights | None = None,
         showSamples: bool = False,
     ):
         super().__init__()
@@ -91,7 +92,7 @@ class CustomEnv(gym.Env):
         self.arch_learning_rate = arch_learning_rate
         self.arch_momentum = arch_momentum
         self.batch_size = batch_size
-        self.reward_weights = reward_weights
+        self.reward_strategy = reward_strategy
         self.max_actions_per_episode = (
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
@@ -107,7 +108,7 @@ class CustomEnv(gym.Env):
         self.console = Console()
         self.current_network_config = NetworkConfig(layers=[])
         self.actions_taken = 0  # Track steps in episode
-        self.sum_reward = 0.0
+        self.sum_reward: float | dict[str, float] = 0.0
         self.sum_accuracy = 0.0
         self.evaluation_count = 0
         self.logdir = logdir
@@ -224,6 +225,11 @@ class CustomEnv(gym.Env):
             terminated = False
             truncated = False
 
+        if not isinstance(reward, float):
+            raise ValueError(
+                f"{CustomEnv.__name__} does not support reward of type '{type(reward)}'"
+            )
+
         obs = self._get_observation()
 
         return obs, reward, terminated, truncated, self.info
@@ -243,6 +249,7 @@ class CustomEnv(gym.Env):
         )
         if action_to_apply is None:
             return self.current_network_config, True  # Stop and evaluate
+
         new_network_config = self.current_network_config.extend(
             action=action_to_apply, partial_arch=self.current_network_config
         )
@@ -283,7 +290,7 @@ class CustomEnv(gym.Env):
         for epoch in range(num_epochs):
             progress = (epoch + 1) / num_epochs * 100
             with self.console.status(
-                f"[bold blue]Training model on action number {self.evaluation_count + 1}: Progress {int(progress)}%[/bold blue]"
+                f"[bold blue]Training model on evaluation number '{self.evaluation_count}': Progress {int(progress)}%[/bold blue]"
             ):
                 trainer.train()
 
@@ -298,7 +305,7 @@ class CustomEnv(gym.Env):
 
         return metrics
 
-    def _evaluate_architecture(self, new_architecture: NetworkConfig) -> float:
+    def _evaluate_architecture(self, new_architecture: NetworkConfig) -> float | dict[str, float]:
         """Evaluate the given architecture by training and testing it, returning the computed reward.
 
         :Args:
@@ -307,6 +314,9 @@ class CustomEnv(gym.Env):
         :Returns:
         - float: The computed reward based on evaluation metrics.
         """
+        self.evaluation_count += 1
+        reward: float | dict[str, float]
+
         cnn_builder = CNNBuilder(
             rl_config=new_architecture,
             dimensions=self.dimensions,
@@ -325,19 +335,19 @@ class CustomEnv(gym.Env):
             optimizer=optimizer,
         )
 
-        if isinstance(training_results, Metrics):
-            self.console.print(
-                f"[bold green]Training of action {self.evaluation_count + 1} successful![/bold green]"
-            )
-            self.console.print(f"[bold blue]Accuracy: {training_results.accuracy}[/bold blue]")
-            reward = self._calculate_reward(training_results)
-            self.console.print(f"[bold blue]Reward: {reward}[/bold blue]")
-            self.console.print("[bold yellow]Architecture:[/bold yellow]")
-            self.print_layers(new_architecture.layers)
+        self.console.print(
+            f"[bold green]Training of evaluation '{self.evaluation_count}' (step: '{self.step_count}', actions taken: '{self.actions_taken}') successful![/bold green]"
+        )
+        self.console.print(f"[bold blue]Accuracy: '{training_results.accuracy}'[/bold blue]")
+        reward = self.reward_strategy.compute_reward(training_results)
+        self._track_and_print_averages(reward=reward, accuracy=training_results.accuracy)
+        self.console.print(
+            f"[bold blue]Reward for evaluation '{self.evaluation_count}':\n{reward}[/bold blue]"
+        )
 
-            return reward
-        else:
-            return training_results  # Already a penalty value
+        self.print_layers(new_architecture.layers)
+
+        return reward
 
     def _should_terminate(self) -> bool:
         # Termination is now handled in step() method
@@ -347,7 +357,9 @@ class CustomEnv(gym.Env):
         # Truncation is now handled in step() method
         return False
 
-    def _calculate_reward(self, metrics: Metrics) -> float:
+    def _track_and_print_averages(
+        self, reward: float | dict[str, float], accuracy: float | None
+    ) -> None:
         """Calculate the reward based on evaluation metrics.
 
         :Args:
@@ -356,35 +368,39 @@ class CustomEnv(gym.Env):
         :Returns:
         - float: The computed reward.
         """
-        rewardCalculator = (
-            RewardCalculator(weights=self.reward_weights)
-            if self.reward_weights
-            else RewardCalculator()
-        )
-        reward: float = rewardCalculator.compute_reward(metrics)
-        self.evaluation_count += 1
 
-        if self.evaluation_count >= 50:
-            avg_reward = self.sum_reward / self.evaluation_count
+        avg_reward: float | dict[str, float]
+
+        if isinstance(reward, float):
+            self.sum_reward_float += reward
+            avg_reward = self.sum_reward_float / self.evaluation_count
+
+        elif isinstance(reward, dict):
+            for key, value in reward.items():
+                if key not in self.sum_reward_dict:
+                    self.sum_reward_dict[key] = 0.0
+                self.sum_reward_dict[key] += value
+            avg_reward = {
+                key: total / self.evaluation_count for key, total in self.sum_reward_dict.items()
+            }
+
+        avg_accuracy: float = -1
+
+        if accuracy is not None:
+            self.sum_accuracy += accuracy
             avg_accuracy = self.sum_accuracy / self.evaluation_count
-            self.console.print(
-                f"[bold cyan]Average reward over last {self.evaluation_count} actions: {avg_reward:.4f}[/bold cyan]"
-            )
-            self.console.print(
-                f"[bold cyan]Average accuracy over last {self.evaluation_count} actions: {avg_accuracy:.4f}[/bold cyan]"
-            )
-            self.sum_reward = 0.0
-            self.sum_accuracy = 0.0
-            self.evaluation_count = 0
-        else:
-            self.sum_reward += reward
-            if hasattr(metrics, "accuracy") and metrics.accuracy is not None:
-                self.sum_accuracy += metrics.accuracy
-            else:
-                self.sum_accuracy += 0.0
 
-        self.newest_reward = float(reward)
-        return reward
+        PRINT_EVERY_N = 50
+        if self.evaluation_count % PRINT_EVERY_N == 0:
+            self.console.print(
+                f"[bold cyan]Average reward over last {PRINT_EVERY_N} evaluations: {avg_reward:.4f}[/bold cyan]"
+            )
+            self.console.print(
+                f"[bold cyan]Average accuracy over last {PRINT_EVERY_N} evaluations: {avg_accuracy:.4f}[/bold cyan]"
+            )
+            self.sum_reward_float = 0.0
+            self.sum_reward_dict = {}
+            self.sum_accuracy = 0.0
 
     def render(self):
         print(self._get_observation())
@@ -401,6 +417,8 @@ class CustomEnv(gym.Env):
         Args:
             layers (list): List of layer objects.
         """
+
+        self.console.print("[bold yellow]Architecture:[/bold yellow]")
         indent = "    "
         for i, layer in enumerate(layers):
             if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
