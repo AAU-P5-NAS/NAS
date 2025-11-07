@@ -70,9 +70,7 @@ def visualize_samples(
         axes[j].axis("off")
 
     plt.tight_layout()
-    plt.show(block=False)
-    plt.pause(0.001)
-    plt.close()
+
 
 
 def visualize_cifar_samples(
@@ -99,4 +97,6 @@ def visualize_cifar_samples(
         axes[j].axis("off")
 
     plt.tight_layout()
-    plt.show()
+    plt.show(block=False)
+    plt.pause(10)
+    plt.close()
