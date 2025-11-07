@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Optional
 import torch
 from src.model_module.action_builder import transform_logits_to_action
 from src.classification_module.metrics import Metrics
-from src.classification_module.reward import FirstBasicRewardStrategy, Weights
+from src.classification_module.reward import RewardStrategy
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
 from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
@@ -73,13 +73,13 @@ class CustomEnv(gym.Env):
         self,
         logdir: str,
         device: str,
+        reward_strategy: RewardStrategy,
         render_mode: str = "console",
         max_layers: int = 16,
         training_epochs: int = 15,
         arch_learning_rate: float = 0.001,
         arch_momentum: float = 0.9,
         batch_size: int = 64,
-        reward_weights: Weights | None = None,
     ):
         super().__init__()
 
@@ -90,7 +90,7 @@ class CustomEnv(gym.Env):
         self.arch_learning_rate = arch_learning_rate
         self.arch_momentum = arch_momentum
         self.batch_size = batch_size
-        self.reward_weights = reward_weights
+        self.reward_strategy = reward_strategy
         self.max_actions_per_episode = (
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
@@ -104,7 +104,7 @@ class CustomEnv(gym.Env):
         self.console = Console()
         self.current_network_config = NetworkConfig(layers=[])
         self.actions_taken = 0  # Track steps in episode
-        self.sum_reward = 0.0
+        self.sum_reward: float | dict[str, float] = 0.0
         self.sum_accuracy = 0.0
         self.evaluation_count = 0
         self.logdir = logdir
@@ -353,12 +353,8 @@ class CustomEnv(gym.Env):
         :Returns:
         - float: The computed reward.
         """
-        rewardCalculator = (
-            FirstBasicRewardStrategy(weights=self.reward_weights)
-            if self.reward_weights
-            else FirstBasicRewardStrategy()
-        )
-        reward: float = rewardCalculator.compute_reward(metrics)
+
+        reward = self.reward_strategy.compute_reward(metrics)
         self.evaluation_count += 1
 
         if self.evaluation_count >= 50:

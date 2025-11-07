@@ -26,7 +26,7 @@ class Baselines(BaseModel):
 
 class RewardStrategy(abc.ABC):
     @abc.abstractmethod
-    def compute_reward(self, metrics: Metrics) -> tuple[float, dict[str, float]]:
+    def compute_reward(self, metrics: Metrics) -> float | dict[str, float]:
         """Compute reward based on provided metrics."""
         raise NotImplementedError
 
@@ -66,7 +66,7 @@ class FirstBasicRewardStrategy(RewardStrategy):
 
         return 0.0
 
-    def compute_reward(self, metrics: Metrics) -> float:
+    def compute_reward(self, metrics: Metrics) -> float | dict[str, float]:
         """Compute reward as weighted combination of normalized metrics."""
 
         # Validate weights
