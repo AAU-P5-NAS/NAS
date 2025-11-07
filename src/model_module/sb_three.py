@@ -52,6 +52,7 @@ class SBThreeAgent:
         arch_momentum: float = 0.9,
         batch_size: int = 64,
         reward_weights: Weights | None = None,
+        showSamples: bool = False,
     ):
         self.env: CustomEnv = CustomEnv(
             device=device,
@@ -63,6 +64,7 @@ class SBThreeAgent:
             reward_strategy=FirstBasicRewardStrategy(weights=reward_weights)
             if reward_weights
             else FirstBasicRewardStrategy(),
+            showSamples=showSamples,
         )
         self.model = policy_algorithm_class(
             policy=policy,
