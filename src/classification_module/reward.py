@@ -32,6 +32,12 @@ class RewardStrategy(abc.ABC):
 
 
 class FirstBasicRewardStrategy(RewardStrategy):
+    """
+    A basic reward strategy that computes a weighted sum of normalized metrics.
+
+    Weights and baselines can be customized via the Weights and Baselines classes.
+    """
+
     def __init__(self, weights: Weights = Weights(), baselines: Baselines = Baselines()):
         self.weights = weights
         self.baselines = baselines
@@ -66,8 +72,11 @@ class FirstBasicRewardStrategy(RewardStrategy):
 
         return 0.0
 
-    def compute_reward(self, metrics: Metrics) -> float | dict[str, float]:
-        """Compute reward as weighted combination of normalized metrics."""
+    def compute_reward(self, metrics: Metrics) -> float:
+        """
+        Compute reward as weighted combination of normalized metrics.
+        Returns a float reward in [0, 1].
+        """
 
         # Validate weights
         for weight in self.weights.model_dump().values():
