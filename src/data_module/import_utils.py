@@ -45,8 +45,13 @@ def fetch_dataset_from_url(src: str, dest: str):
 
 
 def visualize_samples(
-    dataloader: torch.utils.data.DataLoader, label_fn: Callable, num_samples: int = 9
+    dataloader: torch.utils.data.DataLoader,
+    label_fn: Callable,
+    show: bool = False,
+    num_samples: int = 9,
 ):
+    if not show:
+        return
     images, labels = next(iter(dataloader))
     n = min(num_samples, images.size(0))
 
@@ -74,8 +79,14 @@ def visualize_samples(
 
 
 def visualize_cifar_samples(
-    dataloader: torch.utils.data.DataLoader, label_fn: Callable, num_samples: int = 9
+    dataloader: torch.utils.data.DataLoader,
+    label_fn: Callable,
+    show: bool = False,
+    num_samples: int = 9,
 ):
+    if not show:
+        return
+
     images, labels = next(iter(dataloader))
     n = min(num_samples, images.size(0))
 

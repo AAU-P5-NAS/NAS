@@ -3,6 +3,7 @@ from rich.console import Console
 from stable_baselines3 import PPO  # Add this import
 import warnings
 import shutil
+import argparse
 
 from src.model_module.sb_three import SBThreeAgent
 
@@ -11,6 +12,17 @@ console = Console()
 
 
 def main():
+    show = False
+
+    # Handle arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--show-samples", action="store_true")
+
+    args = parser.parse_args()
+
+    if args.show_samples:
+        show = True
+
     console.print("[bold blue]Initializing Neural Architecture Search...[/bold blue]")
 
     # Clean up old models
@@ -19,7 +31,7 @@ def main():
         console.print("[yellow]Deleted old saved models[/yellow]")
 
     # Initialize agent with PPO algorithm
-    agent = SBThreeAgent(policy_algorithm_class=PPO)
+    agent = SBThreeAgent(policy_algorithm_class=PPO, showSamples=show)
 
     # Train the agent
     console.print("[bold green]Starting training...[/bold green]")

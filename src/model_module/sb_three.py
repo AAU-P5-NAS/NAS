@@ -52,6 +52,7 @@ class SBThreeAgent:
         arch_momentum: float = 0.9,
         batch_size: int = 64,
         reward_weights: Weights | None = None,
+        showSamples: bool = False,
     ):
         self.env: CustomEnv = CustomEnv(
             device=device,
@@ -61,6 +62,7 @@ class SBThreeAgent:
             arch_momentum=arch_momentum,
             batch_size=batch_size,
             reward_weights=reward_weights,
+            showSamples=showSamples,
         )
         self.model = policy_algorithm_class(
             policy=policy,

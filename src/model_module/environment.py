@@ -80,6 +80,7 @@ class CustomEnv(gym.Env):
         arch_momentum: float = 0.9,
         batch_size: int = 64,
         reward_weights: Weights | None = None,
+        showSamples: bool = False,
     ):
         super().__init__()
 
@@ -97,7 +98,9 @@ class CustomEnv(gym.Env):
         )
         self.data_importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
         self.logit_slices = get_logit_slices()
-        self.loader_tuple = self.data_importer.get_dataloaders(batch_size=64)
+        self.loader_tuple = self.data_importer.get_dataloaders(
+            batch_size=64, showSamples=showSamples
+        )
         self.dimensions = self.data_importer.get_dimensions()
         self.action_space = self._get_action_space()
         self.observation_space = self._get_observation_space()
