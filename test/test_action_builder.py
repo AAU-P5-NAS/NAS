@@ -5,6 +5,7 @@ import os
 
 from stable_baselines3 import A2C
 
+from src.classification_module.reward import FirstBasicRewardStrategy
 from src.model_module.action_builder import standard_stochastic_sampling, transform_logits_to_action
 from src.model_module.environment import CustomEnv
 from src.utils.network_utils import Decisions
@@ -33,6 +34,7 @@ class TestTransformLogitsToAction:
         arch_learning_rate=0.1,
         arch_momentum=1,
         batch_size=64,
+        reward_strategy=FirstBasicRewardStrategy(),
     )
 
     model = A2C("MlpPolicy", env)
