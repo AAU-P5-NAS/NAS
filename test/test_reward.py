@@ -68,8 +68,8 @@ def test_zero_weights(default_metrics: Metrics):
         architecture_size=0.0,
     )
     calc = RewardCalculator(weights=zero_weights)
-    reward = calc.compute_reward(default_metrics)
-    assert reward == 0.0
+    with pytest.raises(ValueError):
+        calc.compute_reward(default_metrics)
 
 
 def test_partial_metrics(default_metrics: Metrics):
