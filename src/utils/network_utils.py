@@ -244,7 +244,7 @@ def get_latest_layer_index(observation: np.ndarray):
 '''
 
 
-def get_layer_from_index(observation: np.ndarray, index: int) -> LayerConfig:
+def get_layer_from_index(observation: np.ndarray, index: int, max_layers: int) -> LayerConfig:
     """Retrieve the LayerConfig corresponding to a given layer index in the observation."""
     start = index * SINGLE_LAYER_OBSERVATION_SIZE
     if start >= len(observation) or observation[start] == -1:
@@ -267,7 +267,9 @@ def get_layer_from_index(observation: np.ndarray, index: int) -> LayerConfig:
         linear_units=LinearUnits(observation[start + 6])
         if observation[start + 6] != 0
         else LinearUnits.NONE,
-        skip_connection=observation[start + 7] if observation[start + 7] != index else None,
+        skip_connection=observation[start + 7]
+        if observation[start + 7] != max_layers - 1
+        else None,
     )
 
 
@@ -298,12 +300,14 @@ def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig)
     return h, w
 
 
-def get_output_dimensions(observation: np.ndarray, input_dims: tuple[int, int]) -> tuple[int, int]:
+def get_output_dimensions(
+    observation: np.ndarray, input_dims: tuple[int, int], max_layers: int
+) -> tuple[int, int]:
     """Calculate the output dimensions after applying all layers in the observation."""
     for i in range(0, len(observation), SINGLE_LAYER_OBSERVATION_SIZE):
         if observation[i] == 0:
             break  # No more layers defined
-        layer = get_layer_from_index(observation, i // SINGLE_LAYER_OBSERVATION_SIZE)
+        layer = get_layer_from_index(observation, i // SINGLE_LAYER_OBSERVATION_SIZE, max_layers)
         input_dims = calculate_output_dimensions(input_dims, layer)
     return input_dims
 

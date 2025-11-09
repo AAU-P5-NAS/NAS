@@ -289,7 +289,9 @@ def mask_kernel_size_sequential(ctx: MaskContext):
         new_logits[ctx.slices.kernel_size[KernelSize.NONE]] = 1
         return new_logits
 
-    latest_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
+    latest_output_dims = get_output_dimensions(
+        ctx.observation, ctx.input_dimensions[1:], ctx.max_layers
+    )
     valid_kernels = get_valid_kernel_sizes(latest_output_dims)
     invalid_kernels = [k for k in KernelSize if k not in valid_kernels]
 
@@ -313,7 +315,9 @@ def mask_stride_sequential(ctx: MaskContext):
         return new_logits
 
     kernel_size_chosen = KernelSize(ctx.decisions.kernel_size_choice)
-    latest_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
+    latest_output_dims = get_output_dimensions(
+        ctx.observation, ctx.input_dimensions[1:], ctx.max_layers
+    )
     valid_strides = get_valid_strides(latest_output_dims, kernel_size_chosen)
     invalid_strides = [s for s in Stride if s not in valid_strides]
 
@@ -366,14 +370,18 @@ def mask_skip_connection_sequential(ctx: MaskContext):
     if ctx.action_count <= 2:
         # first two layers are not allowed to have skip connections from previous layers.
         new_logits[ctx.slices.skip_connection.all] = -np.inf
-        new_logits[ctx.slices.skip_connection[ctx.action_count - 1]] = 1  # only point to itself
+        new_logits[ctx.slices.skip_connection[ctx.max_layers - 1]] = (
+            1  # no skip connection -> last layer index
+        )
         return new_logits
 
-    last_layer_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
+    last_layer_output_dims = get_output_dimensions(
+        ctx.observation, ctx.input_dimensions[1:], ctx.max_layers
+    )
     input_dim = ctx.input_dimensions[1:]
 
     for i in range(0, ctx.action_count - 2):
-        currentLayerConfig = get_layer_from_index(ctx.observation, i)
+        currentLayerConfig = get_layer_from_index(ctx.observation, i, ctx.max_layers)
         output_dim = calculate_output_dimensions(input_dim, currentLayerConfig)
 
         if output_dim != last_layer_output_dims:
@@ -385,6 +393,8 @@ def mask_skip_connection_sequential(ctx: MaskContext):
     for i in range(ctx.action_count - 2, ctx.max_layers):
         new_logits[ctx.slices.skip_connection[i]] = -np.inf
 
+    # Always keep "no skip" valid
+    new_logits[ctx.slices.skip_connection[ctx.max_layers - 1]] = 1.0
     return new_logits
 
 
@@ -392,7 +402,13 @@ def sample_skip_connection(ctx: MaskContext) -> Optional[int]:
     logits = ctx.logits[ctx.slices.skip_connection.all]
     valid_indices = np.where(logits > -np.inf)[0]
 
-    if len(valid_indices) == 0:
+    length = len(valid_indices)
+
+    if length <= 1:
         return None
 
-    return ctx.sampling_strategy(logits)
+    sampled_index = ctx.sampling_strategy(logits)
+    if sampled_index == ctx.max_layers - 1:
+        return None  # no skip connection
+
+    return sampled_index

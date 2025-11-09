@@ -155,7 +155,9 @@ def flatten_cnn_config(rlconfig: NetworkConfig, max_layers: int) -> list[int]:
         for key, item in data.items():
             if key == "skip_connection":
                 if item is None:
-                    flat_layer_config.append(index)  # no skip connection -> point to itself
+                    flat_layer_config.append(
+                        max_layers - 1
+                    )  # no skip connection -> index of last layer
                 else:
                     flat_layer_config.append(item)
             else:
