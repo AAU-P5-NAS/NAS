@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 
 from src.utils.action_builder_utils import (
@@ -5,7 +6,7 @@ from src.utils.action_builder_utils import (
     build_action_add_layer_sequential,
     get_logit_slices,
 )
-from src.utils.network_utils import EMPTY_DECISIONS
+from src.utils.network_utils import EMPTY_DECISIONS, Decisions
 
 
 def standard_stochastic_sampling(logits: np.ndarray) -> int:
@@ -20,14 +21,16 @@ def transform_logits_to_action(
     observation: np.ndarray,
     max_layers: int,
     dimensions: tuple[int, int, int],
-):
+    actions_taken: int,
+) -> Optional[Decisions]:
     ctx = MaskContext(
         logits=action_output,
         observation=observation,
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=max_layers,
         decisions=EMPTY_DECISIONS,
         input_dimensions=dimensions,
+        action_count=actions_taken,
     )
     return build_action_add_layer_sequential(ctx)

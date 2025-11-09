@@ -1,5 +1,5 @@
 import enum
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 import numpy as np
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 import torch.nn as nn
@@ -27,6 +27,9 @@ class CNNExportError(Exception):
     """Raised when CNN layers are in an invalid order (e.g. Conv after Linear)."""
 
     pass
+
+
+SINGLE_LAYER_OBSERVATION_SIZE = 8  # format [layer_type, out_channels, kernel_size, stride, pool_mode, activation, linear_units, skip_connection]
 
 
 class StandardAction(enum.Enum):
@@ -121,6 +124,7 @@ class LayerConfig(BaseModel):
     pool_mode: PoolMode = PoolMode.NONE
     activation: ActivationFunction = ActivationFunction.NONE
     linear_units: LinearUnits = LinearUnits.NONE
+    skip_connection: Optional[int] = None  # index of the layer to skip from
 
     @model_validator(mode="after")
     def validate_params(self):
@@ -146,6 +150,7 @@ class Decisions(BaseModel):
     linear_units_choice: LinearUnits
     pool_mode_choice: PoolMode
     activation_function_choice: ActivationFunction
+    skip_connection_choice: Optional[int]
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
@@ -157,6 +162,7 @@ EMPTY_DECISIONS = Decisions(
     stride_choice=Stride.NONE,
     linear_units_choice=LinearUnits.NONE,
     pool_mode_choice=PoolMode.NONE,
+    skip_connection_choice=None,
     activation_function_choice=ActivationFunction.NONE,
 )
 
@@ -226,19 +232,21 @@ def update_spatial_dims(
     return h_new, w_new
 
 
+'''
 def get_latest_layer_index(observation: np.ndarray):
-    """Look for the first occurrence of 0 in the observation array with form index 7, 14, 21 ..."""
-    for i in range(0, len(observation), 7):
+    """Look for the first occurrence of 0 in the observation array with form index 8, 16, 24 ..."""
+    for i in range(0, len(observation), SINGLE_LAYER_OBSERVATION_SIZE):
         if observation[i] == 0 and i != 0:
-            return i // 7 - 1
+            return i // SINGLE_LAYER_OBSERVATION_SIZE - 1
         elif observation[i] == 0 and i == 0:
             return None  # No layers defined yet
-    return (len(observation) // 7) - 1  # All layers defined
+    return (len(observation) // SINGLE_LAYER_OBSERVATION_SIZE) - 1  # All layers defined
+'''
 
 
 def get_layer_from_index(observation: np.ndarray, index: int) -> LayerConfig:
     """Retrieve the LayerConfig corresponding to a given layer index in the observation."""
-    start = index * 7
+    start = index * SINGLE_LAYER_OBSERVATION_SIZE
     if start >= len(observation) or observation[start] == -1:
         raise ValueError(f"Layer index {index} is out of bounds or undefined in the observation.")
     return LayerConfig(
@@ -259,6 +267,7 @@ def get_layer_from_index(observation: np.ndarray, index: int) -> LayerConfig:
         linear_units=LinearUnits(observation[start + 6])
         if observation[start + 6] != 0
         else LinearUnits.NONE,
+        skip_connection=observation[start + 7] if observation[start + 7] != index else None,
     )
 
 
@@ -291,10 +300,10 @@ def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig)
 
 def get_output_dimensions(observation: np.ndarray, input_dims: tuple[int, int]) -> tuple[int, int]:
     """Calculate the output dimensions after applying all layers in the observation."""
-    for i in range(0, len(observation), 7):
+    for i in range(0, len(observation), SINGLE_LAYER_OBSERVATION_SIZE):
         if observation[i] == 0:
             break  # No more layers defined
-        layer = get_layer_from_index(observation, i // 7)
+        layer = get_layer_from_index(observation, i // SINGLE_LAYER_OBSERVATION_SIZE)
         input_dims = calculate_output_dimensions(input_dims, layer)
     return input_dims
 
@@ -315,11 +324,38 @@ def get_valid_strides(
     return valid_strides
 
 
-def get_latest_layer(observation: np.ndarray):
-    """Look for the first occurrence of 0 in the observation array with form index 7, 14, 21 ..."""
-    for i in range(0, len(observation), 7):
+def get_latest_layer(observation: np.ndarray, action_count: int):
+    """Look for the first occurrence of 0 in the observation array with form index 8, 16, 24 ..."""
+    if action_count == 1:
+        return None  # First action -> No layers defined yet
+
+    last_layer_index = action_count - 2
+    idx = last_layer_index * SINGLE_LAYER_OBSERVATION_SIZE
+    return LayerConfig(
+        layer_type=LayerType(observation[idx]),
+        out_channels=OutChannels(observation[idx + 1])
+        if observation[idx + 1] != 0
+        else OutChannels.NONE,
+        kernel_size=KernelSize(observation[idx + 2])
+        if observation[idx + 2] != 0
+        else KernelSize.NONE,
+        stride=Stride(observation[idx + 3]) if observation[idx + 3] != 0 else Stride.NONE,
+        pool_mode=PoolMode(observation[idx + 4]) if observation[idx + 4] != 0 else PoolMode.NONE,
+        activation=ActivationFunction(observation[idx + 5])
+        if observation[idx + 5] != 0
+        else ActivationFunction.NONE,
+        linear_units=LinearUnits(observation[idx + 6])
+        if observation[idx + 6] != 0
+        else LinearUnits.NONE,
+        skip_connection=observation[idx + 7]
+        if observation[idx + 7] != (last_layer_index)  # current layer index => no skip connection
+        else -1,
+    )
+
+    """for i in range(0, len(observation), SINGLE_LAYER_OBSERVATION_SIZE):
         if observation[i] == 0 and i != 0:
-            idx = i - 7
+            idx = i - SINGLE_LAYER_OBSERVATION_SIZE
+            last_layer_index = idx // SINGLE_LAYER_OBSERVATION_SIZE - 1
             return LayerConfig(
                 layer_type=LayerType(observation[idx]),
                 out_channels=OutChannels(observation[idx + 1])
@@ -338,6 +374,11 @@ def get_latest_layer(observation: np.ndarray):
                 linear_units=LinearUnits(observation[idx + 6])
                 if observation[idx + 6] != 0
                 else LinearUnits.NONE,
+                skip_connection=observation[idx + 7]
+                if observation[idx + 7]
+                != (last_layer_index)  # current layer index => no skip connection
+                else -1,
             )
         elif observation[i] == 0 and i == 0:
             return None  # No layers defined yet
+            """

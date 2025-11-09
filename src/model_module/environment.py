@@ -91,12 +91,8 @@ class CustomEnv(gym.Env):
         self.arch_momentum = arch_momentum
         self.batch_size = batch_size
         self.reward_weights = reward_weights
-        self.max_actions_per_episode = (
-            max_layers
-            / 2  # (an action adds a layer and an activation function which itself is a layer)
-        )
         self.data_importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
-        self.logit_slices = get_logit_slices()
+        self.logit_slices = get_logit_slices(self.max_layers)
         self.loader_tuple = self.data_importer.get_dataloaders(batch_size=64)
         self.dimensions = self.data_importer.get_dimensions()
         self.action_space = self._get_action_space()
@@ -119,6 +115,7 @@ class CustomEnv(gym.Env):
             + len(LinearUnits)
             + len(PoolMode)
             + len(ActivationFunction)
+            + self.max_layers  # for skip connection option
         )
 
         return spaces.Box(low=0, high=1, shape=(output_actions,), dtype=np.float32)
@@ -132,7 +129,10 @@ class CustomEnv(gym.Env):
         observation_space_vector.append(len(PoolMode))
         observation_space_vector.append(len(ActivationFunction))
         observation_space_vector.append(len(LinearUnits))
-        observation_space_vector *= self.max_layers
+        observation_space_vector.append(
+            self.max_layers
+        )  # to denote a skip connection from a previous layer
+        observation_space_vector *= self.max_layers  # repeat for each layer
 
         return spaces.MultiDiscrete(observation_space_vector)
 
@@ -236,8 +236,20 @@ class CustomEnv(gym.Env):
         """
         observation = self._get_observation()
         action_to_apply = transform_logits_to_action(
-            action_logits, observation, self.max_layers, dimensions=self.dimensions
+            action_logits,
+            observation,
+            self.max_layers,
+            dimensions=self.dimensions,
+            actions_taken=self.actions_taken,
         )
+        if action_to_apply:
+            print(
+                "layer number:",
+                self.actions_taken - 1,
+                "skip connection from:",
+                action_to_apply.skip_connection_choice,
+            )
+
         if action_to_apply is None:
             return self.current_network_config, True  # Stop and evaluate
         new_network_config = self.current_network_config.extend(

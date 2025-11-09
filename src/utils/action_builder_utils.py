@@ -1,5 +1,5 @@
 import enum
-from typing import Callable, Tuple, Type, TypeVar
+from typing import Callable, Optional, Tuple, Type, TypeVar
 from pydantic import BaseModel, ConfigDict
 import numpy as np
 
@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 
 from src.utils.network_utils import (
+    SINGLE_LAYER_OBSERVATION_SIZE,
     Decisions,
     StandardAction,
     LayerType,
@@ -19,8 +20,10 @@ from src.utils.network_utils import (
     LinearUnits,
     PoolMode,
     ActivationFunction,
+    calculate_output_dimensions,
     get_latest_layer,
-    get_latest_layer_index,
+    get_layer_from_index,
+    ### get_latest_layer_index,
     get_output_dimensions,
     get_valid_kernel_sizes,
     get_valid_strides,
@@ -34,6 +37,7 @@ STRIDE_CHOICE = 4
 LINEAR_UNITS_CHOICE = 5
 POOL_MODE_CHOICE = 6
 ACTIVATION_FUNCTION_CHOICE = 7
+SKIP_CONNECTION_CHOICE = 8
 
 
 class MaxLayersReachedException(Exception):
@@ -114,10 +118,11 @@ class Slices(BaseModel):
     linear_units: LogitSlice
     pool_mode: LogitSlice
     activation_function: LogitSlice
+    skip_connection: LogitSlice
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-def get_logit_slices():
+def get_logit_slices(max_layers: int) -> Slices:
     sizes = {
         "standard_actions": len(StandardAction),
         "layer_type": len(LayerType),
@@ -127,6 +132,7 @@ def get_logit_slices():
         "linear_units": len(LinearUnits),
         "pool_mode": len(PoolMode),
         "activation_function": len(ActivationFunction),
+        "skip_connection": max_layers,
     }
     idx = 0
     logit_slices = {}
@@ -145,10 +151,11 @@ class MaskContext(BaseModel):
     max_layers: int
     decisions: Decisions
     input_dimensions: Tuple[int, int, int]
+    action_count: int
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-def build_action_add_layer_sequential(ctx: MaskContext):
+def build_action_add_layer_sequential(ctx: MaskContext) -> Optional[Decisions]:
     try:
         ctx.logits = mask_action_type_sequential(ctx)
         ctx.decisions.action_choice = sample_action_from_slice_v2(
@@ -161,6 +168,7 @@ def build_action_add_layer_sequential(ctx: MaskContext):
 
         ctx.logits = mask_layer_type_sequential(ctx)
         ctx.decisions.layer_type_choice = sample_action_from_slice_v2(ctx, LayerType, "layer_type")
+
         ctx.logits = mask_out_channels_sequential(ctx)
         ctx.decisions.out_channels_choice = sample_action_from_slice_v2(
             ctx, OutChannels, "out_channels"
@@ -178,10 +186,15 @@ def build_action_add_layer_sequential(ctx: MaskContext):
         )
         ctx.logits = mask_pool_mode_sequential(ctx)
         ctx.decisions.pool_mode_choice = sample_action_from_slice_v2(ctx, PoolMode, "pool_mode")
+
         ctx.logits = mask_activation_function_sequential(ctx)
         ctx.decisions.activation_function_choice = sample_action_from_slice_v2(
             ctx, ActivationFunction, "activation_function"
         )
+
+        ctx.logits = mask_skip_connection_sequential(ctx)
+        ctx.decisions.skip_connection_choice = sample_skip_connection(ctx)
+
         return ctx.decisions
 
     except Exception:
@@ -213,12 +226,11 @@ def mask_action_type_sequential(ctx: MaskContext):
     """Mask action types based on current observation and strategy. Raises MaxLayersReachedException if max layers reached."""
     new_logits = ctx.logits.copy()
 
-    latest_layer_index = get_latest_layer_index(ctx.observation)
-    if latest_layer_index == ctx.max_layers - 1:
+    if ctx.action_count > ctx.max_layers:
         raise MaxLayersReachedException("Maximum number of layers reached.")
 
-    if latest_layer_index is None:
-        # No layers yet, can only add
+    if ctx.action_count == 1:
+        # first action -> No layers yet, can only add
         new_logits[ctx.slices.standard_actions.all] = -np.inf
         new_logits[ctx.slices.standard_actions[StandardAction.ADD_LAYER]] = 1
         return new_logits
@@ -229,13 +241,9 @@ def mask_action_type_sequential(ctx: MaskContext):
 def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
-    if ctx.decisions.action_choice == StandardAction.NONE:
-        new_logits[ctx.slices.layer_type.all] = -np.inf
-        new_logits[ctx.slices.layer_type[LayerType.NONE]] = 1
-        return new_logits
-
     linear_layer_exists = any(
-        ctx.observation[i] == LayerType.LINEAR.value for i in range(0, len(ctx.observation), 7)
+        ctx.observation[i] == LayerType.LINEAR.value
+        for i in range(0, len(ctx.observation), SINGLE_LAYER_OBSERVATION_SIZE)
     )
     if linear_layer_exists:
         new_logits[ctx.slices.layer_type.all] = -np.inf
@@ -243,7 +251,7 @@ def mask_layer_type_sequential(ctx: MaskContext):
 
         return new_logits
 
-    previous_layer = get_latest_layer(ctx.observation)
+    previous_layer = get_latest_layer(ctx.observation, ctx.action_count)
     if previous_layer is None or previous_layer.layer_type != LayerType.CONV:
         # if no previous layer or previous layer is not conv, cannot add pool
         new_logits[ctx.slices.layer_type[LayerType.POOL]] = -np.inf
@@ -350,3 +358,41 @@ def mask_activation_function_sequential(ctx: MaskContext):
     new_logits[ctx.slices.activation_function[ActivationFunction.SOFTMAX]] = -np.inf
 
     return new_logits
+
+
+def mask_skip_connection_sequential(ctx: MaskContext):
+    new_logits = ctx.logits.copy()
+
+    if ctx.action_count <= 2:
+        # first two layers are not allowed to have skip connections from previous layers.
+        new_logits[ctx.slices.skip_connection.all] = -np.inf
+        new_logits[ctx.slices.skip_connection[ctx.action_count - 1]] = 1  # only point to itself
+        return new_logits
+
+    last_layer_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
+    input_dim = ctx.input_dimensions[1:]
+
+    for i in range(0, ctx.action_count - 2):
+        currentLayerConfig = get_layer_from_index(ctx.observation, i)
+        output_dim = calculate_output_dimensions(input_dim, currentLayerConfig)
+
+        if output_dim != last_layer_output_dims:
+            # incompatible dimensions for skip connection
+            new_logits[ctx.slices.skip_connection[i]] = -np.inf
+        input_dim = output_dim
+
+    # mask previous layer, current layer and future layers
+    for i in range(ctx.action_count - 2, ctx.max_layers):
+        new_logits[ctx.slices.skip_connection[i]] = -np.inf
+
+    return new_logits
+
+
+def sample_skip_connection(ctx: MaskContext) -> Optional[int]:
+    logits = ctx.logits[ctx.slices.skip_connection.all]
+    valid_indices = np.where(logits > -np.inf)[0]
+
+    if len(valid_indices) == 0:
+        return None
+
+    return ctx.sampling_strategy(logits)

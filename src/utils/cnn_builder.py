@@ -6,6 +6,7 @@ import warnings
 from typing import Optional
 
 from src.utils.network_utils import (
+    SINGLE_LAYER_OBSERVATION_SIZE,
     ActivationFunction,
     CNNExportError,
     KernelSize,
@@ -146,23 +147,28 @@ class CNNBuilder:
 
 
 def flatten_cnn_config(rlconfig: NetworkConfig, max_layers: int) -> list[int]:
-    # each layer has 7 slots, 0 for  unused slots (none values for enums)
+    # each layer has 8 slots, 0 for unused slots (none values for enums)
     flat_config = []
-    for layer in rlconfig.layers:
+    for index, layer in enumerate(rlconfig.layers):
         data = layer.model_dump()
         flat_layer_config = []
         for key, item in data.items():
-            if item is not None:
-                flat_layer_config.append(item.value)
+            if key == "skip_connection":
+                if item is None:
+                    flat_layer_config.append(index)  # no skip connection -> point to itself
+                else:
+                    flat_layer_config.append(item)
             else:
-                flat_layer_config.append(0)
-        while len(flat_layer_config) < 7:
-            flat_layer_config.append(0)
+                flat_layer_config.append(item.value)
+
+        if len(flat_layer_config) != SINGLE_LAYER_OBSERVATION_SIZE:
+            raise ValueError("Layer config size mismatch")
 
         flat_config.extend(flat_layer_config)
-    if max_layers * 7 < len(flat_config):
+    if max_layers * SINGLE_LAYER_OBSERVATION_SIZE < len(flat_config):
         raise ValueError("flat_config is larger than allowed size")
-    flat_config.extend((max_layers * 7 - len(flat_config)) * [0])
+
+    flat_config.extend((max_layers * SINGLE_LAYER_OBSERVATION_SIZE - len(flat_config)) * [0])
 
     return flat_config
 
@@ -196,7 +202,7 @@ if __name__ == "__main__":
     )
 
     # Instantiate the CNN builder
-    cnn_builder = CNNBuilder(rl_config=config, input_size=(28, 28), num_classes=26)
+    cnn_builder = CNNBuilder(rl_config=config, dimensions=(1, 28, 28), num_classes=26)
 
     # Build the PyTorch model
     model = cnn_builder.build()
