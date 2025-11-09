@@ -251,7 +251,7 @@ def mask_layer_type_sequential(ctx: MaskContext):
 
         return new_logits
 
-    previous_layer = get_latest_layer(ctx.observation, ctx.action_count)
+    previous_layer = get_latest_layer(ctx.observation, ctx.action_count, ctx.max_layers)
     if previous_layer is None or previous_layer.layer_type != LayerType.CONV:
         # if no previous layer or previous layer is not conv, cannot add pool
         new_logits[ctx.slices.layer_type[LayerType.POOL]] = -np.inf

@@ -328,7 +328,9 @@ def get_valid_strides(
     return valid_strides
 
 
-def get_latest_layer(observation: np.ndarray, action_count: int):
+def get_latest_layer(
+    observation: np.ndarray, action_count: int, max_layers: int
+) -> Optional[LayerConfig]:
     """Look for the first occurrence of 0 in the observation array with form index 8, 16, 24 ..."""
     if action_count == 1:
         return None  # First action -> No layers defined yet
@@ -351,9 +353,7 @@ def get_latest_layer(observation: np.ndarray, action_count: int):
         linear_units=LinearUnits(observation[idx + 6])
         if observation[idx + 6] != 0
         else LinearUnits.NONE,
-        skip_connection=observation[idx + 7]
-        if observation[idx + 7] != (last_layer_index)  # current layer index => no skip connection
-        else -1,
+        skip_connection=observation[idx + 7] if observation[idx + 7] != max_layers - 1 else None,
     )
 
     """for i in range(0, len(observation), SINGLE_LAYER_OBSERVATION_SIZE):
