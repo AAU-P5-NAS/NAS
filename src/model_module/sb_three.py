@@ -28,6 +28,7 @@ class CustomEnvCallBack(BaseCallback):
         )
 
     def _on_step(self) -> bool:
+        print("")
         if isinstance(self.training_env, DummyVecEnv):
             for env in self.training_env.envs:
                 if isinstance(env, Monitor):

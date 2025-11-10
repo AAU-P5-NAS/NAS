@@ -1,39 +1,94 @@
+import time
+from src.data_module.dataset import DatasetOption
 from src.classification_module.train import Trainer
-from src.data_module.importer import DataImporter, DatasetOption
+from src.data_module.importer import DataImporter
+
 import torch
+from torch.nn import CrossEntropyLoss
+import torch.nn as nn
+from rich.console import Console
+
+console = Console()
 
 
 def main():
-    importer = DataImporter(dataset_option=DatasetOption.EMNIST_LETTERS)
-    dataloaders = importer.get_as_cnn(batch_size=64, test_split=0.2)
+    importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
+    dataloaders = importer.get_dataloaders(batch_size=32, shuffle=True)
     number_of_classes = 26
-    pre_model = [
-        torch.nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=0),
-        torch.nn.MaxPool2d(kernel_size=2, stride=2),
-        torch.nn.Flatten(),
-        torch.nn.Linear(32 * 13 * 13, 512),
-        torch.nn.ReLU(),
-        torch.nn.Linear(512, 128),
-        torch.nn.ReLU(),
-        torch.nn.Linear(128, number_of_classes),
-        torch.nn.Softmax(dim=1),
-    ]
-    model = torch.nn.Sequential(
-        *pre_model,
+
+    number_of_classes = 10
+
+    model = nn.Sequential(
+        # Block 1
+        nn.Conv2d(3, 64, kernel_size=3, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.Conv2d(64, 64, kernel_size=3, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.MaxPool2d(2, 2),
+        nn.Dropout(0.25),
+        # Block 2
+        nn.Conv2d(64, 128, kernel_size=3, padding=1),
+        nn.BatchNorm2d(128),
+        nn.ReLU(),
+        nn.Conv2d(128, 128, kernel_size=3, padding=1),
+        nn.BatchNorm2d(128),
+        nn.ReLU(),
+        nn.MaxPool2d(2, 2),
+        nn.Dropout(0.25),
+        # Block 3
+        nn.Conv2d(128, 256, kernel_size=3, padding=1),
+        nn.BatchNorm2d(256),
+        nn.ReLU(),
+        nn.Conv2d(256, 256, kernel_size=3, padding=1),
+        nn.BatchNorm2d(256),
+        nn.ReLU(),
+        nn.MaxPool2d(2, 2),
+        nn.Dropout(0.25),
+        # Fully connected
+        nn.Flatten(),
+        nn.Linear(256 * 4 * 4, 512),  # Adjusted input size after removing Block 4
+        nn.ReLU(),
+        nn.Dropout(0.5),
+        nn.Linear(512, number_of_classes),
     )
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+
+    for layer in model:
+        if isinstance(layer, torch.nn.Conv2d) or isinstance(layer, torch.nn.Linear):
+            torch.nn.init.xavier_uniform_(layer.weight)  # Xavier/Glorot uniform initialization
+            if layer.bias is not None:
+                layer.bias.data.fill_(0.0)  # Zero bias
+
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     trainer = Trainer(
         dataloaders=dataloaders,
-        model=model,
+        model=model.to(device),
+        loss_function=CrossEntropyLoss().to(device),
         optimizer=optimizer,
-        loss_function=torch.nn.CrossEntropyLoss(),
-        num_classes=number_of_classes,
+        num_classes=importer.get_num_classes()[0],
+        dimensions=importer.get_dimensions(),
     )
-    for epoch in range(200):
-        trainer.train()
-        metrics = trainer.test()
+    num_epochs = 10
+    start_time = time.time()
 
-        print(f"Test Metrics: {metrics}")
+    for epoch in range(num_epochs):
+        progress = (epoch + 1) / num_epochs * 100
+        with console.status(
+            f"[bold blue]Training model on epoch {epoch}/{num_epochs}: Progress {int(progress)}%[/bold blue]"
+        ):
+            trainer.train()
+
+    end_time = time.time()
+    training_time = end_time - start_time
+    metrics = trainer.test()
+
+    metrics.runtime = training_time
+    metrics.training_time = training_time
+    console.print("Metrics:", metrics)
+    return metrics
 
 
 if __name__ == "__main__":
