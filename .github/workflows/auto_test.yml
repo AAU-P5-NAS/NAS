@@ -13,8 +13,11 @@ jobs:
         with:
           python-version: '3.11'
           
-      - name: Install uv and sync
-        run: pip install uv | uv sync 
+      - name: Install uv
+        run: pip install uv
+        
+      - name: Sync packages
+        run: uv sync 
         
       - name: Run the tests
         run: uv run pytest
