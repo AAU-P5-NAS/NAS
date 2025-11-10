@@ -29,6 +29,7 @@ from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
 
 from src.utils.action_builder_utils import get_logit_slices
+from utils.graph_cnn import GraphCnn
 
 
 class CustomEnv(gym.Env):
@@ -316,12 +317,11 @@ class CustomEnv(gym.Env):
         :Returns:
         - float: The computed reward based on evaluation metrics.
         """
-        cnn_builder = CNNBuilder(
-            rl_config=new_architecture,
-            dimensions=self.dimensions,
+        architecture = GraphCnn(
+            net_config=new_architecture,
             num_classes=self.data_importer.get_num_classes()[0],
+            input_dimensions=self.dimensions,
         )
-        architecture = cnn_builder.build()
         optimizer = torch.optim.SGD(
             architecture.parameters(),
             lr=self.arch_learning_rate,

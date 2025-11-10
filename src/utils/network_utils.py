@@ -37,7 +37,7 @@ class StandardAction(enum.Enum):
     ADD_LAYER = 1
 
 
-class LayerType(enum.Enum):
+class LayerType(enum.IntEnum):
     NONE = 0
     CONV = 1  # "conv"
     LINEAR = 2
