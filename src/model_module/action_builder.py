@@ -15,6 +15,11 @@ def standard_stochastic_sampling(logits: np.ndarray) -> int:
     return np.random.choice(len(logits), p=probs)  # sample index based on probs and return idx
 
 
+def max_sampling(logits: np.ndarray) -> int:
+    """Selects the index with the highest logit value."""
+    return int(np.argmax(logits))
+
+
 def transform_logits_to_action(
     action_output: np.ndarray,
     observation: np.ndarray,
@@ -25,7 +30,7 @@ def transform_logits_to_action(
         logits=action_output,
         observation=observation,
         slices=get_logit_slices(),
-        sampling_strategy=standard_stochastic_sampling,
+        sampling_strategy=max_sampling,
         max_layers=max_layers,
         decisions=EMPTY_DECISIONS,
         input_dimensions=dimensions,
