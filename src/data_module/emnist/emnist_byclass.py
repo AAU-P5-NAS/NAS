@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from rich.console import Console
 
-from data_module.import_utils import (
+from src.data_module.import_utils import (
     fetch_dataset_from_url,
     GRAYSCALE_NUM_CHANNELS,
     DEFAULT_H,

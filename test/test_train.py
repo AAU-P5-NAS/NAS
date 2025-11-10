@@ -2,6 +2,7 @@ import torch
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter
 from src.data_module.dataset import DatasetOption
+from src.classification_module.metrics import Metrics
 
 
 def test_stop_when_trains_too_long():
@@ -37,3 +38,6 @@ def test_stop_when_trains_too_long():
 
     stopped_while_trianing = trainer.train()
     assert stopped_while_trianing is False
+
+    test_return_metrics = trainer.test()
+    assert isinstance(test_return_metrics, Metrics)

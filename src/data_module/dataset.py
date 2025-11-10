@@ -1,10 +1,10 @@
 from torch.utils.data import TensorDataset
-from data_module.cifar.cifar10 import import_cifar10
-from data_module.emnist.emnist_balanced import import_emnist_balanced
-from data_module.emnist.emnist_byclass import import_emnist_byclass
-from data_module.emnist.emnist_bymerge import import_emnist_bymerge
-from data_module.emnist.emnist_letters import import_emnist_letters
-from data_module.emnist.emnist_mnist import import_emnist_mnist
+from src.data_module.cifar.cifar10 import import_cifar10
+from src.data_module.emnist.emnist_balanced import import_emnist_balanced
+from src.data_module.emnist.emnist_byclass import import_emnist_byclass
+from src.data_module.emnist.emnist_bymerge import import_emnist_bymerge
+from src.data_module.emnist.emnist_letters import import_emnist_letters
+from src.data_module.emnist.emnist_mnist import import_emnist_mnist
 from typing import Callable, Tuple
 import enum
 import pandas as pd
