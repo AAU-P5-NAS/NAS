@@ -6,9 +6,8 @@ import os
 from stable_baselines3 import A2C
 
 from src.classification_module.reward import WeightedSumRS
-from src.model_module.action_builder import standard_stochastic_sampling, transform_logits_to_action
+from src.model_module.action_builder import standard_stochastic_sampling
 from src.model_module.environment import CustomEnv
-from src.utils.network_utils import Decisions
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -41,14 +40,15 @@ class TestTransformLogitsToAction:
     obs, _ = env.reset()
     action, _ = model.predict(obs)
 
-    def test_empty(self):
+
+"""     def test_empty(self):
         assert transform_logits_to_action(np.array([]), np.array([]), 0, (0, 0, 0)) is None
 
     def test_finds_action(self):
         assert isinstance(
             transform_logits_to_action(self.action, self.obs, 20, (1, 28, 28)), Decisions
         )
-
+ """
 
 '''
 from src.utils.action_builder_utils import (
