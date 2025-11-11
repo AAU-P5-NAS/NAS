@@ -12,6 +12,7 @@ from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
 from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
 from src.utils.network_utils import (
+    EMPTY_DECISIONS,
     LayerType,
     NetworkConfig,
     OutChannels,
@@ -27,7 +28,12 @@ from rich.console import Console
 from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
 
-from src.utils.action_builder_utils import get_logit_slices, transform_action_indices_to_decisions
+from src.utils.action_builder_utils import (
+    MaskContext,
+    get_logit_slices,
+    sample_actions,
+    transform_action_indices_to_decisions,
+)
 
 MAX_LAYERS = 16
 
@@ -116,18 +122,35 @@ class CustomEnv(gym.Env):
         self.logdir = logdir
 
     def _get_action_space(self) -> spaces.Space:
-        output_actions = (
-            len(StandardAction)
-            + len(LayerType)
-            + len(OutChannels)
-            + len(KernelSize)
-            + len(Stride)
-            + len(LinearUnits)
-            + len(PoolMode)
-            + len(ActivationFunction)
+        return spaces.MultiDiscrete(
+            [
+                len(StandardAction),
+                len(LayerType),
+                len(OutChannels),
+                len(KernelSize),
+                len(Stride),
+                len(LinearUnits),
+                len(PoolMode),
+                len(ActivationFunction),
+            ]
         )
 
-        return spaces.Box(low=0, high=1, shape=(output_actions,), dtype=np.float32)
+    def action_masks(self) -> np.ndarray:
+        """
+        Return a boolean array of shape (num_actions,) where True means valid.
+        """
+        action_space: spaces.MultiDiscrete = self.action_space  # type: ignore
+        ctx = MaskContext(
+            logits=np.zeros(action_space.nvec),  # dummy logits
+            observation=self._get_observation(),
+            slices=self.logit_slices,
+            sampling_strategy=lambda x: 0,
+            max_layers=self.max_layers,
+            decisions=EMPTY_DECISIONS,
+            input_dimensions=self.dimensions,
+        )
+        _, masked_logits = sample_actions(ctx)
+        return masked_logits > -np.inf
 
     def _get_observation_space(self) -> spaces.Space:
         observation_space_vector: List[int] = []

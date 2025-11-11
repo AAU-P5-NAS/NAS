@@ -183,6 +183,9 @@ def transform_action_indices_to_decisions(action_indices: np.ndarray, slices: Sl
 
 
 def sample_actions(ctx: MaskContext):
+    print("observations before flattening:", ctx.observation)
+    ctx.observation = ctx.observation.flatten()
+    print("observations after flattening:", ctx.observation)
     ctx.logits = mask_action_type_sequential(ctx)
     ctx.decisions.action_choice = sample_action_from_slice_v2(
         ctx, StandardAction, "standard_actions"
@@ -250,12 +253,15 @@ def mask_action_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
     latest_layer_index = get_latest_layer_index(ctx.observation)
+    print("Latest layer index:", latest_layer_index)
     if latest_layer_index == ctx.max_layers - 1:
         raise MaxLayersReachedException("Maximum number of layers reached.")
 
     if latest_layer_index is None:
         # No layers yet, can only add
         new_logits[ctx.slices.standard_actions.all] = -np.inf
+        print("Masking all standard actions except ADD_LAYER")
+        print("logits after masking:", new_logits)
         new_logits[ctx.slices.standard_actions[StandardAction.ADD_LAYER]] = 1
         return new_logits
 
