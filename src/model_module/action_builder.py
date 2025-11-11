@@ -1,11 +1,13 @@
 import numpy as np
 
+""" 
 from src.utils.action_builder_utils import (
     MaskContext,
-    build_action_add_layer_sequential,
     get_logit_slices,
 )
 from src.utils.network_utils import EMPTY_DECISIONS
+
+ """
 
 
 def standard_stochastic_sampling(logits: np.ndarray) -> int:
@@ -20,7 +22,7 @@ def max_sampling(logits: np.ndarray) -> int:
     return int(np.argmax(logits))
 
 
-def transform_logits_to_action(
+""" def transform_logits_to_action(
     action_output: np.ndarray,
     observation: np.ndarray,
     max_layers: int,
@@ -35,4 +37,4 @@ def transform_logits_to_action(
         decisions=EMPTY_DECISIONS,
         input_dimensions=dimensions,
     )
-    return build_action_add_layer_sequential(ctx)
+    return build_action_add_layer_sequential(ctx) """

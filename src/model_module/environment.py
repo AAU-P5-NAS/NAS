@@ -6,7 +6,6 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
-from src.model_module.action_builder import transform_logits_to_action
 from src.classification_module.metrics import Metrics
 from src.classification_module.reward import RewardStrategy
 from src.classification_module.train import Trainer
@@ -28,7 +27,9 @@ from rich.console import Console
 from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
 
-from src.utils.action_builder_utils import get_logit_slices
+from src.utils.action_builder_utils import get_logit_slices, transform_action_indices_to_decisions
+
+MAX_LAYERS = 16
 
 
 class CustomEnv(gym.Env):
@@ -209,7 +210,6 @@ class CustomEnv(gym.Env):
         """
 
         self.evaluated_this_step = False
-
         self.info = {}
         self.step_count += 1
         self.actions_taken += 1
@@ -240,24 +240,19 @@ class CustomEnv(gym.Env):
         """Build a new architecture based on the agent's action logits.
 
         :Args:
-        - action_logits: The logits produced by the agent's policy network.
+        - action_logits: The logits produced by the agent's policy network after masking.
 
         :Returns:
         - tuple: (new_network_config, should_evaluate)
         """
-        observation = self._get_observation()
-        action_to_apply = transform_logits_to_action(
-            action_logits, observation, self.max_layers, dimensions=self.dimensions
-        )
-        print(f"Action to apply: {action_to_apply}")
-        if action_to_apply is None:
+        decisions = transform_action_indices_to_decisions(action_logits, self.logit_slices)
+        if decisions.action_choice == StandardAction.NONE:
             return self.current_network_config, True  # Stop and evaluate
-
-        new_network_config = self.current_network_config.extend(
-            action=action_to_apply, partial_arch=self.current_network_config
-        )
-        self.current_network_config = new_network_config
-        return new_network_config, False  # Do not evaluate yet
+        else:
+            self.current_network_config = self.current_network_config.add_layer(
+                decisions, partial_arch=self.current_network_config
+            )
+            return self.current_network_config, False  # Do not evaluate yet
 
     def _train_classifier(
         self,

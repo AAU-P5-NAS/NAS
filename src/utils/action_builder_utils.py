@@ -116,6 +116,10 @@ class Slices(BaseModel):
     activation_function: LogitSlice
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    def idx(self, enum_name: str, enum_value: enum.Enum) -> int:
+        """Get absolute index for a given enum name and value."""
+        return getattr(self, enum_name).idx(enum_value)
+
 
 def get_logit_slices():
     sizes = {
@@ -148,49 +152,69 @@ class MaskContext(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-def build_action_add_layer_sequential(ctx: MaskContext):
-    try:
-        ctx.logits = mask_action_type_sequential(ctx)
-        ctx.decisions.action_choice = sample_action_from_slice_v2(
-            ctx, StandardAction, "standard_actions"
-        )
-        if ctx.decisions.action_choice == StandardAction.NONE:
-            raise ArchitectureCompleteException(
-                "Architecture is complete. No further actions can be taken."
-            )
+def transform_decisions_to_action_indices(decisions: Decisions, slices: Slices) -> np.ndarray:
+    return np.array(
+        [
+            slices.idx("standard_actions", decisions.action_choice),
+            slices.idx("layer_type", decisions.layer_type_choice),
+            slices.idx("out_channels", decisions.out_channels_choice),
+            slices.idx("kernel_size", decisions.kernel_size_choice),
+            slices.idx("stride", decisions.stride_choice),
+            slices.idx("linear_units", decisions.linear_units_choice),
+            slices.idx("pool_mode", decisions.pool_mode_choice),
+            slices.idx("activation_function", decisions.activation_function_choice),
+        ]
+    )
 
-        ctx.logits = mask_layer_type_sequential(ctx)
-        ctx.decisions.layer_type_choice = sample_action_from_slice_v2(ctx, LayerType, "layer_type")
-        ctx.logits = mask_out_channels_sequential(ctx)
-        ctx.decisions.out_channels_choice = sample_action_from_slice_v2(
-            ctx, OutChannels, "out_channels"
-        )
-        ctx.logits = mask_kernel_size_sequential(ctx)
-        ctx.decisions.kernel_size_choice = sample_action_from_slice_v2(
-            ctx, KernelSize, "kernel_size"
-        )
-        ctx.logits = mask_stride_sequential(ctx)
-        ctx.decisions.stride_choice = sample_action_from_slice_v2(ctx, Stride, "stride")
 
-        ctx.logits = mask_linear_units_sequential(ctx)
-        ctx.decisions.linear_units_choice = sample_action_from_slice_v2(
-            ctx, LinearUnits, "linear_units"
-        )
-        ctx.logits = mask_pool_mode_sequential(ctx)
-        ctx.decisions.pool_mode_choice = sample_action_from_slice_v2(ctx, PoolMode, "pool_mode")
-        ctx.logits = mask_activation_function_sequential(ctx)
-        ctx.decisions.activation_function_choice = sample_action_from_slice_v2(
-            ctx, ActivationFunction, "activation_function"
-        )
-        return ctx.decisions
+def transform_action_indices_to_decisions(action_indices: np.ndarray, slices: Slices):
+    return Decisions(
+        action_choice=StandardAction(action_indices[0] - slices.standard_actions.start),
+        layer_type_choice=LayerType(action_indices[1] - slices.layer_type.start),
+        out_channels_choice=OutChannels(action_indices[2] - slices.out_channels.start),
+        kernel_size_choice=KernelSize(action_indices[3] - slices.kernel_size.start),
+        stride_choice=Stride(action_indices[4] - slices.stride.start),
+        linear_units_choice=LinearUnits(action_indices[5] - slices.linear_units.start),
+        pool_mode_choice=PoolMode(action_indices[6] - slices.pool_mode.start),
+        activation_function_choice=ActivationFunction(
+            action_indices[7] - slices.activation_function.start
+        ),
+    )
 
-    except Exception as e:
-        import traceback
 
-        tb = traceback.extract_tb(e.__traceback__)
-        filename, lineno, func, text = tb[-1]
-        print(f"Error ({e}) in {filename}, line {lineno}: {text}")
-        return None  # no action to perform.
+def sample_actions(ctx: MaskContext):
+    ctx.logits = mask_action_type_sequential(ctx)
+    ctx.decisions.action_choice = sample_action_from_slice_v2(
+        ctx, StandardAction, "standard_actions"
+    )
+    if ctx.decisions.action_choice == StandardAction.NONE:
+        masked_logits = ctx.logits.copy()
+        masked_logits[:] = -np.inf
+        masked_logits[ctx.slices.standard_actions[StandardAction.NONE]] = 1
+        return ctx.decisions, masked_logits
+
+    ctx.logits = mask_layer_type_sequential(ctx)
+    ctx.decisions.layer_type_choice = sample_action_from_slice_v2(ctx, LayerType, "layer_type")
+    ctx.logits = mask_out_channels_sequential(ctx)
+    ctx.decisions.out_channels_choice = sample_action_from_slice_v2(
+        ctx, OutChannels, "out_channels"
+    )
+    ctx.logits = mask_kernel_size_sequential(ctx)
+    ctx.decisions.kernel_size_choice = sample_action_from_slice_v2(ctx, KernelSize, "kernel_size")
+    ctx.logits = mask_stride_sequential(ctx)
+    ctx.decisions.stride_choice = sample_action_from_slice_v2(ctx, Stride, "stride")
+
+    ctx.logits = mask_linear_units_sequential(ctx)
+    ctx.decisions.linear_units_choice = sample_action_from_slice_v2(
+        ctx, LinearUnits, "linear_units"
+    )
+    ctx.logits = mask_pool_mode_sequential(ctx)
+    ctx.decisions.pool_mode_choice = sample_action_from_slice_v2(ctx, PoolMode, "pool_mode")
+    ctx.logits = mask_activation_function_sequential(ctx)
+    ctx.decisions.activation_function_choice = sample_action_from_slice_v2(
+        ctx, ActivationFunction, "activation_function"
+    )
+    return ctx.decisions, ctx.logits
 
 
 """ def sample_action_from_slice(ctx: MaskContext, slice_name: str) -> int:
