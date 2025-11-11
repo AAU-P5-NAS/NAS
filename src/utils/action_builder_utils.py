@@ -278,8 +278,8 @@ def mask_out_channels_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
     if (
-        ctx.decisions.out_channels_choice == LayerType.LINEAR
-        or ctx.decisions.out_channels_choice == LayerType.NONE
+        ctx.decisions.layer_type_choice == LayerType.LINEAR
+        or ctx.decisions.layer_type_choice == LayerType.NONE
     ):
         new_logits[ctx.slices.out_channels.all] = -np.inf
         new_logits[ctx.slices.out_channels[OutChannels.NONE]] = 1
@@ -293,8 +293,8 @@ def mask_kernel_size_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
     if (
-        ctx.decisions.kernel_size_choice == LayerType.NONE
-        or ctx.decisions.kernel_size_choice == LayerType.LINEAR
+        ctx.decisions.layer_type_choice == LayerType.NONE
+        or ctx.decisions.layer_type_choice == LayerType.LINEAR
     ):
         # mask all kernel sizes
         new_logits[ctx.slices.kernel_size.all] = -np.inf

@@ -42,11 +42,18 @@ class TestTransformLogitsToAction:
     action, _ = model.predict(obs)
 
     def test_empty(self):
-        assert transform_logits_to_action(np.array([]), np.array([]), 0, (0, 0, 0)) is None
+        assert (
+            transform_logits_to_action(
+                np.array([]), np.array([]), self.env.max_layers, (0, 0, 0), 1
+            )
+            is None
+        )
 
     def test_finds_action(self):
+        print(self.obs, self.action)
         assert isinstance(
-            transform_logits_to_action(self.action, self.obs, 20, (1, 28, 28)), Decisions
+            transform_logits_to_action(self.action, self.obs, self.env.max_layers, (1, 28, 28), 1),
+            Decisions,
         )
 
 

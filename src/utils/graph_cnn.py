@@ -13,6 +13,7 @@ class GraphCnn(nn.Module):
         self.num_classes = num_classes
         self.input_dimensions = input_dimensions
         self.layers = nn.ModuleList()
+        self.layer_shapes: dict[int, tuple[int, int, int]] = {}
         self.projections = nn.ModuleDict()
         self.build()
 
@@ -31,12 +32,20 @@ class GraphCnn(nn.Module):
 
             layer, out_channels, h, w = build_single_layer(layer_config, in_channels, h, w)
             self.layers.append(layer)
+            self.layer_shapes[index] = (out_channels, h, w)
 
             skip_from = layer_config.skip_connection
             if skip_from is not None:
                 self._add_skip_projection(skip_from, index, out_channels, h, w)
 
             in_channels = out_channels
+
+        if not has_flattened:
+            self.layers.append(nn.Flatten())
+            in_channels *= h * w
+
+        if in_channels != self.num_classes:
+            self.layers.append(nn.Linear(in_channels, self.num_classes))
 
     def forward(self, x: Tensor) -> Tensor:
         outputs: Dict[int, Tensor] = {}
@@ -67,29 +76,42 @@ class GraphCnn(nn.Module):
         raise AttributeError("Cannot infer output channels")
 
     def _add_skip_projection(self, skip_from: int, skip_to: int, out_channels: int, h: int, w: int):
-        """Add a projection layer to match dimensions for skip connections.
+        """
+        Add a projection layer to match dimensions for skip connections.
+
         Cases:
-            1. Conv/Pool → Conv/Pool: project only if in/out channels differ
-            2. Conv/Pool → Linear: project using flatten + linear (if needed)
-            3. Linear → Linear: project only if feature dims differ
+            1. Conv/Pool -> Conv/Pool: project only if in/out channels differ
+            2. Conv/Pool -> Linear: flatten + optional linear projection
+            3. Linear -> Linear: project only if feature dims differ
         """
         proj_name = f"from_{skip_from}_to_{skip_to}"
-        from_layer = self.layers[skip_from]
-        in_channels = self._infer_out_channels(from_layer)
+
+        if skip_from in self.layer_shapes:
+            in_channels, h_from, w_from = self.layer_shapes[skip_from]
+        else:
+            in_channels, h_from, w_from = self.input_dimensions
 
         is_to_conv = h > 1 and w > 1
+        is_from_conv = h_from > 1 and w_from > 1
 
-        if is_to_conv and in_channels != out_channels:  # case 1
-            self.projections[proj_name] = nn.Conv2d(in_channels, out_channels, kernel_size=1)
-        elif not is_to_conv and isinstance(from_layer, (nn.Conv2d, nn.Sequential)):  # case 2
-            flat_features = in_channels * h * w
+        # Case 1:
+        if is_from_conv and is_to_conv:
+            if in_channels != out_channels:
+                self.projections[proj_name] = nn.Conv2d(in_channels, out_channels, kernel_size=1)
+
+        # Case 2
+        elif is_from_conv and not is_to_conv:
+            flat_features = in_channels * h_from * w_from
             if flat_features == out_channels:
                 self.projections[proj_name] = nn.Flatten()
             else:
                 self.projections[proj_name] = nn.Sequential(
-                    nn.Flatten(), nn.Linear(flat_features, out_channels)
+                    nn.Flatten(),
+                    nn.Linear(flat_features, out_channels),
                 )
-        else:  # case 3
+
+        # Case 3
+        else:
             if in_channels != out_channels:
                 self.projections[proj_name] = nn.Linear(in_channels, out_channels)
 
