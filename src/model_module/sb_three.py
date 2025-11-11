@@ -7,7 +7,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
-from src.classification_module.reward import FirstBasicRewardStrategy, Weights
+from src.classification_module.reward import WeightedSumRS, Weights
 import os
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -28,6 +28,7 @@ class CustomEnvCallBack(BaseCallback):
         )
 
     def _on_step(self) -> bool:
+        print("")
         if isinstance(self.training_env, DummyVecEnv):
             for env in self.training_env.envs:
                 if isinstance(env, Monitor):
@@ -61,9 +62,9 @@ class SBThreeAgent:
             arch_learning_rate=arch_learning_rate,
             arch_momentum=arch_momentum,
             batch_size=batch_size,
-            reward_strategy=FirstBasicRewardStrategy(weights=reward_weights)
+            reward_strategy=WeightedSumRS(weights=reward_weights)
             if reward_weights
-            else FirstBasicRewardStrategy(),
+            else WeightedSumRS(),
             showSamples=showSamples,
         )
         self.model = policy_algorithm_class(

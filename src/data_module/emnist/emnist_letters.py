@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import torch
 from rich.console import Console
-from data_module.import_utils import (
+from src.data_module.import_utils import (
     DEFAULT_H,
     DEFAULT_W,
     GRAYSCALE_NUM_CHANNELS,

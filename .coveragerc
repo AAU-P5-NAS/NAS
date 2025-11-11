@@ -1,0 +1,5 @@
+
+
+[run]
+omit =
+    src/data_module/emnist/*

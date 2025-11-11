@@ -75,6 +75,7 @@ class CustomEnv(gym.Env):
         logdir: str,
         device: str,
         reward_strategy: RewardStrategy,
+        data_set: DatasetOption = DatasetOption.CIFAR_10,
         render_mode: str = "console",
         max_layers: int = 16,
         training_epochs: int = 15,
@@ -97,7 +98,7 @@ class CustomEnv(gym.Env):
             max_layers
             / 2  # (an action adds a layer and an activation function which itself is a layer)
         )
-        self.data_importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
+        self.data_importer = DataImporter(dataset_option=data_set)
         self.logit_slices = get_logit_slices()
         self.loader_tuple = self.data_importer.get_dataloaders(
             batch_size=64, showSamples=showSamples
@@ -235,7 +236,7 @@ class CustomEnv(gym.Env):
 
         return obs, reward, terminated, truncated, self.info
 
-    def _get_new_architecture(self, action_logits: np.ndarray):
+    def _get_new_architecture(self, action_logits: np.ndarray) -> tuple[NetworkConfig, bool]:
         """Build a new architecture based on the agent's action logits.
 
         :Args:
@@ -248,6 +249,7 @@ class CustomEnv(gym.Env):
         action_to_apply = transform_logits_to_action(
             action_logits, observation, self.max_layers, dimensions=self.dimensions
         )
+        print(f"Action to apply: {action_to_apply}")
         if action_to_apply is None:
             return self.current_network_config, True  # Stop and evaluate
 

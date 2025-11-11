@@ -1,5 +1,5 @@
 import pytest
-from src.classification_module.reward import FirstBasicRewardStrategy, Weights
+from src.classification_module.reward import WeightedSumRS, Weights
 from src.classification_module.metrics import Metrics
 
 
@@ -28,7 +28,7 @@ def test_reward_calculator_normalization(default_metrics: Metrics):
         runtime=3.0,
         architecture_size=1.0,
     )
-    calc = FirstBasicRewardStrategy(weights=weights)
+    calc = WeightedSumRS(weights=weights)
     reward = calc.compute_reward(default_metrics)
 
     # Reward must be between 0 and 1 since all metrics and weights are normalized
@@ -39,7 +39,7 @@ def test_reward_ignores_none_values(default_metrics: Metrics):
     """Test that None metrics are ignored without breaking."""
     metrics = default_metrics
     metrics.precision = None
-    calc = FirstBasicRewardStrategy()
+    calc = WeightedSumRS()
     reward = calc.compute_reward(metrics)
     assert isinstance(reward, float)
     assert reward is not None and reward == reward  # Check for NaN
@@ -47,7 +47,7 @@ def test_reward_ignores_none_values(default_metrics: Metrics):
 
 def test_inverse_metrics_scaled(default_metrics: Metrics):
     """Test that flops, runtime, and architecture_size are scaled down."""
-    calc = FirstBasicRewardStrategy()
+    calc = WeightedSumRS()
     reward = calc.compute_reward(default_metrics)
     # If those values are large, the reward should be reduced
     smaller_flops = default_metrics.model_copy(update={"flops": 1.0})
@@ -67,7 +67,7 @@ def test_zero_weights(default_metrics: Metrics):
         runtime=0.0,
         architecture_size=0.0,
     )
-    calc = FirstBasicRewardStrategy(weights=zero_weights)
+    calc = WeightedSumRS(weights=zero_weights)
     with pytest.raises(ValueError):
         calc.compute_reward(default_metrics)
 
@@ -84,7 +84,7 @@ def test_partial_metrics(default_metrics: Metrics):
         runtime=0.0,
         architecture_size=0.0,
     )
-    calc = FirstBasicRewardStrategy(weights=custom_weights)
+    calc = WeightedSumRS(weights=custom_weights)
     reward = calc.compute_reward(default_metrics)
     assert 0.0 <= reward <= 1.0
     # Reward should depend primarily on accuracy and test_loss
@@ -103,6 +103,6 @@ def test_negative_weights_raises(default_metrics: Metrics):
         runtime=0.0,
         architecture_size=0.0,
     )
-    calc = FirstBasicRewardStrategy(weights=negative_weights)
+    calc = WeightedSumRS(weights=negative_weights)
     with pytest.raises(ValueError, match="Weights must be non-negative"):
         calc.compute_reward(default_metrics)

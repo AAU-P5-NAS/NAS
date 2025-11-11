@@ -5,7 +5,7 @@ from torch.utils.data import TensorDataset
 import numpy as np
 from rich.console import Console
 
-from data_module.import_utils import fetch_dataset_from_url
+from src.data_module.import_utils import fetch_dataset_from_url
 
 console = Console()
 
