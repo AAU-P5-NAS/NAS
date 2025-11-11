@@ -1,13 +1,13 @@
 import pytest
 import src.model_module.environment as environment_module
-from src.classification_module.reward import FirstBasicRewardStrategy
+from src.classification_module.reward import WeightedSumRS
 
 
 def get_environment():
     environment = environment_module.CustomEnv(
         logdir="tests/logs",
         device="cpu",
-        reward_strategy=FirstBasicRewardStrategy(),
+        reward_strategy=WeightedSumRS(),
     )
     return environment
 
@@ -16,7 +16,7 @@ def test_environment_initialization():
     environment = get_environment()
     assert environment.logdir == "tests/logs"
     assert environment.device == "cpu"
-    assert isinstance(environment.reward_strategy, FirstBasicRewardStrategy)
+    assert isinstance(environment.reward_strategy, WeightedSumRS)
     assert environment.max_layers == 16
     assert environment.training_epochs == 15
     assert environment.data_importer is not None
