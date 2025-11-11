@@ -2,13 +2,15 @@ import numpy as np
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 import torch
 
-from src.model_module.action_builder import standard_stochastic_sampling
-from src.model_module.environment import MAX_LAYERS
-from src.utils.action_builder_utils import (
-    MaskContext,
+from src.action_masking.action_masking_utils import (
     get_logit_slices,
-    sample_actions,
     transform_decisions_to_action_indices,
+    standard_stochastic_sampling,
+)
+from src.model_module.environment import MAX_LAYERS
+from src.action_masking.action_masking import (
+    MaskContext,
+    sample_actions,
 )
 from src.utils.network_utils import (
     EMPTY_DECISIONS,

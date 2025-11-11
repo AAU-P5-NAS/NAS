@@ -6,7 +6,7 @@ import argparse
 from sb3_contrib.ppo_mask import MaskablePPO
 
 from src.model_module.sb_three import SBThreeAgent
-from src.model_module.MaskablePolicy import CustomMaskablePolicy
+from src.action_masking.action_masking_policy import CustomMaskablePolicy
 
 warnings.filterwarnings("ignore", message="Unsupported operator aten::tanh")
 console = Console()

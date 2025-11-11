@@ -27,7 +27,7 @@ from rich.console import Console
 from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
 
-from src.utils.action_builder_utils import (
+from src.action_masking.action_masking_utils import (
     get_logit_slices,
     transform_action_indices_to_decisions,
 )
@@ -137,16 +137,15 @@ class CustomEnv(gym.Env):
         Returns a boolean mask for valid actions given the current environment state.
         This mask is used by MaskablePPO to know which actions are allowed globally.
 
+        Its only purpose is to only allow ADD_LAYER if no layers exist yet.
+
         It is just necessary for masking to work even if it dont do much.
         """
-        # Get total number of actions from your slices
         slices = get_logit_slices()
         total_actions = slices.activation_function.stop  # assuming this is the last slice
 
-        # Start with all False (disallow everything)
         mask = np.zeros(total_actions, dtype=bool)
 
-        # Example logic: If no layers exist, only allow ADD_LAYER action
         if self.current_network_config.layers == []:
             mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
         else:
