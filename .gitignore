@@ -217,3 +217,7 @@ src/data_module/cifar/data_batch_3
 src/data_module/cifar/data_batch_4
 src/data_module/cifar/data_batch_5
 src/data_module/cifar/test_batch
+
+
+src/data_module/emnist/emnist_balanced_train.csv
+src/data_module/emnist/emnist_letters_train.csv

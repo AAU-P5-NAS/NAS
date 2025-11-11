@@ -1,7 +1,7 @@
 # NAS
 Neural Architecture Search.
 
-## Installation guide
+## Installation guide.
 Clone the repo, then:
 1. Install 'uv' if not done already: 
     - MacOS / Linux: 
