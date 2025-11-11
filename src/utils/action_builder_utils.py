@@ -197,7 +197,12 @@ def build_action_add_layer_sequential(ctx: MaskContext) -> Optional[Decisions]:
 
         return ctx.decisions
 
-    except Exception:
+    except Exception as e:
+        import traceback
+
+        tb = traceback.extract_tb(e.__traceback__)
+        filename, lineno, func, text = tb[-1]
+        print(f"Error ({e}) in {filename}, line {lineno}: {text}")
         return None  # no action to perform.
 
 
@@ -213,13 +218,20 @@ def build_action_add_layer_sequential(ctx: MaskContext) -> Optional[Decisions]:
 E = TypeVar("E", bound=enum.Enum)
 
 
-def sample_action_from_slice_v2(ctx: MaskContext, enum_class: Type[E], slice_name: str) -> E:
+def sample_action_from_slice_v2(ctx: MaskContext, enum_class_type: Type[E], slice_name: str) -> E:
     logits = ctx.logits[getattr(ctx.slices, slice_name).all]
     valid_indices = np.where(logits > -np.inf)[0]
+
+    enum_class: E
     if len(valid_indices) == 0:
-        return enum_class(0)  # No valid actions, return NONE.
+        enum_class = enum_class_type(0)  # No valid actions, return NONE.
     else:
-        return enum_class(int(ctx.sampling_strategy(logits)))
+        enum_class = enum_class_type(int(ctx.sampling_strategy(logits)))
+
+    print(
+        f"Sampled action: {enum_class.value} ({enum_class.name}), valid indices: {valid_indices}, from slice '{slice_name}': {valid_indices}"
+    )
+    return enum_class
 
 
 def mask_action_type_sequential(ctx: MaskContext):

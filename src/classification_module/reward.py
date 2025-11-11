@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from src.classification_module.metrics import Metrics
 import numpy as np
+import abc
 
 
 class Weights(BaseModel):
@@ -23,7 +24,20 @@ class Baselines(BaseModel):
     max_test_loss: float = 3.0  # Clip losses above this
 
 
-class RewardCalculator:
+class RewardStrategy(abc.ABC):
+    @abc.abstractmethod
+    def compute_reward(self, metrics: Metrics) -> float | dict[str, float]:
+        """Compute reward based on provided metrics."""
+        raise NotImplementedError
+
+
+class WeightedSumRS(RewardStrategy):
+    """
+    A basic reward strategy that computes a weighted sum of normalized metrics.
+
+    Weights and baselines can be customized via the Weights and Baselines classes.
+    """
+
     def __init__(self, weights: Weights = Weights(), baselines: Baselines = Baselines()):
         self.weights = weights
         self.baselines = baselines
@@ -59,7 +73,10 @@ class RewardCalculator:
         return 0.0
 
     def compute_reward(self, metrics: Metrics) -> float:
-        """Compute reward as weighted combination of normalized metrics."""
+        """
+        Compute reward as weighted combination of normalized metrics.
+        Returns a float reward in [0, 1].
+        """
 
         # Validate weights
         for weight in self.weights.model_dump().values():

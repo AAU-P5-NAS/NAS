@@ -1,8 +1,9 @@
-import pytest
 import torch
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter
 from src.data_module.dataset import DatasetOption
+from src.classification_module.metrics import Metrics
+
 
 def test_stop_when_trains_too_long():
     importer = DataImporter(dataset_option=DatasetOption.EMNIST_LETTERS)
@@ -29,6 +30,7 @@ def test_stop_when_trains_too_long():
         optimizer=optimizer,
         loss_function=torch.nn.CrossEntropyLoss(),
         num_classes=number_of_classes,
+        dimensions=(1, 28, 28),
     )
 
     stopped_while_trianing = trainer.train(1)
@@ -36,3 +38,6 @@ def test_stop_when_trains_too_long():
 
     stopped_while_trianing = trainer.train()
     assert stopped_while_trianing is False
+
+    test_return_metrics = trainer.test()
+    assert isinstance(test_return_metrics, Metrics)

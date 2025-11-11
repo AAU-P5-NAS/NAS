@@ -1,7 +1,7 @@
 from typing import Tuple
 from rich.console import Console
-from data_module.dataset import DatasetOption
-from data_module.import_utils import visualize_cifar_samples, visualize_samples
+from src.data_module.dataset import DatasetOption
+from src.data_module.import_utils import visualize_cifar_samples, visualize_samples
 import torch
 
 console = Console()
@@ -33,7 +33,7 @@ class DataImporter:
             else "[bold green]Data loaded ✔[/bold green]"
         )
 
-    def get_dataloaders(self, batch_size: int, shuffle: bool = True):
+    def get_dataloaders(self, batch_size: int, showSamples: bool = False, shuffle: bool = True):
         """
         Returns a DataLoader for both the training_data and test_data, shaped for CNN input.
 
@@ -58,10 +58,12 @@ class DataImporter:
 
         if self.dataset_option == DatasetOption.CIFAR_10:
             visualize_cifar_samples(
-                train_dataloader, self.dataset_option.get_label_fn(), num_samples=30
+                train_dataloader, self.dataset_option.get_label_fn(), showSamples, num_samples=30
             )
         else:
-            visualize_samples(train_dataloader, self.dataset_option.get_label_fn(), num_samples=30)
+            visualize_samples(
+                train_dataloader, self.dataset_option.get_label_fn(), showSamples, num_samples=30
+            )
 
         return train_dataloader, test_dataloader
 
