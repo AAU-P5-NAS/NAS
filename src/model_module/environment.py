@@ -12,7 +12,6 @@ from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
 from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
 from src.utils.network_utils import (
-    EMPTY_DECISIONS,
     LayerType,
     NetworkConfig,
     OutChannels,
@@ -29,9 +28,7 @@ from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
 
 from src.utils.action_builder_utils import (
-    MaskContext,
     get_logit_slices,
-    sample_actions,
     transform_action_indices_to_decisions,
 )
 
@@ -135,22 +132,27 @@ class CustomEnv(gym.Env):
             ]
         )
 
-    def action_masks(self) -> np.ndarray:
+    def get_action_mask(self) -> np.ndarray:
         """
-        Return a boolean array of shape (num_actions,) where True means valid.
+        Returns a boolean mask for valid actions given the current environment state.
+        This mask is used by MaskablePPO to know which actions are allowed globally.
+
+        It is just necessary for masking to work even if it dont do much.
         """
-        action_space: spaces.MultiDiscrete = self.action_space  # type: ignore
-        ctx = MaskContext(
-            logits=np.zeros(action_space.nvec),  # dummy logits
-            observation=self._get_observation(),
-            slices=self.logit_slices,
-            sampling_strategy=lambda x: 0,
-            max_layers=self.max_layers,
-            decisions=EMPTY_DECISIONS,
-            input_dimensions=self.dimensions,
-        )
-        _, masked_logits = sample_actions(ctx)
-        return masked_logits > -np.inf
+        # Get total number of actions from your slices
+        slices = get_logit_slices()
+        total_actions = slices.activation_function.stop  # assuming this is the last slice
+
+        # Start with all False (disallow everything)
+        mask = np.zeros(total_actions, dtype=bool)
+
+        # Example logic: If no layers exist, only allow ADD_LAYER action
+        if self.current_network_config.layers == []:
+            mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
+        else:
+            mask[slices.standard_actions.start : slices.standard_actions.stop] = True
+
+        return mask
 
     def _get_observation_space(self) -> spaces.Space:
         observation_space_vector: List[int] = []
@@ -365,7 +367,6 @@ class CustomEnv(gym.Env):
         self.console.print(
             f"[bold blue]Reward for evaluation '{self.evaluation_count}':\n{reward}[/bold blue]"
         )
-
         self.print_layers(new_architecture.layers)
 
         return reward
