@@ -31,7 +31,7 @@ class RewardStrategy(abc.ABC):
         raise NotImplementedError
 
 
-class FirstBasicRewardStrategy(RewardStrategy):
+class WeightedSumRS(RewardStrategy):
     """
     A basic reward strategy that computes a weighted sum of normalized metrics.
 
