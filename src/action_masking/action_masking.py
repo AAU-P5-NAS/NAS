@@ -76,7 +76,6 @@ def mask_action_type_sequential(ctx: MaskContext):
 
 def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
-
     if ctx.decisions.action_choice == StandardAction.NONE:
         new_logits[ctx.slices.layer_type.all] = -np.inf
         new_logits[ctx.slices.layer_type[LayerType.NONE]] = 1
@@ -88,17 +87,17 @@ def mask_layer_type_sequential(ctx: MaskContext):
     if linear_layer_exists:
         new_logits[ctx.slices.layer_type.all] = -np.inf
         new_logits[ctx.slices.layer_type[LayerType.LINEAR]] = 1  # only linear is valid
-
         return new_logits
 
     previous_layer = get_latest_layer(ctx.observation)
     if previous_layer is None or previous_layer.layer_type != LayerType.CONV:
-        # if no previous layer or previous layer is not conv, cannot add pool
+        # if no previous layer or previous layer is not conv, cannot add pool (typically pool follows conv)
         new_logits[ctx.slices.layer_type[LayerType.POOL]] = -np.inf
 
     new_logits[
         ctx.slices.layer_type[LayerType.NONE]
     ] = -np.inf  # NONE is not valid when adding a layer
+
     return new_logits
 
 
@@ -119,7 +118,6 @@ def mask_out_channels_sequential(ctx: MaskContext):
 
 def mask_kernel_size_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
-    print("ctx.observation:", ctx.observation[:40])  # print first few layers
 
     if (
         ctx.decisions.layer_type_choice == LayerType.NONE
@@ -129,13 +127,13 @@ def mask_kernel_size_sequential(ctx: MaskContext):
         new_logits[ctx.slices.kernel_size.all] = -np.inf
         new_logits[ctx.slices.kernel_size[KernelSize.NONE]] = 1
         return new_logits
-    print("ctx.input dimensions :", ctx.input_dimensions)
     latest_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
-    print("latest_output_dims:", latest_output_dims)
-    valid_kernels = get_valid_kernel_sizes(latest_output_dims, padding=0)
+    if ctx.decisions.layer_type_choice == LayerType.POOL:
+        valid_kernels = get_valid_kernel_sizes(latest_output_dims, padding=0)
+    else:
+        valid_kernels = get_valid_kernel_sizes(latest_output_dims, padding=1)
 
     invalid_kernels = [k for k in KernelSize if k not in valid_kernels]
-
     for kernel in invalid_kernels:
         invalid_kernel_index = ctx.slices.kernel_size[kernel.value]
         new_logits[invalid_kernel_index] = -np.inf
@@ -155,9 +153,12 @@ def mask_stride_sequential(ctx: MaskContext):
         new_logits[ctx.slices.stride[Stride.NONE]] = 1
         return new_logits
 
-    kernel_size_chosen = KernelSize(ctx.decisions.kernel_size_choice)
+    kernel_size_chosen = ctx.decisions.kernel_size_choice
     latest_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
-    valid_strides = get_valid_strides(latest_output_dims, kernel_size_chosen)
+    if ctx.decisions.layer_type_choice == LayerType.POOL:
+        valid_strides = get_valid_strides(latest_output_dims, kernel_size_chosen, padding=0)
+    else:
+        valid_strides = get_valid_strides(latest_output_dims, kernel_size_chosen, padding=1)
     invalid_strides = [s for s in Stride if s not in valid_strides]
 
     for stride in invalid_strides:

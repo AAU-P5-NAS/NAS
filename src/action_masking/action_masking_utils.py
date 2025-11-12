@@ -171,7 +171,6 @@ E = TypeVar("E", bound=enum.Enum)
 def sample_action_for_slice(ctx: MaskContext, enum_class_type: Type[E], slice_name: str) -> E:
     logits = ctx.logits[getattr(ctx.slices, slice_name).all]
     valid_indices = np.where(logits > -np.inf)[0]
-
     enum_class: E
     if len(valid_indices) == 0:
         enum_class = enum_class_type(0)  # No valid actions, return NONE.
