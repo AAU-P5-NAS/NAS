@@ -81,8 +81,9 @@ class DataImporter:
         :Returns:
         - tuple of (num_channels, height, width): Dimensions of the input data.
         """
-        match self.dataset_option:
-            case DatasetOption.CIFAR_10:
+
+        match self.dataset_option.value:
+            case DatasetOption.CIFAR_10.value:
                 return 3, 32, 32
             case _:
                 return 1, 28, 28
