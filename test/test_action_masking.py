@@ -59,4 +59,18 @@ def test_first_action_is_add_layer():
 
 
 def test_max_layers():
-    pass
+    full_config = NetworkConfig(layers=[])  # must be filled
+
+    ctx = MaskContext(
+        logits=get_logits(),
+        observation=get_obs(full_config, max_layers=20),
+        slices=get_logit_slices(),
+        sampling_strategy=standard_stochastic_sampling,
+        max_layers=20,
+        decisions=EMPTY_DECISIONS,
+        input_dimensions=(3, 32, 32),
+    )
+
+    decisions, masked_logits = sample_actions(ctx)
+
+    assert decisions.action_choice == StandardAction.ADD_LAYER
