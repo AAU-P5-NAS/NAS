@@ -102,19 +102,17 @@ def test_partial_metrics(default_metrics: Metrics):
 
 def test_negative_weights_raises(default_metrics: Metrics):
     """Test that negative weights raise a ValueError."""
-    negative_weights = Weights(
-        accuracy=-1.0,
-        precision=0.0,
-        recall=0.0,
-        f1_score=0.0,
-        test_loss=0.0,
-        flops=0.0,
-        runtime=0.0,
-        architecture_size=0.0,
-    )
-    calc = WeightedSumRS(weights=negative_weights)
     with pytest.raises(ValueError, match="Weights must be non-negative"):
-        calc.compute_reward(default_metrics)
+        Weights(
+            accuracy=-1.0,
+            precision=0.0,
+            recall=0.0,
+            f1_score=0.0,
+            test_loss=0.0,
+            flops=0.0,
+            runtime=0.0,
+            architecture_size=0.0,
+        )
 
 
 def test_static_weights():
