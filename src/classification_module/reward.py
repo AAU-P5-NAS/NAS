@@ -76,7 +76,8 @@ class RewardStrategy(abc.ABC):
 
         # FLOPs (lower is better)
         elif metric_name == "flops":
-            normalized = 1.0 - np.clip(value / self.baselines.max_flops, 0.0, 1.0)
+            # normalized = 1.0 - np.clip(value / self.baselines.max_flops, 0.0, 1.0)
+            normalized = 1 - np.clip(np.log(value + 1) / np.log(self.baselines.max_flops + 1), 0.0, 1.0)
             return normalized
 
         # Runtime (lower is better)
@@ -195,8 +196,8 @@ class TchebycheffReward(RewardStrategy):
             diff = weight * abs(normalized_value - z_i_star)
             weighted_diffs.append(diff)
 
-        reward = max(weighted_diffs) if weighted_diffs else 0.0
-        return reward
+        deviation = max(weighted_diffs) if weighted_diffs else 0.0
+        return 1 - deviation
 
 
 # _____________________________________
