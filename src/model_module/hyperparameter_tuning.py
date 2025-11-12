@@ -1,6 +1,7 @@
 """Hyperparameter optimization with separated RL and SL tuning"""
 
 from __future__ import annotations
+import traceback
 import optuna
 from typing import Dict, Any, Optional
 from rich.console import Console
@@ -167,7 +168,7 @@ class SLHyperparameterOptimizer:
 
         try:
             with console.status("Initializing data importer..."):
-                data_importer = DataImporter(max_per_class=1000, dataset_option=self.dataset_option)
+                data_importer = DataImporter(dataset_option=self.dataset_option)
                 train_loader, test_loader = data_importer.get_dataloaders(batch_size=batch_size)
                 train_num_classes, test_num_classes = data_importer.get_num_classes()
             with console.status("Creating standard architecture..."):
@@ -223,6 +224,10 @@ class SLHyperparameterOptimizer:
 
         except Exception as e:
             self.console.print(f"[bold red]Trial failed: {e}[/bold red]")
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                print(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
+            print(f"Error: {e}")
             return -10.0
 
     def optimize(
