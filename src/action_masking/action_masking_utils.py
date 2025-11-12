@@ -125,6 +125,18 @@ class MaskContext(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
+NO_ACTION_DECISIONS = Decisions(
+    action_choice=StandardAction.NONE,
+    layer_type_choice=LayerType.NONE,
+    out_channels_choice=OutChannels.NONE,
+    kernel_size_choice=KernelSize.NONE,
+    stride_choice=Stride.NONE,
+    linear_units_choice=LinearUnits.NONE,
+    pool_mode_choice=PoolMode.NONE,
+    activation_function_choice=ActivationFunction.NONE,
+)
+
+
 def transform_decisions_to_action_indices(decisions: Decisions, slices: Slices) -> np.ndarray:
     return np.array(
         [

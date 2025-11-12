@@ -263,16 +263,16 @@ def get_layer_from_index(observation: np.ndarray, index: int) -> LayerConfig:
 
 
 def get_valid_kernel_sizes(
-    last_layer_output_dims: tuple[int, int], padding: int = 1
+    last_layer_output_dims: tuple[int, int], padding: int = 0
 ) -> list[KernelSize]:
-    """Get valid kernel sizes based on last layer's output dimensions and padding. Assumes square kernels and no dilation."""
     h, w = last_layer_output_dims
     min_dim = min(h, w)
-    max_kernel_size = min_dim + 2 * padding  # ignore stride, chosen later
-    valid_kernels = []
-
-    valid_kernels.extend(kernel for kernel in KernelSize if kernel.value <= max_kernel_size)
-
+    max_kernel_size = min_dim  # ignore padding entirely
+    valid_kernels = [
+        kernel
+        for kernel in KernelSize
+        if kernel.to_kernel() is not None and kernel.to_kernel() <= max_kernel_size
+    ]
     return valid_kernels
 
 
@@ -282,10 +282,12 @@ def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig)
 
     h, w = input_dims
     if layer.layer_type == LayerType.CONV:
-        padding = layer.kernel_size.value // 2  # assuming same padding
-        h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.to_stride(), padding)
+        padding = layer.kernel_size.to_kernel() // 2  # assuming same padding
+        h, w = update_spatial_dims(
+            h, w, layer.kernel_size.to_kernel(), layer.stride.to_stride(), padding
+        )
     elif layer.layer_type == LayerType.POOL:
-        h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.to_stride())
+        h, w = update_spatial_dims(h, w, layer.kernel_size.to_kernel(), layer.stride.to_stride())
     return h, w
 
 
@@ -305,13 +307,17 @@ def get_valid_strides(
     """Get valid stride values that won't make output dimensions too small. Assumes square kernels and no dilation."""
     h, w = last_layer_output_dims
     min_dim = min(h, w)
-    max_stride = min_dim + 2 * padding - kernel_size.value + 1
+    max_stride = min_dim + 2 * padding - kernel_size.to_kernel() + 1
     valid_strides = []
 
     if max_stride < 1:
         return valid_strides
 
-    valid_strides.extend(stride for stride in Stride if stride.value <= max_stride)
+    valid_strides.extend(
+        stride
+        for stride in Stride
+        if stride.to_stride() is not None and stride.to_stride() <= max_stride
+    )
     return valid_strides
 
 

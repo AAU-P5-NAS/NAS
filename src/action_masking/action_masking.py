@@ -3,7 +3,11 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from src.action_masking.action_masking_utils import MaskContext, sample_action_for_slice
+from src.action_masking.action_masking_utils import (
+    NO_ACTION_DECISIONS,
+    MaskContext,
+    sample_action_for_slice,
+)
 from src.utils.network_utils import (
     StandardAction,
     LayerType,
@@ -29,7 +33,7 @@ def sample_actions(ctx: MaskContext):
         masked_logits = ctx.logits.copy()
         masked_logits[:] = -np.inf
         masked_logits[ctx.slices.standard_actions[StandardAction.NONE]] = 1
-        return ctx.decisions, masked_logits
+        return NO_ACTION_DECISIONS, masked_logits
 
     ctx.logits = mask_layer_type_sequential(ctx)
     ctx.decisions.layer_type_choice = sample_action_for_slice(ctx, LayerType, "layer_type")
@@ -115,6 +119,7 @@ def mask_out_channels_sequential(ctx: MaskContext):
 
 def mask_kernel_size_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
+    print("ctx.observation:", ctx.observation[:40])  # print first few layers
 
     if (
         ctx.decisions.layer_type_choice == LayerType.NONE
@@ -124,13 +129,15 @@ def mask_kernel_size_sequential(ctx: MaskContext):
         new_logits[ctx.slices.kernel_size.all] = -np.inf
         new_logits[ctx.slices.kernel_size[KernelSize.NONE]] = 1
         return new_logits
-
+    print("ctx.input dimensions :", ctx.input_dimensions)
     latest_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
-    valid_kernels = get_valid_kernel_sizes(latest_output_dims)
+    print("latest_output_dims:", latest_output_dims)
+    valid_kernels = get_valid_kernel_sizes(latest_output_dims, padding=0)
+
     invalid_kernels = [k for k in KernelSize if k not in valid_kernels]
 
     for kernel in invalid_kernels:
-        invalid_kernel_index = ctx.slices.kernel_size[kernel]
+        invalid_kernel_index = ctx.slices.kernel_size[kernel.value]
         new_logits[invalid_kernel_index] = -np.inf
 
     new_logits[ctx.slices.kernel_size[KernelSize.NONE]] = -np.inf
