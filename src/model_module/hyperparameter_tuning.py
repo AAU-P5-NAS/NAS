@@ -81,6 +81,7 @@ class SLHyperparameterOptimizer:
     """Optimize Supervised Learning hyperparameters using a standard architecture"""
 
     trials_run = 0
+
     def __init__(
         self,
         search_space: HyperparameterSearchSpace,
@@ -245,7 +246,9 @@ class SLHyperparameterOptimizer:
         with console.status("Creating Study..."):
             study = optuna.create_study(direction="maximize", study_name=study_name)
 
-        with console.status(f"Optimizing hyperparameters (Trial {self.trials_run}/{self.n_trials})..."):
+        with console.status(
+            f"Optimizing hyperparameters (Trial {self.trials_run}/{self.n_trials})..."
+        ):
             study.optimize(
                 self._objective,
                 n_trials=self.n_trials,
@@ -342,7 +345,6 @@ class RLHyperparameterOptimizer:
 
         study = optuna.create_study(direction="maximize", study_name=study_name)
 
-        with self.console.status("Optimizing hyperparameters (Trial {self.n_trials})..."):
         study.optimize(
             lambda trial: self._objective(trial, agent_class, total_timesteps, sl_hyperparams),
             n_trials=self.n_trials,
