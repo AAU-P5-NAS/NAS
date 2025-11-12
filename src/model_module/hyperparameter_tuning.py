@@ -26,51 +26,54 @@ from src.utils.network_utils import (
 from src.utils.cnn_builder import CNNBuilder
 from torch.nn import CrossEntropyLoss
 
+console = Console()
 
-def create_standard_architecture() -> NetworkConfig:
+
+def create_standard_architecture(number_of_classes: int) -> torch.nn.Sequential:
     """Create a standard architecture for SL hyperparameter tuning"""
-    layers = [
-        LayerConfig(
-            layer_type=LayerType.CONV,
-            out_channels=OutChannels.CH_32,
-            kernel_size=KernelSize.KS_3,
-            stride=Stride.S_1,
-            activation=ActivationFunction.RELU,
-        ),
-        LayerConfig(
-            layer_type=LayerType.POOL,
-            kernel_size=KernelSize.KS_3,
-            stride=Stride.S_2,
-            pool_mode=PoolMode.MAX,
-            activation=ActivationFunction.NONE,
-        ),
-        LayerConfig(
-            layer_type=LayerType.CONV,
-            out_channels=OutChannels.CH_64,
-            kernel_size=KernelSize.KS_3,
-            stride=Stride.S_1,
-            activation=ActivationFunction.RELU,
-        ),
-        LayerConfig(
-            layer_type=LayerType.POOL,
-            kernel_size=KernelSize.KS_3,
-            stride=Stride.S_2,
-            pool_mode=PoolMode.MAX,
-            activation=ActivationFunction.NONE,
-        ),
-        LayerConfig(
-            layer_type=LayerType.LINEAR,
-            linear_units=LinearUnits.LU_128,
-            activation=ActivationFunction.RELU,
-        ),
-        LayerConfig(
-            layer_type=LayerType.LINEAR,
-            linear_units=LinearUnits.LU_256,
-            activation=ActivationFunction.NONE,
-        ),
-    ]
+    model = torch.nn.Sequential(
+        # Block 1
+        torch.nn.Conv2d(3, 64, kernel_size=3, padding=1),
+        torch.nn.BatchNorm2d(64),
+        torch.nn.ReLU(),
+        torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
+        torch.nn.BatchNorm2d(64),
+        torch.nn.ReLU(),
+        torch.nn.MaxPool2d(2, 2),
+        torch.nn.Dropout(0.25),
+        # Block 2
+        torch.nn.Conv2d(64, 128, kernel_size=3, padding=1),
+        torch.nn.BatchNorm2d(128),
+        torch.nn.ReLU(),
+        torch.nn.Conv2d(128, 128, kernel_size=3, padding=1),
+        torch.nn.BatchNorm2d(128),
+        torch.nn.ReLU(),
+        torch.nn.MaxPool2d(2, 2),
+        torch.nn.Dropout(0.25),
+        # Block 3
+        torch.nn.Conv2d(128, 256, kernel_size=3, padding=1),
+        torch.nn.BatchNorm2d(256),
+        torch.nn.ReLU(),
+        torch.nn.Conv2d(256, 256, kernel_size=3, padding=1),
+        torch.nn.BatchNorm2d(256),
+        torch.nn.ReLU(),
+        torch.nn.MaxPool2d(2, 2),
+        torch.nn.Dropout(0.25),
+        # Fully connected
+        torch.nn.Flatten(),
+        torch.nn.Linear(256 * 4 * 4, 512),  # Adjusted input size after removing Block 4
+        torch.nn.ReLU(),
+        torch.nn.Dropout(0.5),
+        torch.nn.Linear(512, number_of_classes),
+    )
 
-    return NetworkConfig(layers=layers)
+    for layer in model:
+        if isinstance(layer, torch.nn.Conv2d) or isinstance(layer, torch.nn.Linear):
+            torch.nn.init.xavier_uniform_(layer.weight)  # Xavier/Glorot uniform initialization
+            if layer.bias is not None:
+                layer.bias.data.fill_(0.0)
+
+    return model
 
 
 class SLHyperparameterOptimizer:
@@ -81,6 +84,7 @@ class SLHyperparameterOptimizer:
         search_space: HyperparameterSearchSpace,
         n_trials: int = 20,
         timeout: Optional[int] = None,
+        dataset_option: DatasetOption = DatasetOption.CIFAR_10,
     ):
         self.search_space = search_space
         self.n_trials = n_trials
@@ -88,107 +92,120 @@ class SLHyperparameterOptimizer:
         self.console = Console()
         self.best_params: Optional[Dict[str, Any]] = None
         self.best_value: float = 0.0
-        self.standard_architecture = create_standard_architecture()
+        self.standard_architecture: torch.nn.Sequential | None = None
+        self.dataset_option = dataset_option
 
     def _objective(self, trial: optuna.Trial) -> float:
         """Objective function for SL hyperparameter optimization"""
 
         sl = self.search_space.sl_hyperparameters
 
-        learning_rate = trial.suggest_float(
-            "arch_lr",
-            sl.learning_rate_min,
-            sl.learning_rate_max,
-            log=True,
-        )
+        with console.status("Suggesting hyperparameters (learning rate)..."):
+            learning_rate = trial.suggest_float(
+                "arch_lr",
+                sl.learning_rate_min,
+                sl.learning_rate_max,
+                log=True,
+            )
 
-        momentum = trial.suggest_float(
-            "arch_momentum",
-            sl.momentum_min,
-            sl.momentum_max,
-        )
+        with console.status("Suggesting hyperparameters (momentum)..."):
+            momentum = trial.suggest_float(
+                "arch_momentum",
+                sl.momentum_min,
+                sl.momentum_max,
+            )
 
-        batch_size = trial.suggest_categorical(
-            "batch_size",
-            sl.batch_size_choices,
-        )
+        with console.status("Suggesting hyperparameters (batch size)..."):
+            batch_size = trial.suggest_categorical(
+                "batch_size",
+                sl.batch_size_choices,
+            )
 
-        training_epochs = trial.suggest_categorical(
-            "training_epochs",
-            sl.training_epochs_choices,
-        )
+        with console.status("Suggesting hyperparameters (training epochs)..."):
+            training_epochs = trial.suggest_categorical(
+                "training_epochs",
+                sl.training_epochs_choices,
+            )
 
-        optimizer_type = trial.suggest_categorical(
-            "optimizer_type",
-            ["SGD", "Adam", "RMSprop"],
-        )
+        with console.status("Suggesting hyperparameters (optimizer type)..."):
+            optimizer_type = trial.suggest_categorical(
+                "optimizer_type",
+                ["SGD", "Adam", "RMSprop"],
+            )
 
-        reward_weights_config = self.search_space.reward_weights
-        accuracy_weight = trial.suggest_float(
-            "accuracy_weight",
-            reward_weights_config.accuracy_weight_min,
-            reward_weights_config.accuracy_weight_max,
-        )
-        f1_weight = trial.suggest_float(
-            "f1_weight",
-            reward_weights_config.f1_weight_min,
-            reward_weights_config.f1_weight_max,
-        )
-        test_loss_weight = trial.suggest_float(
-            "test_loss_weight",
-            reward_weights_config.test_loss_weight_min,
-            reward_weights_config.test_loss_weight_max,
-        )
-        flops_weight = trial.suggest_float(
-            "flops_weight",
-            reward_weights_config.flops_weight_min,
-            reward_weights_config.flops_weight_max,
-        )
-        runtime_weight = trial.suggest_float(
-            "runtime_weight",
-            reward_weights_config.runtime_weight_min,
-            reward_weights_config.runtime_weight_max,
-        )
+        with console.status("Suggesting hyperparameters (reward weights)..."):
+            reward_weights_config = self.search_space.reward_weights
+            accuracy_weight = trial.suggest_float(
+                "accuracy_weight",
+                reward_weights_config.accuracy_weight_min,
+                reward_weights_config.accuracy_weight_max,
+            )
+        with console.status("Suggesting hyperparameters (F1 score weight)..."):
+            f1_weight = trial.suggest_float(
+                "f1_weight",
+                reward_weights_config.f1_weight_min,
+                reward_weights_config.f1_weight_max,
+            )
+        with console.status("Suggesting hyperparameters (test loss weight)..."):
+            test_loss_weight = trial.suggest_float(
+                "test_loss_weight",
+                reward_weights_config.test_loss_weight_min,
+                reward_weights_config.test_loss_weight_max,
+            )
+        with console.status("Suggesting hyperparameters (FLOPs weight)..."):
+            flops_weight = trial.suggest_float(
+                "flops_weight",
+                reward_weights_config.flops_weight_min,
+                reward_weights_config.flops_weight_max,
+            )
+        with console.status("Suggesting hyperparameters (runtime weight)..."):
+            runtime_weight = trial.suggest_float(
+                "runtime_weight",
+                reward_weights_config.runtime_weight_min,
+                reward_weights_config.runtime_weight_max,
+            )
 
         try:
-            data_importer = DataImporter(
-                max_per_class=1000, dataset_option=DatasetOption.EMNIST_BALANCED
-            )
-            train_loader, test_loader = data_importer.get_dataloaders(batch_size=batch_size)
-            train_num_classes, test_num_classes = data_importer.get_num_classes()
-            cnn_builder = CNNBuilder(
-                rl_config=self.standard_architecture, num_classes=train_num_classes
-            )
-            model = cnn_builder.build()
-
+            with console.status("Initializing data importer..."):
+                data_importer = DataImporter(max_per_class=1000, dataset_option=self.dataset_option)
+                train_loader, test_loader = data_importer.get_dataloaders(batch_size=batch_size)
+                train_num_classes, test_num_classes = data_importer.get_num_classes()
+            with console.status("Creating standard architecture..."):
+                self.standard_architecture = create_standard_architecture(train_num_classes)
             if optimizer_type == "SGD":
-                optimizer = torch.optim.SGD(
-                    model.parameters(),
+                optimizer = torch.optim.Adam(
+                    self.standard_architecture.parameters(),
                     lr=learning_rate,
-                    momentum=momentum,
                 )
             elif optimizer_type == "Adam":
-                optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+                optimizer = torch.optim.Adam(
+                    self.standard_architecture.parameters(), lr=learning_rate
+                )
             elif optimizer_type == "RMSprop":
-                optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+                optimizer = torch.optim.RMSprop(
+                    self.standard_architecture.parameters(), lr=learning_rate
+                )
             else:
                 optimizer = torch.optim.SGD(
-                    model.parameters(),
+                    self.standard_architecture.parameters(),
                     lr=learning_rate,
                     momentum=momentum,
                 )
 
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            trainer = Trainer(
-                dataloaders=(train_loader, test_loader),
-                model=model.to(device),
-                loss_function=CrossEntropyLoss().to(device),
-                optimizer=optimizer,
-                num_classes=train_num_classes,
-            )
+            with console.status("Initializing trainer..."):
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                trainer = Trainer(
+                    dataloaders=(train_loader, test_loader),
+                    model=self.standard_architecture.to(device),
+                    loss_function=CrossEntropyLoss().to(device),
+                    optimizer=optimizer,
+                    num_classes=train_num_classes,
+                    dimensions=data_importer.get_dimensions(),
+                )
 
             for epoch in range(training_epochs):
-                trainer.train()
+                with console.status(f"Training model (epoch {epoch + 1}/{training_epochs})..."):
+                    trainer.train()
 
             metrics = trainer.test()
 
@@ -218,22 +235,33 @@ class SLHyperparameterOptimizer:
             "[bold blue]Starting SL hyperparameter optimization with standard architecture...[/bold blue]"
         )
 
-        study = optuna.create_study(direction="maximize", study_name=study_name)
+        with console.status("Creating Study..."):
+            study = optuna.create_study(direction="maximize", study_name=study_name)
 
-        study.optimize(
-            self._objective,
-            n_trials=self.n_trials,
-            timeout=self.timeout,
-        )
+        with console.status("Optimizing hyperparameters..."):
+            study.optimize(
+                self._objective,
+                n_trials=self.n_trials,
+                timeout=self.timeout,
+            )
 
-        self.best_params = study.best_params
-        self.best_value = study.best_value
+        with console.status("Writing results..."):
+            self.best_params = study.best_params
+            self.best_value = study.best_value
 
-        self.console.print("[bold green]Optimization complete![/bold green]")
-        self.console.print(f"[bold green]Best value: {self.best_value:.4f}[/bold green]")
-        self.console.print("[bold cyan]Best SL parameters:[/bold cyan]")
-        for param, value in self.best_params.items():
-            self.console.print(f"  {param}: {value}")
+            self.console.print("[bold green]Optimization complete![/bold green]")
+            self.console.print(f"[bold green]Best value: {self.best_value:.4f}[/bold green]")
+            self.console.print("[bold cyan]Best SL parameters:[/bold cyan]")
+
+            with open("sl_hyperparameter_optimization_results.txt", "w") as f:
+                f.write("Best SL parameters:\n")
+                for param, value in self.best_params.items():
+                    f.write(f"{param}: {value}\n")
+                f.write("\n")
+                f.write(f"Best value: {self.best_value:.4f}\n")
+
+            for param, value in self.best_params.items():
+                self.console.print(f"  {param}: {value}")
 
         return self.best_params
 

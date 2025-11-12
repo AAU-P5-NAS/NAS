@@ -1,0 +1,13 @@
+Best SL parameters:
+arch_lr: 0.0006016577080722921
+arch_momentum: 0.6008776799861538
+batch_size: 32
+training_epochs: 15
+optimizer_type: SGD
+accuracy_weight: 6.4786971419920745
+f1_weight: 11.808717805965962
+test_loss_weight: 5.354134721637669
+flops_weight: 2.9018549115954975
+runtime_weight: 3.55112983045088
+
+Best value: -10.0000

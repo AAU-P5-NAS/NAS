@@ -7,6 +7,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
+from src.data_module.importer import DatasetOption
 from src.classification_module.reward import WeightedSumRS, Weights
 import os
 
@@ -51,6 +52,7 @@ class SBThreeAgent:
         training_epochs: int = 15,
         arch_learning_rate: float = 0.001,
         arch_momentum: float = 0.9,
+        data_set: DatasetOption = DatasetOption.CIFAR_10,
         batch_size: int = 64,
         reward_weights: Weights | None = None,
         showSamples: bool = False,
@@ -61,6 +63,7 @@ class SBThreeAgent:
             training_epochs=training_epochs,
             arch_learning_rate=arch_learning_rate,
             arch_momentum=arch_momentum,
+            data_set=data_set,
             batch_size=batch_size,
             reward_strategy=WeightedSumRS(weights=reward_weights)
             if reward_weights
