@@ -1,5 +1,5 @@
 import pytest
-from src.classification_module.reward import WeightedSumRS, Weights
+from src.classification_module.reward import WeightedSumRS, TchebycheffReward, Weights
 from src.classification_module.metrics import Metrics
 
 
@@ -39,7 +39,14 @@ def test_reward_ignores_none_values(default_metrics: Metrics):
     """Test that None metrics are ignored without breaking."""
     metrics = default_metrics
     metrics.precision = None
-    calc = WeightedSumRS()
+    w = Weights.staticWeights()
+    calc = WeightedSumRS(w)
+    reward = calc.compute_reward(metrics)
+    assert isinstance(reward, float)
+    assert reward is not None and reward == reward  # Check for NaN
+
+    w = Weights.dynamicWeightsSampler()
+    calc = TchebycheffReward(w)
     reward = calc.compute_reward(metrics)
     assert isinstance(reward, float)
     assert reward is not None and reward == reward  # Check for NaN
@@ -47,7 +54,9 @@ def test_reward_ignores_none_values(default_metrics: Metrics):
 
 def test_inverse_metrics_scaled(default_metrics: Metrics):
     """Test that flops, runtime, and architecture_size are scaled down."""
-    calc = WeightedSumRS()
+
+    w = Weights.staticWeights()
+    calc = WeightedSumRS(w)
     reward = calc.compute_reward(default_metrics)
     # If those values are large, the reward should be reduced
     smaller_flops = default_metrics.model_copy(update={"flops": 1.0})
@@ -93,16 +102,37 @@ def test_partial_metrics(default_metrics: Metrics):
 
 def test_negative_weights_raises(default_metrics: Metrics):
     """Test that negative weights raise a ValueError."""
-    negative_weights = Weights(
-        accuracy=-1.0,
-        precision=0.0,
-        recall=0.0,
-        f1_score=0.0,
-        test_loss=0.0,
-        flops=0.0,
-        runtime=0.0,
-        architecture_size=0.0,
-    )
-    calc = WeightedSumRS(weights=negative_weights)
     with pytest.raises(ValueError, match="Weights must be non-negative"):
-        calc.compute_reward(default_metrics)
+        Weights(
+            accuracy=-1.0,
+            precision=0.0,
+            recall=0.0,
+            f1_score=0.0,
+            test_loss=0.0,
+            flops=0.0,
+            runtime=0.0,
+            architecture_size=0.0,
+        )
+
+
+def test_static_weights():
+    weights = Weights.staticWeights()
+
+    for w in weights.model_dump().values():
+        assert isinstance(w, (float, int)) and w is not None
+
+
+def test_dynamic_weights_randomness():
+    weights1 = Weights.dynamicWeightsSampler().model_dump()
+    weights2 = Weights.dynamicWeightsSampler().model_dump()
+    differences = [weights1[k] != weights2[k] for k in weights1]
+    assert any(differences), "Dynamic sampler produced identical weights"
+
+
+def test_TchebycheffReward_compute(default_metrics: Metrics):
+    """Test that weights are normalized to sum to 1."""
+    w = Weights.dynamicWeightsSampler()
+    calc = TchebycheffReward(w)
+    reward = calc.compute_reward(default_metrics)
+
+    assert 0.0 <= reward <= 1.0
