@@ -348,10 +348,10 @@ def get_latest_layer(
     observation: np.ndarray, action_count: int, max_layers: int
 ) -> Optional[LayerConfig]:
     """Look for the first occurrence of 0 in the observation array with form index 8, 16, 24 ..."""
-    if action_count == 1:
+    if action_count == 0:
         return None  # First action -> No layers defined yet
 
-    last_layer_index = action_count - 2
+    last_layer_index = action_count - 1
     idx = last_layer_index * SINGLE_LAYER_OBSERVATION_SIZE
     return LayerConfig(
         layer_type=LayerType(observation[idx]),

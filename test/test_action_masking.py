@@ -43,6 +43,7 @@ def get_logits(
         + len(LinearUnits)
         + len(PoolMode)
         + len(ActivationFunction)
+        + 20  # assuming max_layers=20 for skip connections
     )
     logits = np.random.randn(sum).astype(np.float32)
 
@@ -71,11 +72,12 @@ def test_first_action_is_add_layer():
     ctx = MaskContext(
         logits=get_logits(),
         observation=get_obs(empty_config, max_layers=20),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=20),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=20,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=0,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -99,11 +101,12 @@ def test_layertype_no_none_when_adding_layer():
     ctx = MaskContext(
         logits=get_logits(next_action=StandardAction.ADD_LAYER),
         observation=get_obs(config, max_layers=20),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=20),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=20,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=4,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -129,11 +132,12 @@ def test_max_layers():
     ctx = MaskContext(
         logits=get_logits(),
         observation=get_obs(full_config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=MAX_LAYERS,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -163,11 +167,12 @@ def test_after_linear_no_conv_or_pool():
     ctx = MaskContext(
         logits=get_logits(),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=2,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -193,11 +198,12 @@ def test_layertype_is_none_after_none_action():
     ctx = MaskContext(
         logits=get_logits(next_action=StandardAction.NONE),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=1,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -220,11 +226,12 @@ def test_no_pool_without_conv():
     ctx = MaskContext(
         logits=get_logits(),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=1,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -254,11 +261,12 @@ def test_no_outputchannels_chosen_after_linear():
     ctx = MaskContext(
         logits=get_logits(),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=2,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -283,11 +291,12 @@ def test_outputchannelse_notnone_given_add_conv():
     ctx = MaskContext(
         logits=get_logits(next_action=StandardAction.ADD_LAYER, next_layer=LayerType.CONV),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=1,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -312,14 +321,16 @@ def test_outputchannels_notnone_given_add_pool():
     ctx = MaskContext(
         logits=get_logits(next_action=StandardAction.ADD_LAYER, next_layer=LayerType.POOL),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=1,
     )
 
     decisions, masked_logits = sample_actions(ctx)
+    print("Decisions:", decisions)
 
     assert decisions.out_channels_choice != OutChannels.NONE
 
@@ -341,14 +352,16 @@ def test_kernel_size_notnone_given_add_conv():
     ctx = MaskContext(
         logits=get_logits(next_action=StandardAction.ADD_LAYER, next_layer=LayerType.CONV),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=1,
     )
 
     decisions, masked_logits = sample_actions(ctx)
+    print("Decisions:", decisions)
 
     assert decisions.kernel_size_choice != KernelSize.NONE
 
@@ -370,11 +383,12 @@ def test_kernel_size_notnone_given_add_pool():
     ctx = MaskContext(
         logits=get_logits(next_action=StandardAction.ADD_LAYER, next_layer=LayerType.POOL),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=1,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -427,11 +441,12 @@ def test_correct_kernel_size_1():
     ctx = MaskContext(
         logits=get_logits(next_action=StandardAction.ADD_LAYER, next_layer=LayerType.CONV),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=5,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -478,11 +493,12 @@ def test_correct_kernel_size_1or3():
     ctx = MaskContext(
         logits=get_logits(next_action=StandardAction.ADD_LAYER, next_layer=LayerType.CONV),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=4,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -511,11 +527,12 @@ def test_linear_units_notnone_given_add_linear():
     ctx = MaskContext(
         logits=get_logits(next_action=StandardAction.ADD_LAYER, next_layer=LayerType.LINEAR),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=1,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -540,11 +557,12 @@ def test_activation_function_notnone_given_add_layer():
     ctx = MaskContext(
         logits=get_logits(next_action=StandardAction.ADD_LAYER),
         observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
+        action_count=1,
     )
 
     decisions, masked_logits = sample_actions(ctx)

@@ -65,7 +65,7 @@ def mask_action_type_sequential(ctx: MaskContext):
     """Mask action types based on current observation and strategy. Raises MaxLayersReachedException if max layers reached."""
     new_logits = ctx.logits.copy()
 
-    if ctx.action_count > ctx.max_layers:
+    if ctx.action_count >= ctx.max_layers:
         # Max layers reached, can only choose NONE
         new_logits[ctx.slices.standard_actions.all] = -np.inf
         new_logits[ctx.slices.standard_actions[StandardAction.NONE]] = 1
@@ -82,9 +82,12 @@ def mask_action_type_sequential(ctx: MaskContext):
 
 def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
+    print("logits for layer type before masking:", new_logits[ctx.slices.layer_type.all])
+    print("action choice:", ctx.decisions.action_choice)
     if ctx.decisions.action_choice == StandardAction.NONE:
         new_logits[ctx.slices.layer_type.all] = -np.inf
         new_logits[ctx.slices.layer_type[LayerType.NONE]] = 1
+        print("logits for layer type after masking NONE:", new_logits[ctx.slices.layer_type.all])
         return new_logits
 
     linear_layer_exists = any(
