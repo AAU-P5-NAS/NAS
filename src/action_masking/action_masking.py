@@ -82,12 +82,10 @@ def mask_action_type_sequential(ctx: MaskContext):
 
 def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
-    print("logits for layer type before masking:", new_logits[ctx.slices.layer_type.all])
-    print("action choice:", ctx.decisions.action_choice)
+
     if ctx.decisions.action_choice == StandardAction.NONE:
         new_logits[ctx.slices.layer_type.all] = -np.inf
         new_logits[ctx.slices.layer_type[LayerType.NONE]] = 1
-        print("logits for layer type after masking NONE:", new_logits[ctx.slices.layer_type.all])
         return new_logits
 
     linear_layer_exists = any(
