@@ -200,6 +200,14 @@ class NetworkConfig(BaseModel):
 
         return self.add_layer(action, partial_arch)
 
+    def apply_action(self, action_logits: np.ndarray) -> tuple["NetworkConfig", bool]:
+        decisions = transform_action_indices_to_decisions(action_logits)
+        if decisions.action_choice == StandardAction.NONE:
+            return self, True  # Stop and evaluate
+        else:
+            self = self.add_layer(decisions, partial_arch=self)
+            return self, False  # Do not evaluate yet
+
     def add_layer(self, actions: Decisions, partial_arch: "NetworkConfig") -> "NetworkConfig":
         lt = LayerType(actions.layer_type_choice)
         oc = OutChannels(actions.out_channels_choice)
@@ -222,6 +230,20 @@ class NetworkConfig(BaseModel):
         partial_arch.layers.append(layer_config)
 
         return partial_arch
+
+
+def transform_action_indices_to_decisions(action_indices: np.ndarray):
+    return Decisions(
+        action_choice=StandardAction(action_indices[0]),
+        layer_type_choice=LayerType(action_indices[1]),
+        out_channels_choice=OutChannels(action_indices[2]),
+        kernel_size_choice=KernelSize(action_indices[3]),
+        stride_choice=Stride(action_indices[4]),
+        linear_units_choice=LinearUnits(action_indices[5]),
+        pool_mode_choice=PoolMode(action_indices[6]),
+        activation_function_choice=ActivationFunction(action_indices[7]),
+        skip_connection_choice=action_indices[8],
+    )
 
 
 def get_number_of_actions_from_observation(observation: np.ndarray) -> int:

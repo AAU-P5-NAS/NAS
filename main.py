@@ -13,16 +13,9 @@ console = Console()
 
 
 def main():
-    show = False
-
     # Handle arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--show-samples", action="store_true")
-
-    args = parser.parse_args()
-
-    if args.show_samples:
-        show = True
 
     console.print("[bold blue]Initializing Neural Architecture Search...[/bold blue]")
 
@@ -33,12 +26,13 @@ def main():
 
     # Initialize agent with PPO algorithm
     agent = SBThreeAgent(
-        policy_algorithm_class=MaskablePPO, policy=CustomMaskablePolicy, showSamples=show
+        policy_algorithm_class=MaskablePPO,
+        policy=CustomMaskablePolicy,
     )
 
     # Train the agent
     console.print("[bold green]Starting training...[/bold green]")
-    agent.train(total_timesteps=30, log_interval=1)
+    agent.train(total_timesteps=30)
 
     # Save the trained model
     agent.save_model()

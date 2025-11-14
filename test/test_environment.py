@@ -1,11 +1,23 @@
+from model_module.hyperparameters import SLHyperParameters
+from model_module.logger import NoOpLogger
 import src.model_module.environment as environment_module
 from src.classification_module.reward import WeightedSumRS, Weights
+
+test_logger = NoOpLogger()
+
+hyperparameters = SLHyperParameters(
+    training_epochs=15,
+    learning_rate=0.001,
+    momentum=0.9,
+    batch_size=64,
+)
 
 
 def get_environment():
     environment = environment_module.CustomEnv(
-        logdir="tests/logs",
         device="cpu",
+        hyperparameters=hyperparameters,
+        tb_logger=test_logger,
         reward_strategy=WeightedSumRS(weights=Weights.staticWeights()),
     )
     return environment
@@ -13,11 +25,9 @@ def get_environment():
 
 def test_environment_initialization():
     environment = get_environment()
-    assert environment.logdir == "tests/logs"
     assert environment.device == "cpu"
     assert isinstance(environment.reward_strategy, WeightedSumRS)
-    assert environment.max_layers == 16
-    assert environment.training_epochs == 15
+    assert environment.hyperparameters.training_epochs == 15
     assert environment.data_importer is not None
 
 
