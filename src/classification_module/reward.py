@@ -1,19 +1,66 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, field_validator
 from src.classification_module.metrics import Metrics
 import numpy as np
 import abc
+import random
 
 
 class Weights(BaseModel):
-    accuracy: float = 6.0
+    model_config = ConfigDict(validate_assignment=True)
+    
+    # Performance Metrics
+    accuracy: float = 0.0
     precision: float = 0.0
     recall: float = 0.0
-    f1_score: float = 10.0
-    test_loss: float = 5.0
-    flops: float = 2.0
-    runtime: float = 3.0
-    architecture_size: float = 1.0
+    f1_score: float = 0.0
+    test_loss: float = 0.0
 
+    # Cost/Efficiency Metrics
+    flops: float = 0.0
+    runtime: float = 0.0
+    architecture_size: float = 0.0
+
+    @classmethod
+    def staticWeights(cls):
+        return cls(
+            accuracy=6.0,
+            flops=2.0,
+        )
+
+    @classmethod
+    def dynamicWeightsSampler(cls):
+        weights = {
+            # Performance Metrics
+            "accuracy": random.random(),
+            # "precision": random.random(),
+            # "recall": random.random(),
+            # "f1_score": random.random(),
+            # "test_loss": random.random(),
+            # Cost/Efficiency Metrics
+            "flops": random.random(),
+            # "runtime": random.random(),
+            # "architecture_size": random.random(),
+        }
+
+        total = sum(weights.values())
+
+        for i in weights:
+            weights[i] /= total
+        return cls(**weights)
+    
+    def normalize(self) -> "Weights":
+        """Return a new Weights instance with all values normalized to sum to 1."""
+        total = sum(self.model_dump().values())
+        if total == 0:
+            raise ValueError("Total weight cannot be zero")
+        normalized = {k: v / total for k, v in self.model_dump().items()}
+        return Weights(**normalized)
+    
+    @field_validator('*') # Validate weights
+    def non_negative(cls, v, info):
+        if v < 0:
+            raise ValueError("Weights must be non-negative")
+        return v
 
 class Baselines(BaseModel):
     """Expected ranges for normalization"""
@@ -25,20 +72,7 @@ class Baselines(BaseModel):
 
 
 class RewardStrategy(abc.ABC):
-    @abc.abstractmethod
-    def compute_reward(self, metrics: Metrics) -> float | dict[str, float]:
-        """Compute reward based on provided metrics."""
-        raise NotImplementedError
-
-
-class WeightedSumRS(RewardStrategy):
-    """
-    A basic reward strategy that computes a weighted sum of normalized metrics.
-
-    Weights and baselines can be customized via the Weights and Baselines classes.
-    """
-
-    def __init__(self, weights: Weights = Weights(), baselines: Baselines = Baselines()):
+    def __init__(self, weights: Weights, baselines: Baselines = Baselines()):
         self.weights = weights
         self.baselines = baselines
 
@@ -57,7 +91,8 @@ class WeightedSumRS(RewardStrategy):
 
         # FLOPs (lower is better)
         elif metric_name == "flops":
-            normalized = 1.0 - np.clip(value / self.baselines.max_flops, 0.0, 1.0)
+            # normalized = 1.0 - np.clip(value / self.baselines.max_flops, 0.0, 1.0)
+            normalized = 1 - np.clip(np.log(value + 1) / np.log(self.baselines.max_flops + 1), 0.0, 1.0)
             return normalized
 
         # Runtime (lower is better)
@@ -72,29 +107,34 @@ class WeightedSumRS(RewardStrategy):
 
         return 0.0
 
+    @abc.abstractmethod
+    def compute_reward(self, metrics: Metrics) -> float | dict[str, float]:
+        """Compute reward based on provided metrics."""
+        raise NotImplementedError
+
+
+class WeightedSumRS(RewardStrategy):
+    """
+    A basic reward strategy that computes a weighted sum of normalized metrics.
+
+    Weights and baselines can be customized via the Weights and Baselines classes.
+    """
+
+    def __init__(self, weights: Weights, baselines: Baselines = Baselines()):
+        super().__init__(weights, baselines)
+
     def compute_reward(self, metrics: Metrics) -> float:
         """
         Compute reward as weighted combination of normalized metrics.
         Returns a float reward in [0, 1].
         """
 
-        # Validate weights
-        for weight in self.weights.model_dump().values():
-            if weight < 0:
-                raise ValueError("Weights must be non-negative")
-
         # Normalize weights to sum to 1
-        total_weight = sum(self.weights.model_dump().values())
-        if total_weight == 0:
-            raise ValueError("Total weight cannot be zero")
-
-        normalized_weights = {
-            metric: weight / total_weight for metric, weight in self.weights.model_dump().items()
-        }
+        normalized_weights = self.weights.normalize()
 
         # Calculate weighted sum of normalized metrics
         reward = 0.0
-        for metric_name, weight in normalized_weights.items():
+        for metric_name, weight in normalized_weights.model_dump().items():
             if weight == 0:
                 continue
 
@@ -107,3 +147,79 @@ class WeightedSumRS(RewardStrategy):
             reward += weight * normalized_value
 
         return reward  # Now guaranteed in [0, 1]
+
+
+class TchebycheffReward(RewardStrategy):
+    """
+    weighted Tchebycheff scalarizing function: f_Tchb(x, w) = max_i * w_i |f_i(x) - z_star_i |
+
+    """
+
+    def __init__(self, weights: Weights, baselines: Baselines = Baselines()):
+        super().__init__(weights, baselines)
+
+        # Compute ideal reference point z* from baselines
+        self.z_star = {
+            "accuracy": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1_score": 1.0,
+            "test_loss": 0.0,
+            "flops": 0.0,
+            "runtime": 0.0,
+            "architecture_size": 0.0,
+        }
+
+    def compute_reward(self, metrics: Metrics) -> float:
+
+        # Normalize weights to sum to 1
+        normalized_weights = self.weights.normalize()
+
+        weighted_diffs = []
+        for metric_name, weight in normalized_weights.model_dump().items():
+            if weight == 0:
+                continue
+            value = getattr(metrics, metric_name, None)
+            if value is None:
+                continue
+
+            normalized_value = self._normalize_metric(metric_name, value)
+
+            z_i_star = self.z_star.get(metric_name, 0.0)
+
+            diff = weight * abs(normalized_value - z_i_star)
+            weighted_diffs.append(diff)
+
+        deviation = max(weighted_diffs) if weighted_diffs else 0.0
+        return 1 - deviation
+
+
+# _____________________________________
+if __name__ == "__main__":
+    metrics = Metrics(
+        accuracy=0.8,
+        precision=0.75,
+        recall=0.7,
+        f1_score=0.78,
+        test_loss=0.3,
+        flops=100,
+        runtime=2.0,
+        architecture_size=50,
+    )
+
+    weights = Weights.staticWeights()
+    reward = WeightedSumRS(weights)
+    print("Static W: ", weights, "\nreward: ", reward.compute_reward(metrics))
+    print("")
+
+    weights = Weights.dynamicWeightsSampler()
+    reward = TchebycheffReward(weights)
+    print("Dynamic W1: ", weights, "\nreward: ", reward.compute_reward(metrics))
+
+    weights = Weights.dynamicWeightsSampler()
+    reward = TchebycheffReward(weights)
+    print("Dynamic W2: ", weights, "\nreward: ", reward.compute_reward(metrics))
+
+    weights = Weights.dynamicWeightsSampler()
+    reward = TchebycheffReward(weights)
+    print("Dynamic W3: ", weights, "\nreward: ", reward.compute_reward(metrics))
