@@ -11,7 +11,7 @@ from src.classification_module.metrics import Metrics
 from src.classification_module.reward import RewardStrategy
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
-from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
+from src.utils.cnn_builder import flatten_cnn_config
 from src.utils.network_utils import (
     LayerType,
     NetworkConfig,
@@ -29,6 +29,7 @@ from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
 
 from src.utils.action_builder_utils import get_logit_slices
+from utils.graph_cnn import GraphCnn
 
 
 class CustomEnv(gym.Env):
@@ -94,12 +95,8 @@ class CustomEnv(gym.Env):
         self.arch_momentum = arch_momentum
         self.batch_size = batch_size
         self.reward_strategy = reward_strategy
-        self.max_actions_per_episode = (
-            max_layers
-            / 2  # (an action adds a layer and an activation function which itself is a layer)
-        )
         self.data_importer = DataImporter(dataset_option=data_set)
-        self.logit_slices = get_logit_slices()
+        self.logit_slices = get_logit_slices(self.max_layers)
         self.loader_tuple = self.data_importer.get_dataloaders(
             batch_size=64, showSamples=showSamples
         )
@@ -124,6 +121,7 @@ class CustomEnv(gym.Env):
             + len(LinearUnits)
             + len(PoolMode)
             + len(ActivationFunction)
+            + self.max_layers  # for skip connection option
         )
 
         return spaces.Box(low=0, high=1, shape=(output_actions,), dtype=np.float32)
@@ -137,7 +135,10 @@ class CustomEnv(gym.Env):
         observation_space_vector.append(len(PoolMode))
         observation_space_vector.append(len(ActivationFunction))
         observation_space_vector.append(len(LinearUnits))
-        observation_space_vector *= self.max_layers
+        observation_space_vector.append(
+            self.max_layers
+        )  # to denote a skip connection from a previous layer
+        observation_space_vector *= self.max_layers  # repeat for each layer
 
         return spaces.MultiDiscrete(observation_space_vector)
 
@@ -247,9 +248,13 @@ class CustomEnv(gym.Env):
         """
         observation = self._get_observation()
         action_to_apply = transform_logits_to_action(
-            action_logits, observation, self.max_layers, dimensions=self.dimensions
+            action_logits,
+            observation,
+            self.max_layers,
+            dimensions=self.dimensions,
+            actions_taken=self.actions_taken,
         )
-        print(f"Action to apply: {action_to_apply}")
+
         if action_to_apply is None:
             return self.current_network_config, True  # Stop and evaluate
 
@@ -320,12 +325,11 @@ class CustomEnv(gym.Env):
         self.evaluation_count += 1
         reward: float | dict[str, float]
 
-        cnn_builder = CNNBuilder(
-            rl_config=new_architecture,
-            dimensions=self.dimensions,
+        architecture = GraphCnn(
+            net_config=new_architecture,
             num_classes=self.data_importer.get_num_classes()[0],
+            input_dimensions=self.dimensions,
         )
-        architecture = cnn_builder.build()
         optimizer = torch.optim.SGD(
             architecture.parameters(),
             lr=self.arch_learning_rate,
