@@ -10,7 +10,7 @@ from src.classification_module.metrics import Metrics
 from src.classification_module.reward import RewardStrategy
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
-from src.utils.cnn_builder import CNNBuilder, flatten_cnn_config
+from src.utils.cnn_builder import flatten_cnn_config
 from src.utils.network_utils import (
     LayerType,
     NetworkConfig,
@@ -26,6 +26,7 @@ from torch.nn import CrossEntropyLoss, Module
 from rich.console import Console
 from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
+from src.utils.graph_cnn import GraphCnn
 
 from src.action_masking.action_masking_utils import (
     get_logit_slices,
@@ -81,7 +82,7 @@ class CustomEnv(gym.Env):
         reward_strategy: RewardStrategy,
         data_set: DatasetOption = DatasetOption.CIFAR_10,
         render_mode: str = "console",
-        max_layers: int = 16,
+        max_layers: int = MAX_LAYERS,
         training_epochs: int = 15,
         arch_learning_rate: float = 0.001,
         arch_momentum: float = 0.9,
@@ -92,18 +93,14 @@ class CustomEnv(gym.Env):
 
         self.device = device
         self.render_mode = render_mode
-        self.max_layers = max_layers
+        self.max_layers = MAX_LAYERS
         self.training_epochs = training_epochs
         self.arch_learning_rate = arch_learning_rate
         self.arch_momentum = arch_momentum
         self.batch_size = batch_size
         self.reward_strategy = reward_strategy
-        self.max_actions_per_episode = (
-            max_layers
-            / 2  # (an action adds a layer and an activation function which itself is a layer)
-        )
         self.data_importer = DataImporter(dataset_option=data_set)
-        self.logit_slices = get_logit_slices()
+        self.logit_slices = get_logit_slices(self.max_layers)
         self.loader_tuple = self.data_importer.get_dataloaders(
             batch_size=64, showSamples=showSamples
         )
@@ -129,29 +126,9 @@ class CustomEnv(gym.Env):
                 len(LinearUnits),
                 len(PoolMode),
                 len(ActivationFunction),
+                self.max_layers,  # for skip connection option
             ]
         )
-
-    def get_action_mask(self) -> np.ndarray:
-        """
-        Returns a boolean mask for valid actions given the current environment state.
-        This mask is used by MaskablePPO to know which actions are allowed globally.
-
-        Its only purpose is to only allow ADD_LAYER if no layers exist yet.
-
-        It is just necessary for masking to work even if it dont do much.
-        """
-        slices = get_logit_slices()
-        total_actions = slices.activation_function.stop  # assuming this is the last slice
-
-        mask = np.zeros(total_actions, dtype=bool)
-
-        if self.current_network_config.layers == []:
-            mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
-        else:
-            mask[slices.standard_actions.start : slices.standard_actions.stop] = True
-
-        return mask
 
     def _get_observation_space(self) -> spaces.Space:
         observation_space_vector: List[int] = []
@@ -162,7 +139,10 @@ class CustomEnv(gym.Env):
         observation_space_vector.append(len(PoolMode))
         observation_space_vector.append(len(ActivationFunction))
         observation_space_vector.append(len(LinearUnits))
-        observation_space_vector *= self.max_layers
+        observation_space_vector.append(
+            self.max_layers
+        )  # to denote a skip connection from a previous layer
+        observation_space_vector *= self.max_layers  # repeat for each layer
 
         return spaces.MultiDiscrete(observation_space_vector)
 
@@ -239,7 +219,6 @@ class CustomEnv(gym.Env):
         self.actions_taken += 1
 
         new_architecture, should_evaluate = self._get_new_architecture(action_logits)
-
         if should_evaluate:
             self.evaluated_this_step = True
             reward = self._evaluate_architecture(new_architecture)
@@ -339,12 +318,11 @@ class CustomEnv(gym.Env):
         self.evaluation_count += 1
         reward: float | dict[str, float]
 
-        cnn_builder = CNNBuilder(
-            rl_config=new_architecture,
-            dimensions=self.dimensions,
+        architecture = GraphCnn(
+            net_config=new_architecture,
             num_classes=self.data_importer.get_num_classes()[0],
+            input_dimensions=self.dimensions,
         )
-        architecture = cnn_builder.build()
         optimizer = torch.optim.SGD(
             architecture.parameters(),
             lr=self.arch_learning_rate,
@@ -454,6 +432,27 @@ class CustomEnv(gym.Env):
                 self.console.print(
                     f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
                 )
+
+    def get_action_mask(self) -> np.ndarray:
+        """
+        Returns a boolean mask for valid actions given the current environment state.
+        This mask is used by MaskablePPO to know which actions are allowed globally.
+
+        Its only purpose is to only allow ADD_LAYER if no layers exist yet.
+
+        It is just necessary for masking to work even if it dont do much.
+        """
+        slices = get_logit_slices(max_layers=self.max_layers)
+        total_actions = slices.skip_connection.stop  # assuming this is the last slice
+
+        mask = np.zeros(total_actions, dtype=bool)
+
+        if self.current_network_config.layers == []:
+            mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
+        else:
+            mask[slices.standard_actions.start : slices.standard_actions.stop] = True
+
+        return mask
 
 
 """ 

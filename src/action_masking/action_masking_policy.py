@@ -4,6 +4,7 @@ import torch
 
 from src.action_masking.action_masking_utils import (
     get_logit_slices,
+    max_sampling,
     transform_decisions_to_action_indices,
     standard_stochastic_sampling,
 )
@@ -14,6 +15,7 @@ from src.action_masking.action_masking import (
 )
 from src.utils.network_utils import (
     EMPTY_DECISIONS,
+    get_number_of_actions_from_observation,
 )
 from src.data_module.cifar.cifar10 import DEFAULT_W, DEFAULT_H, NUM_CHANNELS
 
@@ -35,16 +37,17 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
         # 2. Get raw policy network logits from features
         logits = self.action_net(latent_pi).squeeze(0)  # [total_action_dim]
 
+        sampling_strategy = standard_stochastic_sampling if not deterministic else max_sampling
+        action_count = get_number_of_actions_from_observation(obs.squeeze(0).cpu().numpy())
         ctx = MaskContext(
             logits=logits.detach().cpu().numpy(),  # ensure format
             observation=obs.squeeze(0).cpu().numpy(),
-            slices=get_logit_slices(),
-            sampling_strategy=standard_stochastic_sampling
-            if not deterministic
-            else np.argmax,  # deterministic uses argmax
+            slices=get_logit_slices(MAX_LAYERS),
+            sampling_strategy=sampling_strategy,
             max_layers=MAX_LAYERS,
             decisions=EMPTY_DECISIONS,
             input_dimensions=(NUM_CHANNELS, DEFAULT_H, DEFAULT_W),
+            action_count=action_count,
         )
 
         # 4. Sample sequential actions
@@ -54,7 +57,7 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
         # 5. Transform decisions to action indices tensor
         # Actions must be a tensor of a specific shape for SB3
         actions = torch.tensor(
-            transform_decisions_to_action_indices(decisions, ctx.slices),
+            np.array(transform_decisions_to_action_indices(decisions, ctx.slices), dtype=np.int64),
             device=obs.device,
             dtype=torch.long,
         ).unsqueeze(0)

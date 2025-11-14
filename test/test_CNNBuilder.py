@@ -7,6 +7,7 @@ import onnx
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.utils.network_utils import (
+    SINGLE_LAYER_OBSERVATION_SIZE,
     LayerType,
     OutChannels,
     KernelSize,
@@ -116,7 +117,9 @@ def test_onnx_export_raises_CNNExportError(valid_rl_config):
 def test_cnn_config_to_flatt(valid_rl_config, size):
     flatten = flatten_cnn_config(valid_rl_config, size)
 
-    assert len(flatten) == size * 7, f"Expected {size * 7}, got {len(flatten)}"
+    assert len(flatten) == size * SINGLE_LAYER_OBSERVATION_SIZE, (
+        f"Expected {size * SINGLE_LAYER_OBSERVATION_SIZE}, got {len(flatten)}"
+    )
     assert all(isinstance(x, int) for x in flatten)
     assert all(x >= -1 for x in flatten)
 

@@ -21,32 +21,6 @@ from src.utils.network_utils import (
     ActivationFunction,
 )
 
-"""
-LogitSlice: 
-    An enhanced slice wrapper to manage action logits for different action types.
-    Provides methods to get absolute indices and access slice properties.
-
-Slices:
-    A Pydantic model to hold LogitSlice instances for various action categories.
-    Enables structured access to different action slices.
-
-MaskContext:
-    A Pydantic model encapsulating the context needed for action masking.
-    Contains logits, observation, slices, action strategy, sampling strategy, max layers, and decisions.
-
-Decisions:
-    A Pydantic model to store the choices made for each action type during the masking process.
-    Includes a method to convert decisions to a list of integers.
-
-The raw logits from the Agent are organized into a Slices object for easier management and sampling. 
-This helps with masking specific invalid actions. For example, to mask out linear units: 
-    masked_logits = ctx.logits.copy()
-    masked_logits[ctx.slices.linear_units.all] = -np.inf # mask all linear units
-    masked_logits[ctx.slices.linear_units.idx(LinearUnits.UNIT_128)] = 1  # explicitly allow 128 units
-    masked_logits[ctx.slices.linear_units[LinearUnits.UNIT_128]] = -np.inf  # Can also use indexing with [] (same as above)
-    return masked_logits 
-"""
-
 
 class LogitSlice:
     def __init__(self, slc: slice):
@@ -87,6 +61,7 @@ class Slices(BaseModel):
     linear_units: LogitSlice
     pool_mode: LogitSlice
     activation_function: LogitSlice
+    skip_connection: LogitSlice
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def idx(self, enum_name: str, enum_value: enum.Enum) -> int:
@@ -94,7 +69,7 @@ class Slices(BaseModel):
         return getattr(self, enum_name).idx(enum_value)
 
 
-def get_logit_slices():
+def get_logit_slices(max_layers: int):
     sizes = {
         "standard_actions": len(StandardAction),
         "layer_type": len(LayerType),
@@ -104,6 +79,7 @@ def get_logit_slices():
         "linear_units": len(LinearUnits),
         "pool_mode": len(PoolMode),
         "activation_function": len(ActivationFunction),
+        "skip_connection": max_layers,
     }
     idx = 0
     logit_slices = {}
@@ -122,6 +98,7 @@ class MaskContext(BaseModel):
     max_layers: int
     decisions: Decisions
     input_dimensions: Tuple[int, int, int]
+    action_count: int
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
@@ -134,6 +111,7 @@ NO_ACTION_DECISIONS = Decisions(
     linear_units_choice=LinearUnits.NONE,
     pool_mode_choice=PoolMode.NONE,
     activation_function_choice=ActivationFunction.NONE,
+    skip_connection_choice=None,
 )
 
 
@@ -148,6 +126,9 @@ def transform_decisions_to_action_indices(decisions: Decisions, slices: Slices) 
             decisions.linear_units_choice.value,
             decisions.pool_mode_choice.value,
             decisions.activation_function_choice.value,
+            decisions.skip_connection_choice
+            if decisions.skip_connection_choice is not None
+            else slices.skip_connection.stop,
         ]
     )
 
@@ -162,6 +143,7 @@ def transform_action_indices_to_decisions(action_indices: np.ndarray, slices: Sl
         linear_units_choice=LinearUnits(action_indices[5]),
         pool_mode_choice=PoolMode(action_indices[6]),
         activation_function_choice=ActivationFunction(action_indices[7]),
+        skip_connection_choice=action_indices[8],
     )
 
 
@@ -178,6 +160,22 @@ def sample_action_for_slice(ctx: MaskContext, enum_class_type: Type[E], slice_na
         enum_class = enum_class_type(int(ctx.sampling_strategy(logits)))
 
     return enum_class
+
+
+def sample_skip_connection(ctx: MaskContext):
+    logits = ctx.logits[ctx.slices.skip_connection.all]
+    valid_indices = np.where(logits > -np.inf)[0]
+
+    length = len(valid_indices)
+
+    if length <= 1:
+        return None
+
+    sampled_index = ctx.sampling_strategy(logits)
+    if sampled_index == ctx.max_layers - 1:
+        return None  # no skip connection
+
+    return sampled_index
 
 
 def standard_stochastic_sampling(logits: np.ndarray) -> int:
