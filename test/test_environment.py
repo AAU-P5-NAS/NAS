@@ -1,13 +1,12 @@
-import pytest
 import src.model_module.environment as environment_module
-from src.classification_module.reward import WeightedSumRS
+from src.classification_module.reward import WeightedSumRS, Weights
 
 
 def get_environment():
     environment = environment_module.CustomEnv(
         logdir="tests/logs",
         device="cpu",
-        reward_strategy=WeightedSumRS(),
+        reward_strategy=WeightedSumRS(weights=Weights.staticWeights()),
     )
     return environment
 
@@ -69,6 +68,7 @@ def test_get_new_architecture():
         1,  # Tanh
         1,  # Softmax
     ]
+    action_logits += [0] * environment.max_layers  # add skip logits
 
     architecture, should_evaluate = environment._get_new_architecture(
         action_logits=np.array(action_logits, dtype=np.float32)
@@ -124,6 +124,7 @@ def test_get_new_architecture():
         0,  # Tanh
         0,  # Softmax
     ]
+    action_logits += [0] * environment.max_layers  # add skip logits
 
     architecture, should_evaluate = environment._get_new_architecture(
         action_logits=np.array(action_logits, dtype=np.float32)
@@ -177,6 +178,7 @@ def test_get_new_architecture():
         0,  # Tanh
         0,  # Softmax
     ]
+    action_logits += [0] * environment.max_layers  # add skip logits
 
     architecture, should_evaluate = environment._get_new_architecture(
         action_logits=np.array(action_logits, dtype=np.float32)

@@ -67,7 +67,7 @@ class SBThreeAgent:
             batch_size=batch_size,
             reward_strategy=WeightedSumRS(weights=reward_weights)
             if reward_weights
-            else WeightedSumRS(),
+            else WeightedSumRS(Weights(accuracy=0.5, flops=0.5)),
             showSamples=showSamples,
         )
         self.model = policy_algorithm_class(
