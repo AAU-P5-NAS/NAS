@@ -82,7 +82,6 @@ class CustomEnv(gym.Env):
         reward_strategy: RewardStrategy,
         data_set: DatasetOption = DatasetOption.CIFAR_10,
         render_mode: str = "console",
-        max_layers: int = MAX_LAYERS,
         training_epochs: int = 15,
         arch_learning_rate: float = 0.001,
         arch_momentum: float = 0.9,
