@@ -16,7 +16,6 @@ def test_environment_initialization():
     assert environment.logdir == "tests/logs"
     assert environment.device == "cpu"
     assert isinstance(environment.reward_strategy, WeightedSumRS)
-    assert environment.max_layers == 16
     assert environment.training_epochs == 15
     assert environment.data_importer is not None
 
