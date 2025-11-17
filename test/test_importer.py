@@ -1,10 +1,6 @@
-import random
 import sys
 import os
-import torch
 import pytest
-import math
-import matplotlib.pyplot as plt
 
 # Fixes import issues when running tests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

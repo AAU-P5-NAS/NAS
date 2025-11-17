@@ -6,7 +6,6 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
-from src.model_module.action_builder import transform_logits_to_action
 from src.classification_module.metrics import Metrics
 from src.classification_module.reward import RewardStrategy
 from src.classification_module.train import Trainer
@@ -27,9 +26,14 @@ from torch.nn import CrossEntropyLoss, Module
 from rich.console import Console
 from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
+from src.utils.graph_cnn import GraphCnn
 
-from src.utils.action_builder_utils import get_logit_slices
-from utils.graph_cnn import GraphCnn
+from src.action_masking.action_masking_utils import (
+    get_logit_slices,
+    transform_action_indices_to_decisions,
+)
+
+MAX_LAYERS = 16
 
 
 class CustomEnv(gym.Env):
@@ -78,7 +82,6 @@ class CustomEnv(gym.Env):
         reward_strategy: RewardStrategy,
         data_set: DatasetOption = DatasetOption.CIFAR_10,
         render_mode: str = "console",
-        max_layers: int = 16,
         training_epochs: int = 15,
         arch_learning_rate: float = 0.001,
         arch_momentum: float = 0.9,
@@ -89,14 +92,13 @@ class CustomEnv(gym.Env):
 
         self.device = device
         self.render_mode = render_mode
-        self.max_layers = max_layers
         self.training_epochs = training_epochs
         self.arch_learning_rate = arch_learning_rate
         self.arch_momentum = arch_momentum
         self.batch_size = batch_size
         self.reward_strategy = reward_strategy
         self.data_importer = DataImporter(dataset_option=data_set)
-        self.logit_slices = get_logit_slices(self.max_layers)
+        self.logit_slices = get_logit_slices(max_layers=MAX_LAYERS)
         self.loader_tuple = self.data_importer.get_dataloaders(
             batch_size=64, showSamples=showSamples
         )
@@ -112,19 +114,19 @@ class CustomEnv(gym.Env):
         self.logdir = logdir
 
     def _get_action_space(self) -> spaces.Space:
-        output_actions = (
-            len(StandardAction)
-            + len(LayerType)
-            + len(OutChannels)
-            + len(KernelSize)
-            + len(Stride)
-            + len(LinearUnits)
-            + len(PoolMode)
-            + len(ActivationFunction)
-            + self.max_layers  # for skip connection option
+        return spaces.MultiDiscrete(
+            [
+                len(StandardAction),
+                len(LayerType),
+                len(OutChannels),
+                len(KernelSize),
+                len(Stride),
+                len(LinearUnits),
+                len(PoolMode),
+                len(ActivationFunction),
+                MAX_LAYERS,  # for skip connection option
+            ]
         )
-
-        return spaces.Box(low=0, high=1, shape=(output_actions,), dtype=np.float32)
 
     def _get_observation_space(self) -> spaces.Space:
         observation_space_vector: List[int] = []
@@ -136,14 +138,14 @@ class CustomEnv(gym.Env):
         observation_space_vector.append(len(ActivationFunction))
         observation_space_vector.append(len(LinearUnits))
         observation_space_vector.append(
-            self.max_layers
+            MAX_LAYERS
         )  # to denote a skip connection from a previous layer
-        observation_space_vector *= self.max_layers  # repeat for each layer
+        observation_space_vector *= MAX_LAYERS  # repeat for each layer
 
         return spaces.MultiDiscrete(observation_space_vector)
 
     def _get_observation(self) -> np.ndarray:
-        flattened_obs = flatten_cnn_config(self.current_network_config, self.max_layers)
+        flattened_obs = flatten_cnn_config(self.current_network_config, MAX_LAYERS)
         return np.array(flattened_obs, dtype=np.float32)
 
     def _write_summary(self, logger: Logger, summary_writer: SummaryWriter) -> None:
@@ -199,24 +201,22 @@ class CustomEnv(gym.Env):
         observation = self._get_observation()
         return observation, self.info
 
-    def step(self, action_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
+    def step(self, decision_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
 
         :Args:
-        - action: The logits produced by the agent's policy network.
+        - decision_logits: The logits produced by the agent's policy network after masking. (represents decisions)
 
         :Returns:
         - tuple: (observation, reward, terminated, truncated, info)
         """
 
         self.evaluated_this_step = False
-
         self.info = {}
         self.step_count += 1
         self.actions_taken += 1
 
-        new_architecture, should_evaluate = self._get_new_architecture(action_logits)
-
+        new_architecture, should_evaluate = self._get_new_architecture(decision_logits)
         if should_evaluate:
             self.evaluated_this_step = True
             reward = self._evaluate_architecture(new_architecture)
@@ -237,32 +237,23 @@ class CustomEnv(gym.Env):
 
         return obs, reward, terminated, truncated, self.info
 
-    def _get_new_architecture(self, action_logits: np.ndarray) -> tuple[NetworkConfig, bool]:
-        """Build a new architecture based on the agent's action logits.
+    def _get_new_architecture(self, decision_logits: np.ndarray) -> tuple[NetworkConfig, bool]:
+        """Build a new architecture based on the agent's decision logits.
 
         :Args:
-        - action_logits: The logits produced by the agent's policy network.
+        - decision_logits: The logits produced by the agent's policy network after masking.
 
         :Returns:
         - tuple: (new_network_config, should_evaluate)
         """
-        observation = self._get_observation()
-        action_to_apply = transform_logits_to_action(
-            action_logits,
-            observation,
-            self.max_layers,
-            dimensions=self.dimensions,
-            actions_taken=self.actions_taken,
-        )
-
-        if action_to_apply is None:
+        decisions = transform_action_indices_to_decisions(decision_logits, self.logit_slices)
+        if decisions.action_choice == StandardAction.NONE:
             return self.current_network_config, True  # Stop and evaluate
-
-        new_network_config = self.current_network_config.extend(
-            action=action_to_apply, partial_arch=self.current_network_config
-        )
-        self.current_network_config = new_network_config
-        return new_network_config, False  # Do not evaluate yet
+        else:
+            self.current_network_config = self.current_network_config.add_layer(
+                decisions, partial_arch=self.current_network_config
+            )
+            return self.current_network_config, False  # Do not evaluate yet
 
     def _train_classifier(
         self,
@@ -351,7 +342,6 @@ class CustomEnv(gym.Env):
         self.console.print(
             f"[bold blue]Reward for evaluation '{self.evaluation_count}':\n{reward}[/bold blue]"
         )
-
         self.print_layers(new_architecture.layers)
 
         return reward
@@ -440,6 +430,27 @@ class CustomEnv(gym.Env):
                 self.console.print(
                     f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
                 )
+
+    def get_action_mask(self) -> np.ndarray:
+        """
+        Returns a boolean mask for valid actions given the current environment state.
+        This mask is used by MaskablePPO to know which actions are allowed globally.
+
+        Its only purpose is to only allow ADD_LAYER if no layers exist yet.
+
+        It is just necessary for masking to work even if it dont do much.
+        """
+        slices = get_logit_slices(max_layers=MAX_LAYERS)
+        total_actions = slices.skip_connection.stop  # assuming this is the last slice
+
+        mask = np.zeros(total_actions, dtype=bool)
+
+        if self.current_network_config.layers == []:
+            mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
+        else:
+            mask[slices.standard_actions.start : slices.standard_actions.stop] = True
+
+        return mask
 
 
 """ 

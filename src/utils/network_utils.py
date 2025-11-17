@@ -224,6 +224,16 @@ class NetworkConfig(BaseModel):
         return partial_arch
 
 
+def get_number_of_actions_from_observation(observation: np.ndarray) -> int:
+    """Count the number of defined layers in the observation array."""
+    count = 0
+    for i in range(0, len(observation), SINGLE_LAYER_OBSERVATION_SIZE):
+        if observation[i] == 0:
+            break
+        count += 1
+    return count
+
+
 def update_spatial_dims(
     h: int, w: int, kernel: int, stride: int, padding: int = 0
 ) -> Tuple[int, int]:
@@ -274,16 +284,16 @@ def get_layer_from_index(observation: np.ndarray, index: int, max_layers: int) -
 
 
 def get_valid_kernel_sizes(
-    last_layer_output_dims: tuple[int, int], padding: int = 1
+    last_layer_output_dims: tuple[int, int], padding: int = 0
 ) -> list[KernelSize]:
-    """Get valid kernel sizes based on last layer's output dimensions and padding. Assumes square kernels and no dilation."""
     h, w = last_layer_output_dims
     min_dim = min(h, w)
-    max_kernel_size = min_dim + 2 * padding  # ignore stride, chosen later
-    valid_kernels = []
-
-    valid_kernels.extend(kernel for kernel in KernelSize if kernel.value <= max_kernel_size)
-
+    max_kernel_size = min_dim  # ignore padding entirely
+    valid_kernels = [
+        kernel
+        for kernel in KernelSize
+        if kernel.to_kernel() is not None and kernel.to_kernel() <= max_kernel_size
+    ]
     return valid_kernels
 
 
@@ -293,10 +303,12 @@ def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig)
 
     h, w = input_dims
     if layer.layer_type == LayerType.CONV:
-        padding = layer.kernel_size.value // 2  # assuming same padding
-        h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.to_stride(), padding)
+        padding = layer.kernel_size.to_kernel() // 2  # assuming same padding
+        h, w = update_spatial_dims(
+            h, w, layer.kernel_size.to_kernel(), layer.stride.to_stride(), padding
+        )
     elif layer.layer_type == LayerType.POOL:
-        h, w = update_spatial_dims(h, w, layer.kernel_size.value, layer.stride.to_stride())
+        h, w = update_spatial_dims(h, w, layer.kernel_size.to_kernel(), layer.stride.to_stride())
     return h, w
 
 
@@ -318,24 +330,28 @@ def get_valid_strides(
     """Get valid stride values that won't make output dimensions too small. Assumes square kernels and no dilation."""
     h, w = last_layer_output_dims
     min_dim = min(h, w)
-    max_stride = min_dim + 2 * padding - kernel_size.value + 1
+    max_stride = min_dim + 2 * padding - kernel_size.to_kernel() + 1
     valid_strides = []
 
     if max_stride < 1:
         return valid_strides
 
-    valid_strides.extend(stride for stride in Stride if stride.value <= max_stride)
+    valid_strides.extend(
+        stride
+        for stride in Stride
+        if stride.to_stride() is not None and stride.to_stride() <= max_stride
+    )
     return valid_strides
 
 
 def get_latest_layer(
     observation: np.ndarray, action_count: int, max_layers: int
 ) -> Optional[LayerConfig]:
-    """Look for the first occurrence of 0 in the observation array with form index 8, 16, 24 ..."""
-    if action_count == 1:
-        return None  # First action -> No layers defined yet
+    # action_count = number of layers
+    if action_count == 0:
+        return None 
 
-    last_layer_index = action_count - 2
+    last_layer_index = action_count - 1
     idx = last_layer_index * SINGLE_LAYER_OBSERVATION_SIZE
     return LayerConfig(
         layer_type=LayerType(observation[idx]),
