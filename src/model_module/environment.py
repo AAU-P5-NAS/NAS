@@ -22,6 +22,7 @@ from src.utils.network_utils import (
     LinearUnits,
     PoolMode,
     ActivationFunction,
+    transform_action_indices_to_decisions,
 )
 from torch.nn import CrossEntropyLoss
 from rich.console import Console
@@ -61,6 +62,7 @@ class CustomEnv(gym.Env):
         self.reward_strategy = reward_strategy
         self.tb_logger = tb_logger
         self.data_importer = DataImporter(dataset_option=dataset)
+        self.logit_slices = get_logit_slices(max_layers=MAX_LAYERS)
         self.loader_tuple = self.data_importer.get_dataloaders(
             batch_size=self.hyperparameters.batch_size
         )
@@ -125,11 +127,11 @@ class CustomEnv(gym.Env):
         observation = self._get_observation()
         return observation, self.info
 
-    def step(self, action_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
+    def step(self, decision_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
 
         :Args:
-        - action: The logits produced by the agent's policy network.
+        - decision_logits: The logits produced by the agent's policy network after masking. (represents decisions)
 
         :Returns:
         - tuple: (observation, reward, terminated, truncated, info)
@@ -137,8 +139,7 @@ class CustomEnv(gym.Env):
 
         self.info = {}
 
-        new_architecture, should_evaluate = self.current_network_config.apply_action(action_logits)
-
+        new_architecture, should_evaluate = self._get_new_architecture(decision_logits)
         if should_evaluate:
             reward = self._evaluate_architecture(new_architecture)
             terminated = True
@@ -158,6 +159,24 @@ class CustomEnv(gym.Env):
         self.actions_taken += 1
 
         return obs, reward, terminated, truncated, self.info
+
+    def _get_new_architecture(self, decision_logits: np.ndarray) -> tuple[NetworkConfig, bool]:
+        """Build a new architecture based on the agent's decision logits.
+
+        :Args:
+        - decision_logits: The logits produced by the agent's policy network after masking.
+
+        :Returns:
+        - tuple: (new_network_config, should_evaluate)
+        """
+        decisions = transform_action_indices_to_decisions(decision_logits)
+        if decisions.action_choice == StandardAction.NONE:
+            return self.current_network_config, True  # Stop and evaluate
+        else:
+            self.current_network_config = self.current_network_config.add_layer(
+                decisions, partial_arch=self.current_network_config
+            )
+            return self.current_network_config, False  # Do not evaluate yet
 
     def _train_classifier(
         self,
