@@ -92,14 +92,13 @@ class CustomEnv(gym.Env):
 
         self.device = device
         self.render_mode = render_mode
-        self.max_layers = MAX_LAYERS
         self.training_epochs = training_epochs
         self.arch_learning_rate = arch_learning_rate
         self.arch_momentum = arch_momentum
         self.batch_size = batch_size
         self.reward_strategy = reward_strategy
         self.data_importer = DataImporter(dataset_option=data_set)
-        self.logit_slices = get_logit_slices(self.max_layers)
+        self.logit_slices = get_logit_slices(max_layers=MAX_LAYERS)
         self.loader_tuple = self.data_importer.get_dataloaders(
             batch_size=64, showSamples=showSamples
         )
@@ -125,7 +124,7 @@ class CustomEnv(gym.Env):
                 len(LinearUnits),
                 len(PoolMode),
                 len(ActivationFunction),
-                self.max_layers,  # for skip connection option
+                MAX_LAYERS,  # for skip connection option
             ]
         )
 
@@ -139,14 +138,14 @@ class CustomEnv(gym.Env):
         observation_space_vector.append(len(ActivationFunction))
         observation_space_vector.append(len(LinearUnits))
         observation_space_vector.append(
-            self.max_layers
+            MAX_LAYERS
         )  # to denote a skip connection from a previous layer
-        observation_space_vector *= self.max_layers  # repeat for each layer
+        observation_space_vector *= MAX_LAYERS  # repeat for each layer
 
         return spaces.MultiDiscrete(observation_space_vector)
 
     def _get_observation(self) -> np.ndarray:
-        flattened_obs = flatten_cnn_config(self.current_network_config, self.max_layers)
+        flattened_obs = flatten_cnn_config(self.current_network_config, MAX_LAYERS)
         return np.array(flattened_obs, dtype=np.float32)
 
     def _write_summary(self, logger: Logger, summary_writer: SummaryWriter) -> None:
@@ -202,11 +201,11 @@ class CustomEnv(gym.Env):
         observation = self._get_observation()
         return observation, self.info
 
-    def step(self, action_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
+    def step(self, decision_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
 
         :Args:
-        - action: The logits produced by the agent's policy network.
+        - decision_logits: The logits produced by the agent's policy network after masking. (represents decisions)
 
         :Returns:
         - tuple: (observation, reward, terminated, truncated, info)
@@ -217,7 +216,7 @@ class CustomEnv(gym.Env):
         self.step_count += 1
         self.actions_taken += 1
 
-        new_architecture, should_evaluate = self._get_new_architecture(action_logits)
+        new_architecture, should_evaluate = self._get_new_architecture(decision_logits)
         if should_evaluate:
             self.evaluated_this_step = True
             reward = self._evaluate_architecture(new_architecture)
@@ -238,16 +237,16 @@ class CustomEnv(gym.Env):
 
         return obs, reward, terminated, truncated, self.info
 
-    def _get_new_architecture(self, action_logits: np.ndarray) -> tuple[NetworkConfig, bool]:
-        """Build a new architecture based on the agent's action logits.
+    def _get_new_architecture(self, decision_logits: np.ndarray) -> tuple[NetworkConfig, bool]:
+        """Build a new architecture based on the agent's decision logits.
 
         :Args:
-        - action_logits: The logits produced by the agent's policy network after masking.
+        - decision_logits: The logits produced by the agent's policy network after masking.
 
         :Returns:
         - tuple: (new_network_config, should_evaluate)
         """
-        decisions = transform_action_indices_to_decisions(action_logits, self.logit_slices)
+        decisions = transform_action_indices_to_decisions(decision_logits, self.logit_slices)
         if decisions.action_choice == StandardAction.NONE:
             return self.current_network_config, True  # Stop and evaluate
         else:
@@ -441,7 +440,7 @@ class CustomEnv(gym.Env):
 
         It is just necessary for masking to work even if it dont do much.
         """
-        slices = get_logit_slices(max_layers=self.max_layers)
+        slices = get_logit_slices(max_layers=MAX_LAYERS)
         total_actions = slices.skip_connection.stop  # assuming this is the last slice
 
         mask = np.zeros(total_actions, dtype=bool)

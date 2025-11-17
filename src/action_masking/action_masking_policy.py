@@ -83,6 +83,7 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
             "linear_units",
             "pool_mode",
             "activation_function",
+            "skip_connection",
         ]
 
         decision_values = [
@@ -94,6 +95,7 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
             decisions.linear_units_choice.value,
             decisions.pool_mode_choice.value,
             decisions.activation_function_choice.value,
+            decisions.skip_connection_choice if decisions.skip_connection_choice is not None else 0,
         ]
 
         log_probs = []
