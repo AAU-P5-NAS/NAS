@@ -81,6 +81,7 @@ class SLHyperparameterOptimizer:
     """Optimize Supervised Learning hyperparameters using a standard architecture"""
 
     trials_run = 0
+    TRAINING_EPOCHS = 25
 
     def __init__(
         self,
@@ -115,12 +116,6 @@ class SLHyperparameterOptimizer:
             batch_size = trial.suggest_categorical(
                 "batch_size",
                 sl.batch_size_choices,
-            )
-
-        with console.status("Suggesting hyperparameters (training epochs)..."):
-            training_epochs = trial.suggest_categorical(
-                "training_epochs",
-                sl.training_epochs_choices,
             )
 
         with console.status("Suggesting hyperparameters (optimizer type)..."):
@@ -186,8 +181,8 @@ class SLHyperparameterOptimizer:
                     dimensions=data_importer.get_dimensions(),
                 )
 
-            for epoch in range(training_epochs):
-                with console.status(f"Training model (epoch {epoch + 1}/{training_epochs})..."):
+            for epoch in range(self.TRAINING_EPOCHS):
+                with console.status(f"Training model (epoch {epoch + 1}/{self.TRAINING_EPOCHS})..."):
                     trainer.train()
 
             metrics = trainer.test()
@@ -195,7 +190,6 @@ class SLHyperparameterOptimizer:
             reward_calculator = WeightedSumRS(weights=Weights(accuracy=0.5, flops=0.5))
             reward = reward_calculator.compute_reward(metrics)
 
-            self.trials_run += 1
             return float(reward)
 
         except Exception as e:
@@ -205,6 +199,9 @@ class SLHyperparameterOptimizer:
                 print(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
             print(f"Error: {e}")
             return -10.0
+        
+        finally:
+            self.trials_run += 1
 
     def optimize(
         self,
