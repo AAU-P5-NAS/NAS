@@ -89,6 +89,7 @@ class SLHyperparameterOptimizer:
         n_trials: int = 20,
         timeout: Optional[int] = None,
         dataset_option: DatasetOption = DatasetOption.CIFAR_10,
+        seed: Optional[int] = None,
     ):
         self.search_space = search_space
         self.n_trials = n_trials
@@ -98,6 +99,7 @@ class SLHyperparameterOptimizer:
         self.best_value: float = 0.0
         self.standard_architecture: torch.nn.Sequential | None = None
         self.dataset_option = dataset_option
+        self.seed = seed
 
     def _objective(self, trial: optuna.Trial) -> float:
         """Objective function for SL hyperparameter optimization"""
@@ -198,7 +200,7 @@ class SLHyperparameterOptimizer:
             for frame in tb:
                 print(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
             print(f"Error: {e}")
-            return -10.0
+            return -9999999
         
         finally:
             self.trials_run += 1
@@ -214,7 +216,8 @@ class SLHyperparameterOptimizer:
         )
 
         with console.status("Creating Study..."):
-            study = optuna.create_study(direction="maximize", study_name=study_name)
+            sampler = optuna.samplers.NSGAIIISampler(seed=self.seed)
+            study = optuna.create_study(direction="maximize", study_name=study_name, sampler=sampler)
 
         with console.status(
             f"Optimizing hyperparameters (Trial {self.trials_run}/{self.n_trials})..."
@@ -254,10 +257,12 @@ class RLHyperparameterOptimizer:
         search_space: HyperparameterSearchSpace,
         n_trials: int = 10,
         timeout: Optional[int] = None,
+        seed: Optional[int] = None,
     ):
         self.search_space = search_space
         self.n_trials = n_trials
         self.timeout = timeout
+        self.seed = seed
         self.console = Console()
         self.best_params: Optional[Dict[str, Any]] = None
         self.best_value: float = 0.0
@@ -313,7 +318,8 @@ class RLHyperparameterOptimizer:
             "[yellow]Warning: RL hyperparameter tuning is computationally expensive![/yellow]"
         )
 
-        study = optuna.create_study(direction="maximize", study_name=study_name)
+        sampler = optuna.samplers.NSGAIIISampler(seed=self.seed)
+        study = optuna.create_study(direction="maximize", study_name=study_name, sampler=sampler)
 
         study.optimize(
             lambda trial: self._objective(trial, agent_class, total_timesteps, sl_hyperparams),

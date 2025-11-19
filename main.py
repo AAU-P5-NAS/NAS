@@ -25,6 +25,7 @@ def main():
     parser.add_argument("--clean-saved-models", action="store_true")
     parser.add_argument("--policy-seed", type=int, default=None, help="Random seed for reproducibility")
     parser.add_argument("--torch-seed", type=int, default=None, help="Random seed for classifier initialization")
+    parser.add_argument("--optuna-seed", type=int, default=None, help="Random seed for hyperparameter optimization")
     parser.add_argument(
         "--dataset", type=str, default="CIFAR_10", help="Dataset to use, default: CIFAR_10"
     )
@@ -38,6 +39,9 @@ def main():
     if args.policy_seed is not None:
         console.print(f"[yellow]Set policy seed to '{args.policy_seed}'[/yellow]")
 
+    if args.optuna_seed is not None:
+        console.print(f"[yellow]Set optuna seed to '{args.optuna_seed}'[/yellow]")
+
     if args.show_samples:
         show = True
 
@@ -48,9 +52,9 @@ def main():
         )
 
         console.print("[bold magenta]Starting Hyperparameter Optimization...[/bold magenta]")
-        optimizer = SLHyperparameterOptimizer(search_space=HyperparameterSearchSpace(), n_trials=args.optimize_hyperparameters)
+        optimizer = SLHyperparameterOptimizer(search_space=HyperparameterSearchSpace(), n_trials=args.optimize_hyperparameters, seed=args.optuna_seed)
         best_hyperparameters = optimizer.optimize()
-        console.print(f"[bold magenta]Best Hyperparameters: {best_hyperparameters}[/bold magenta]")
+        console.print(f"[bold magenta]Best Hyperparameters: \n{best_hyperparameters}[/bold magenta]")
         return
 
     dataset = DatasetOption[args.dataset]
