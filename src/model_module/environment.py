@@ -255,25 +255,6 @@ class CustomEnv(gym.Env):
             )
             return self.current_network_config, False  # Do not evaluate yet
 
-    def add_dropout_layers(self, model: torch.nn.Module, p: float):
-        """Add droupout layers to the model.
-        
-        :args:
-        - model: The model to add the dropout layers to.
-        - p: The dropout probability. 
-        """
-        # For each layer in the model
-        for name, module in model.named_children():
-            # If modulelist or sequential, then recursively go through modules
-            if isinstance(module, (torch.nn.ModuleList | torch.nn.Sequential)):
-                self.add_dropout_layers(module, p)
-            
-            # If layer is linear or convolutional
-            if isinstance(module, (torch.nn.Linear | torch.nn.Conv2d)):
-                # Replace layer with itself and a dropout appended
-                setattr(model, name, torch.nn.Sequential(module, torch.nn.Dropout2d(p)))
-                
-
     def _train_classifier(
         self,
         dataloaders: Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader],
@@ -293,7 +274,7 @@ class CustomEnv(gym.Env):
         - Metrics | float: The evaluation metrics after training, or a penalty float if training failed.
         """
         
-        self.add_dropout_layers(model, DROPOUT_PROBABILITY)
+        print("Arch:\n", model)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         trainer = Trainer(

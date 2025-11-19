@@ -9,6 +9,7 @@ from src.utils.network_utils import (
     update_spatial_dims,
 )
 
+DROPOUT_PROBABILITY = 0.2
 
 class GraphCnn(nn.Module):
     def __init__(
@@ -29,6 +30,7 @@ class GraphCnn(nn.Module):
         for index, layer_config in enumerate(self.net_config.layers):
             if layer_config.layer_type == LayerType.LINEAR and not has_flattened:
                 self.layers.append(nn.Flatten())
+                self.layers.append(nn.Dropout(DROPOUT_PROBABILITY))
                 has_flattened = True
                 in_channels *= h * w
                 h, w = 1, 1  # no longer relevant
