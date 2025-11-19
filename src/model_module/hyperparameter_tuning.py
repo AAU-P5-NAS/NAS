@@ -192,7 +192,7 @@ class SLHyperparameterOptimizer:
 
             metrics = trainer.test()
            
-            reward_calculator = WeightedSumRS(weights=Weights())
+            reward_calculator = WeightedSumRS(weights=Weights(accuracy=0.5, flops=0.5))
             reward = reward_calculator.compute_reward(metrics)
 
             self.trials_run += 1

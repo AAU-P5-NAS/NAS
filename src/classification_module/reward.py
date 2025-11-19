@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, field_validator
 from src.classification_module.metrics import Metrics
 import numpy as np
@@ -19,6 +20,26 @@ class Weights(BaseModel):
     flops: float = 0.0
     runtime: float = 0.0
     architecture_size: float = 0.0
+
+    def __init__(
+            self, 
+            accuracy: float = 0.0, 
+            precision: float = 0.0,
+            recall: float = 0.0, 
+            f1_score: float = 0.0,
+            test_loss:float = 0.0, 
+            flops: float = 0.0,
+            runtime: float = 0.0, 
+            architecture_size: float = 0.0  
+        ):
+        self.accuracy = accuracy
+        self.precision = precision
+        self.recall = recall
+        self.f1_score = f1_score
+        self.test_loss = test_loss
+        self.flops = flops
+        self.runtime = runtime
+        self.architecture_size = architecture_size
 
     @classmethod
     def staticWeights(cls):
