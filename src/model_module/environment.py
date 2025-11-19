@@ -262,6 +262,7 @@ class CustomEnv(gym.Env):
             architecture=architecture,
             current_config=self.current_network_config,
             actions_taken=self.actions_taken,
+            metrics=training_results,
         )
 
         return reward

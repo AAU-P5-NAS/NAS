@@ -61,6 +61,9 @@ class TensorboardLogger:
         current_config: NetworkConfig | None = None,
     ):
         """Update the logger's latest state."""
+        print(
+            "metrics received:",
+        )
         if reward is not None:
             self.newest_reward = reward
         if actions_taken is not None:
@@ -86,7 +89,7 @@ class TensorboardLogger:
 
         record_optional("Custom/Reward", self.newest_reward)
         record_optional("Custom/Actions Taken", self.newest_actions_taken)
-
+        print("self metrics: ", self.newest_metrics)
         if self.newest_metrics is not None:
             record_optional("Custom/Test Loss", self.newest_metrics.test_loss)
             record_optional("Custom/Accuracy", self.newest_metrics.accuracy)
@@ -113,6 +116,7 @@ class TensorboardLogger:
         architecture: torch.nn.Module | None,
         current_config: NetworkConfig | None,
         actions_taken: Optional[int] = None,
+        metrics: Optional[Metrics] = None,
     ):
         """Update state, print to console, and log to TensorBoard."""
 
@@ -133,7 +137,7 @@ class TensorboardLogger:
         # Then update logger state (this calls log_to_tensorboard)
         self.update(
             reward=reward_to_store,
-            metrics=Metrics(accuracy=accuracy),
+            metrics=metrics,
             architecture=architecture,
             current_config=current_config,
             actions_taken=actions_taken,
