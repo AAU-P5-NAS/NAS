@@ -34,7 +34,6 @@ from src.action_masking.action_masking_utils import (
 )
 
 MAX_LAYERS = 16
-DROPOUT_PROBABILITY = 0.2
 
 class CustomEnv(gym.Env):
     """
@@ -273,8 +272,6 @@ class CustomEnv(gym.Env):
         :Returns:
         - Metrics | float: The evaluation metrics after training, or a penalty float if training failed.
         """
-        
-        print("Arch:\n", model)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         trainer = Trainer(
