@@ -125,7 +125,7 @@ def test_skip_connection_conv_to_linear():
         ),
         make_layer(
             LayerType.LINEAR,
-            linear_units=LinearUnits.LU_128,
+            linear_units=LinearUnits.LU_512,
             skip_connection=0,
         ),
     ]
