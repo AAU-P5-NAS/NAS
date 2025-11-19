@@ -35,7 +35,6 @@ from src.action_masking.action_masking_utils import (
 
 MAX_LAYERS = 16
 
-
 class CustomEnv(gym.Env):
     """
     🎯 What skill should the agent learn?

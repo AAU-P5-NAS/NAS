@@ -1,16 +1,17 @@
-import pytest
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
+import pytest
+
 from src.utils.network_utils import (
+    NetworkConfig,
     LayerConfig,
     LayerType,
-    NetworkConfig,
-    PoolMode,
+    LinearUnits,
     OutChannels,
     KernelSize,
     Stride,
-    LinearUnits,
     ActivationFunction,
+    PoolMode,
 )
 from src.utils.graph_cnn import GraphCnn
 
@@ -125,7 +126,7 @@ def test_skip_connection_conv_to_linear():
         ),
         make_layer(
             LayerType.LINEAR,
-            linear_units=LinearUnits.LU_128,
+            linear_units=LinearUnits.LU_512,
             skip_connection=0,
         ),
     ]
@@ -224,3 +225,54 @@ def test_batch_norm_with_skip_connections(input_tensor):
             assert any(isinstance(m, nn.BatchNorm2d) for m in seq), (
                 "BatchNorm should be added after Conv layers"
             )
+
+
+def count_dropouts_and_find_flatten(layers: nn.ModuleList):
+    """Helper: count nn.Dropout occurrences and find first Flatten index and whether Dropout follows."""
+    total_dropouts = 0
+    flatten_followed_by_dropout = False
+
+    for i, mod in enumerate(layers):
+        # If module is a sequential container, inspect its children
+        if isinstance(mod, nn.Sequential):
+            children = list(mod)
+            for j, child in enumerate(children):
+                if isinstance(child, nn.Flatten):
+                    # ensure there's a next element and it's a Dropout
+                    if j + 1 < len(children) and isinstance(children[j + 1], nn.Dropout):
+                        flatten_followed_by_dropout = True
+                if isinstance(child, nn.Dropout):
+                    total_dropouts += 1
+        else:
+            if isinstance(mod, nn.Flatten):
+                # check next top-level module
+                if i + 1 < len(layers) and isinstance(layers[i + 1], nn.Dropout):
+                    flatten_followed_by_dropout = True
+            if isinstance(mod, nn.Dropout):
+                total_dropouts += 1
+
+    return total_dropouts, flatten_followed_by_dropout
+
+
+def test_dropout_after_flatten_when_linear_layer():
+    # Build a NetworkConfig with a single LINEAR layer (should cause flatten+dropout inside sequential)
+    net = NetworkConfig(layers=[make_layer(LayerType.LINEAR)])
+
+    model = GraphCnn(net, num_classes=LinearUnits.LU_64.to_units(), input_dimensions=(1, 28, 28))
+
+    total_dropouts, flatten_followed = count_dropouts_and_find_flatten(model.layers)
+
+    assert total_dropouts == 1, f"Expected exactly one Dropout, found {total_dropouts}"
+    assert flatten_followed, "Expected Dropout to appear immediately after Flatten"
+
+
+def test_dropout_appended_when_no_linear_layers():
+    # NetworkConfig with a CONV then POOL (no linear) -> flatten+Dropout should be appended at the end
+    net = NetworkConfig(layers=[make_layer(LayerType.CONV), make_layer(LayerType.POOL)])
+
+    model = GraphCnn(net, num_classes=10, input_dimensions=(1, 28, 28))
+
+    total_dropouts, flatten_followed = count_dropouts_and_find_flatten(model.layers)
+
+    assert total_dropouts == 1, f"Expected exactly one Dropout, found {total_dropouts}"
+    assert flatten_followed, "Expected Dropout to appear immediately after Flatten"
