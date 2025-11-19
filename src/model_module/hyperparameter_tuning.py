@@ -192,8 +192,6 @@ class SLHyperparameterOptimizer:
             reward_calculator = WeightedSumRS(weights=Weights(accuracy=0.5, flops=0.5))
             reward = reward_calculator.compute_reward(metrics)
 
-            return float(reward)
-
         except Exception as e:
             self.console.print(f"[bold red]Trial failed: {e}[/bold red]")
             tb = traceback.extract_tb(e.__traceback__)
@@ -204,6 +202,9 @@ class SLHyperparameterOptimizer:
         
         finally:
             self.trials_run += 1
+
+        return float(reward)
+
 
     def optimize(
         self,
@@ -220,7 +221,7 @@ class SLHyperparameterOptimizer:
             study = optuna.create_study(direction="maximize", study_name=study_name, sampler=sampler)
 
         with console.status(
-            f"Optimizing hyperparameters (Trial {self.trials_run}/{self.n_trials})..."
+            f"Optimizing hyperparameters (Trial {self.trials_run+1}/{self.n_trials})..."
         ):
             study.optimize(
                 self._objective,
