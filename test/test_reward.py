@@ -118,13 +118,13 @@ def test_negative_weights_raises(default_metrics: Metrics):
 def test_static_weights():
     weights = Weights.staticWeights()
 
-    for w in weights.model_dump().values():
+    for w in weights.__dict__.values():
         assert isinstance(w, (float, int)) and w is not None
 
 
 def test_dynamic_weights_randomness():
-    weights1 = Weights.dynamicWeightsSampler().model_dump()
-    weights2 = Weights.dynamicWeightsSampler().model_dump()
+    weights1 = Weights.dynamicWeightsSampler().__dict__
+    weights2 = Weights.dynamicWeightsSampler().__dict__
     differences = [weights1[k] != weights2[k] for k in weights1]
     assert any(differences), "Dynamic sampler produced identical weights"
 

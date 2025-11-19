@@ -6,7 +6,7 @@ import abc
 import random
 
 
-class Weights(BaseModel):
+class Weights():
     model_config = ConfigDict(validate_assignment=True)
     
     # Performance Metrics
@@ -32,14 +32,20 @@ class Weights(BaseModel):
             runtime: float = 0.0, 
             architecture_size: float = 0.0  
         ):
-        self.accuracy = accuracy
-        self.precision = precision
-        self.recall = recall
-        self.f1_score = f1_score
-        self.test_loss = test_loss
-        self.flops = flops
-        self.runtime = runtime
-        self.architecture_size = architecture_size
+        self.accuracy = self.validate_non_negative(accuracy)
+        self.precision = self.validate_non_negative(precision)
+        self.recall =  self.validate_non_negative(recall)
+        self.f1_score = self.validate_non_negative(f1_score)
+        self.test_loss = self.validate_non_negative(test_loss)
+        self.flops = self.validate_non_negative(flops)
+        self.runtime = self.validate_non_negative(runtime)
+        self.architecture_size = self.validate_non_negative(architecture_size)
+
+    @staticmethod
+    def validate_non_negative(value: float) -> float:
+        if value < 0:
+            raise ValueError("Weights must be non-negative")
+        return value
 
     @classmethod
     def staticWeights(cls):
@@ -71,17 +77,13 @@ class Weights(BaseModel):
     
     def normalize(self) -> "Weights":
         """Return a new Weights instance with all values normalized to sum to 1."""
-        total = sum(self.model_dump().values())
+        total = sum(self.__dict__.values())
         if total == 0:
             raise ValueError("Total weight cannot be zero")
-        normalized = {k: v / total for k, v in self.model_dump().items()}
+        normalized = {k: v / total for k, v in self.__dict__.items()}
         return Weights(**normalized)
     
-    @field_validator('*') # Validate weights
-    def non_negative(cls, v, info):
-        if v < 0:
-            raise ValueError("Weights must be non-negative")
-        return v
+
 
 class Baselines(BaseModel):
     """Expected ranges for normalization"""
@@ -155,7 +157,7 @@ class WeightedSumRS(RewardStrategy):
 
         # Calculate weighted sum of normalized metrics
         reward = 0.0
-        for metric_name, weight in normalized_weights.model_dump().items():
+        for metric_name, weight in normalized_weights.__dict__.items():
             if weight == 0:
                 continue
 
@@ -197,7 +199,7 @@ class TchebycheffReward(RewardStrategy):
         normalized_weights = self.weights.normalize()
 
         weighted_diffs = []
-        for metric_name, weight in normalized_weights.model_dump().items():
+        for metric_name, weight in normalized_weights.__dict__.items():
             if weight == 0:
                 continue
             value = getattr(metrics, metric_name, None)
