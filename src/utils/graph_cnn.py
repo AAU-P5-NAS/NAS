@@ -44,11 +44,11 @@ class GraphCnn(nn.Module):
 
         if not self.has_flattened:
             self.layers.append(nn.Flatten())
+            self.layers.append(nn.Dropout(DROPOUT_PROBABILITY))
             in_channels *= h * w
             h, w = 1, 1
 
         if in_channels != self.num_classes:
-            self.layers.append(nn.Dropout(DROPOUT_PROBABILITY))
             self.layers.append(nn.Linear(in_channels, self.num_classes))
 
     def forward(self, x: Tensor) -> Tensor:
