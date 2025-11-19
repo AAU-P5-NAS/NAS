@@ -1,3 +1,4 @@
+from typing import Optional
 import torch
 from src.model_module.environment import CustomEnv
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -56,6 +57,7 @@ class SBThreeAgent:
         batch_size: int = 64,
         reward_weights: Weights | None = None,
         showSamples: bool = False,
+        policy_seed: Optional[int] = None,
     ):
         self.env: CustomEnv = CustomEnv(
             device=device,
@@ -78,6 +80,7 @@ class SBThreeAgent:
             device="cpu",
             learning_rate=learning_rate,
             tensorboard_log=self.TB_LOG_DIRECTORY,
+            seed=policy_seed,
         )
         self.model_save_path = f"{self.MODEL_SAVE_DIRECTORY}{self.model.__class__.__name__}"
 
