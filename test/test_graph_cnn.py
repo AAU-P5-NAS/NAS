@@ -1,7 +1,7 @@
 import pytest
 import torch
 from torch import nn, Tensor
-from utils.network_utils import (
+from src.utils.network_utils import (
     LayerConfig,
     LayerType,
     NetworkConfig,
@@ -12,7 +12,7 @@ from utils.network_utils import (
     LinearUnits,
     ActivationFunction,
 )
-from utils.graph_cnn import GraphCnn
+from src.utils.graph_cnn import GraphCnn
 
 
 @pytest.fixture
@@ -162,3 +162,65 @@ def test_forward_pass_runs_without_error(input_tensor):
     with torch.no_grad():
         out = model(input_tensor)
     assert out.shape == (4, 10)
+
+
+def test_batch_norm_not_added_for_small_nets(input_tensor):
+    """Test: BatchNorm is not added for small networks (less than 4 conv layers)"""
+    layers = [
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.POOL),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.POOL),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.POOL),
+        make_layer(LayerType.LINEAR),
+    ]
+    net_config = NetworkConfig(layers=layers)
+    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+
+    # Check that no BatchNorm layers are present
+    assert not any(isinstance(m, nn.BatchNorm2d) for m in model.layers), (
+        "No BatchNorm should be added"
+    )
+
+
+def test_batch_norm_added_for_large_nets(input_tensor):
+    """Test: BatchNorm is added for networks with 4 or more conv layers"""
+    layers = [
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.LINEAR),
+    ]
+    net_config = NetworkConfig(layers=layers)
+    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+
+    print(model.layers)
+
+    # Check that BatchNorm layers are present after Conv layers
+    for seq in model.layers:
+        if isinstance(seq, nn.Sequential) and any(isinstance(m, nn.Conv2d) for m in seq):
+            assert any(isinstance(m, nn.BatchNorm2d) for m in seq), (
+                "BatchNorm should be added after Conv layers"
+            )
+
+
+def test_batch_norm_with_skip_connections(input_tensor):
+    """Test: BatchNorm is added correctly when skip connections are present"""
+    layers = [
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.CONV, skip_connection=0),
+        make_layer(LayerType.CONV, skip_connection=2),
+        make_layer(LayerType.LINEAR),
+    ]
+    net_config = NetworkConfig(layers=layers)
+    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+
+    # Check that BatchNorm layers are present after Conv layers
+    for seq in model.layers:
+        if isinstance(seq, nn.Sequential) and any(isinstance(m, nn.Conv2d) for m in seq):
+            assert any(isinstance(m, nn.BatchNorm2d) for m in seq), (
+                "BatchNorm should be added after Conv layers"
+            )
