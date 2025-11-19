@@ -30,7 +30,7 @@ from torch.nn import CrossEntropyLoss
 console = Console()
 
 
-def create_standard_architecture(number_of_classes: int) -> torch.nn.Sequential:
+def create_standard_architecture(number_of_classes: int, dropout_rate_pooling_layer: float, dropout_rate_linear_layer: float) -> torch.nn.Sequential:
     """Create a standard architecture for SL hyperparameter tuning"""
     model = torch.nn.Sequential(
         # Block 1
@@ -41,7 +41,7 @@ def create_standard_architecture(number_of_classes: int) -> torch.nn.Sequential:
         torch.nn.BatchNorm2d(64),
         torch.nn.ReLU(),
         torch.nn.MaxPool2d(2, 2),
-        torch.nn.Dropout(0.25),
+        torch.nn.Dropout(dropout_rate_pooling_layer),
         # Block 2
         torch.nn.Conv2d(64, 128, kernel_size=3, padding=1),
         torch.nn.BatchNorm2d(128),
@@ -50,7 +50,7 @@ def create_standard_architecture(number_of_classes: int) -> torch.nn.Sequential:
         torch.nn.BatchNorm2d(128),
         torch.nn.ReLU(),
         torch.nn.MaxPool2d(2, 2),
-        torch.nn.Dropout(0.25),
+        torch.nn.Dropout(dropout_rate_pooling_layer),
         # Block 3
         torch.nn.Conv2d(128, 256, kernel_size=3, padding=1),
         torch.nn.BatchNorm2d(256),
@@ -59,12 +59,12 @@ def create_standard_architecture(number_of_classes: int) -> torch.nn.Sequential:
         torch.nn.BatchNorm2d(256),
         torch.nn.ReLU(),
         torch.nn.MaxPool2d(2, 2),
-        torch.nn.Dropout(0.25),
+        torch.nn.Dropout(dropout_rate_pooling_layer),
         # Fully connected
         torch.nn.Flatten(),
         torch.nn.Linear(256 * 4 * 4, 512),  # Adjusted input size after removing Block 4
         torch.nn.ReLU(),
-        torch.nn.Dropout(0.5),
+        torch.nn.Dropout(dropout_rate_linear_layer),
         torch.nn.Linear(512, number_of_classes),
     )
 
@@ -111,13 +111,6 @@ class SLHyperparameterOptimizer:
                 log=True,
             )
 
-        with console.status("Suggesting hyperparameters (momentum)..."):
-            momentum = trial.suggest_float(
-                "arch_momentum",
-                sl.momentum_min,
-                sl.momentum_max,
-            )
-
         with console.status("Suggesting hyperparameters (batch size)..."):
             batch_size = trial.suggest_categorical(
                 "batch_size",
@@ -136,36 +129,16 @@ class SLHyperparameterOptimizer:
                 ["SGD", "Adam", "RMSprop"],
             )
 
-        with console.status("Suggesting hyperparameters (reward weights)..."):
-            reward_weights_config = self.search_space.reward_weights
-            accuracy_weight = trial.suggest_float(
-                "accuracy_weight",
-                reward_weights_config.accuracy_weight_min,
-                reward_weights_config.accuracy_weight_max,
+        with console.status("Suggesting hyperparameters (dropout rates)..."):
+            dropout_rate_pooling_layer = trial.suggest_float(
+                "dropout_rate_pooling_layer",
+                sl.dropout_rate_pooling_layer_min,
+                sl.dropout_rate_pooling_layer_max,
             )
-        with console.status("Suggesting hyperparameters (F1 score weight)..."):
-            f1_weight = trial.suggest_float(
-                "f1_weight",
-                reward_weights_config.f1_weight_min,
-                reward_weights_config.f1_weight_max,
-            )
-        with console.status("Suggesting hyperparameters (test loss weight)..."):
-            test_loss_weight = trial.suggest_float(
-                "test_loss_weight",
-                reward_weights_config.test_loss_weight_min,
-                reward_weights_config.test_loss_weight_max,
-            )
-        with console.status("Suggesting hyperparameters (FLOPs weight)..."):
-            flops_weight = trial.suggest_float(
-                "flops_weight",
-                reward_weights_config.flops_weight_min,
-                reward_weights_config.flops_weight_max,
-            )
-        with console.status("Suggesting hyperparameters (runtime weight)..."):
-            runtime_weight = trial.suggest_float(
-                "runtime_weight",
-                reward_weights_config.runtime_weight_min,
-                reward_weights_config.runtime_weight_max,
+            dropout_rate_linear_layer = trial.suggest_float(
+                "dropout_rate_linear_layer",
+                sl.dropout_rate_linear_layer_min,
+                sl.dropout_rate_linear_layer_max,
             )
 
         try:
@@ -174,26 +147,33 @@ class SLHyperparameterOptimizer:
                 train_loader, test_loader = data_importer.get_dataloaders(batch_size=batch_size)
                 train_num_classes, test_num_classes = data_importer.get_num_classes()
             with console.status("Creating standard architecture..."):
-                self.standard_architecture = create_standard_architecture(train_num_classes)
+                self.standard_architecture = create_standard_architecture(train_num_classes, dropout_rate_pooling_layer, dropout_rate_linear_layer)
             if optimizer_type == "SGD":
-                optimizer = torch.optim.Adam(
-                    self.standard_architecture.parameters(),
-                    lr=learning_rate,
-                )
-            elif optimizer_type == "Adam":
-                optimizer = torch.optim.Adam(
-                    self.standard_architecture.parameters(), lr=learning_rate
-                )
-            elif optimizer_type == "RMSprop":
-                optimizer = torch.optim.RMSprop(
-                    self.standard_architecture.parameters(), lr=learning_rate
-                )
-            else:
+                with console.status("Suggesting hyperparameters (momentum)..."):
+                    momentum = trial.suggest_float(
+                        "arch_momentum",
+                        sl.momentum_min,
+                        sl.momentum_max,
+                    )
+                
                 optimizer = torch.optim.SGD(
                     self.standard_architecture.parameters(),
                     lr=learning_rate,
                     momentum=momentum,
                 )
+
+            elif optimizer_type == "Adam":
+                optimizer = torch.optim.Adam(
+                    self.standard_architecture.parameters(), lr=learning_rate
+                )
+
+            elif optimizer_type == "RMSprop":
+                optimizer = torch.optim.RMSprop(
+                    self.standard_architecture.parameters(), lr=learning_rate
+                )
+                
+            else:
+                raise ValueError(f"Unsupported optimizer type: {optimizer_type}")
 
             with console.status("Initializing trainer..."):
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -211,15 +191,8 @@ class SLHyperparameterOptimizer:
                     trainer.train()
 
             metrics = trainer.test()
-
-            reward_weights = Weights(
-                accuracy=accuracy_weight,
-                f1_score=f1_weight,
-                test_loss=test_loss_weight,
-                flops=flops_weight,
-                runtime=runtime_weight,
-            )
-            reward_calculator = WeightedSumRS(weights=reward_weights)
+           
+            reward_calculator = WeightedSumRS(weights=Weights())
             reward = reward_calculator.compute_reward(metrics)
 
             self.trials_run += 1

@@ -30,6 +30,12 @@ class SLHyperParameters(BaseModel):
     learning_rate_min: float = 1e-4
     learning_rate_max: float = 1e-2
 
+    dropout_rate_pooling_layer_min: float = 0.1
+    dropout_rate_pooling_layer_max: float = 0.5
+
+    dropout_rate_linear_layer_min: float = 0.3
+    dropout_rate_linear_layer_max: float = 0.7
+
     momentum: float = 0.9
     momentum_min: float = 0.5
     momentum_max: float = 0.95
