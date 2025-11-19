@@ -1,7 +1,13 @@
 from typing import Dict, cast
 from torch import Tensor
 import torch.nn as nn
-from utils.network_utils import LayerConfig, LayerType, NetworkConfig, PoolMode, update_spatial_dims
+from src.utils.network_utils import (
+    LayerConfig,
+    LayerType,
+    NetworkConfig,
+    PoolMode,
+    update_spatial_dims,
+)
 
 
 class GraphCnn(nn.Module):

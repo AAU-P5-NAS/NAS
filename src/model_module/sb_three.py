@@ -7,12 +7,17 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import TensorBoardOutputFormat
+from sb3_contrib.common.wrappers import ActionMasker
 
 from src.data_module.importer import DatasetOption
 from src.classification_module.reward import WeightedSumRS, Weights
 import os
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def mask_fn(env):
+    return env.get_action_mask()
 
 
 class CustomEnvCallBack(BaseCallback):
@@ -30,7 +35,6 @@ class CustomEnvCallBack(BaseCallback):
         )
 
     def _on_step(self) -> bool:
-        print("")
         if isinstance(self.training_env, DummyVecEnv):
             for env in self.training_env.envs:
                 if isinstance(env, Monitor):
@@ -59,18 +63,20 @@ class SBThreeAgent:
         showSamples: bool = False,
         policy_seed: Optional[int] = None,
     ):
-        self.env: CustomEnv = CustomEnv(
-            device=device,
-            logdir=self.TB_LOG_DIRECTORY,
-            training_epochs=training_epochs,
-            arch_learning_rate=arch_learning_rate,
-            arch_momentum=arch_momentum,
-            data_set=data_set,
-            batch_size=batch_size,
-            reward_strategy=WeightedSumRS(weights=reward_weights)
-            if reward_weights
-            else WeightedSumRS(Weights(accuracy=0.5, flops=0.5)),
-            showSamples=showSamples,
+        self.env = ActionMasker(
+            CustomEnv(
+                device=device,
+                logdir=self.TB_LOG_DIRECTORY,
+                training_epochs=training_epochs,
+                arch_learning_rate=arch_learning_rate,
+                arch_momentum=arch_momentum,
+                batch_size=batch_size,
+                reward_strategy=WeightedSumRS(weights=reward_weights)
+                if reward_weights
+                else WeightedSumRS(Weights(accuracy=0.5, flops=0.5)),
+                showSamples=showSamples,
+            ),
+            action_mask_fn=mask_fn,
         )
         self.model = policy_algorithm_class(
             policy=policy,
@@ -122,7 +128,7 @@ class SBThreeAgent:
             while not done:
                 action, _ = self.model.predict(obs, deterministic=True)
                 obs, reward, terminated, truncated, _ = self.env.step(action)
-                episode_reward += reward
+                episode_reward += float(reward)
                 done = terminated or truncated
 
             total_rewards.append(episode_reward)
