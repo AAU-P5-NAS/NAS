@@ -28,11 +28,16 @@ class GraphCnn(nn.Module):
 
     def build(self):
         in_channels, h, w = self.input_dimensions
+        apply_batch = (
+            sum(1 for layer in self.net_config.layers if layer.layer_type == LayerType.CONV) >= 4
+        )
         for index, layer_config in enumerate(self.net_config.layers):
             if layer_config.layer_type is LayerType.NONE:
                 continue
 
-            layer, out_channels, h, w = self.build_single_layer(layer_config, in_channels, h, w)
+            layer, out_channels, h, w = self.build_single_layer(
+                layer_config, in_channels, h, w, apply_batch
+            )
             self.layers.append(layer)
             self.layer_shapes[index] = (out_channels, h, w)
 
@@ -119,7 +124,9 @@ class GraphCnn(nn.Module):
             if in_channels != out_channels:
                 self.projections[proj_name] = nn.Linear(in_channels, out_channels)
 
-    def build_single_layer(self, layer_config: LayerConfig, in_channels: int, h: int, w: int):
+    def build_single_layer(
+        self, layer_config: LayerConfig, in_channels: int, h: int, w: int, apply_batch: bool = True
+    ):
         """Builds one layer from LayerConfig and returns:
         - pytorch module (nn.module)
         - updated (in_channels, h, w)
@@ -140,6 +147,10 @@ class GraphCnn(nn.Module):
                 padding=padding,
             )
             modules.append(conv)
+
+            # Add batch norm if specified
+            if apply_batch:
+                modules.append(nn.BatchNorm2d(out_ch))
 
             # Add activation
             if layer_config.activation is not None:
