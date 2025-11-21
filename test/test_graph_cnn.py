@@ -15,6 +15,7 @@ from src.utils.network_utils import (
 )
 from src.utils.graph_cnn import GraphCnn
 
+
 @pytest.fixture
 def input_tensor():
     """(batch_size, channels, height, width)"""
@@ -164,6 +165,68 @@ def test_forward_pass_runs_without_error(input_tensor):
     assert out.shape == (4, 10)
 
 
+def test_batch_norm_not_added_for_small_nets(input_tensor):
+    """Test: BatchNorm is not added for small networks (less than 4 conv layers)"""
+    layers = [
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.POOL),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.POOL),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.POOL),
+        make_layer(LayerType.LINEAR),
+    ]
+    net_config = NetworkConfig(layers=layers)
+    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+
+    # Check that no BatchNorm layers are present
+    assert not any(isinstance(m, nn.BatchNorm2d) for m in model.layers), (
+        "No BatchNorm should be added"
+    )
+
+
+def test_batch_norm_added_for_large_nets(input_tensor):
+    """Test: BatchNorm is added for networks with 4 or more conv layers"""
+    layers = [
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.LINEAR),
+    ]
+    net_config = NetworkConfig(layers=layers)
+    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+
+    print(model.layers)
+
+    # Check that BatchNorm layers are present after Conv layers
+    for seq in model.layers:
+        if isinstance(seq, nn.Sequential) and any(isinstance(m, nn.Conv2d) for m in seq):
+            assert any(isinstance(m, nn.BatchNorm2d) for m in seq), (
+                "BatchNorm should be added after Conv layers"
+            )
+
+
+def test_batch_norm_with_skip_connections(input_tensor):
+    """Test: BatchNorm is added correctly when skip connections are present"""
+    layers = [
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.CONV),
+        make_layer(LayerType.CONV, skip_connection=0),
+        make_layer(LayerType.CONV, skip_connection=2),
+        make_layer(LayerType.LINEAR),
+    ]
+    net_config = NetworkConfig(layers=layers)
+    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+
+    # Check that BatchNorm layers are present after Conv layers
+    for seq in model.layers:
+        if isinstance(seq, nn.Sequential) and any(isinstance(m, nn.Conv2d) for m in seq):
+            assert any(isinstance(m, nn.BatchNorm2d) for m in seq), (
+                "BatchNorm should be added after Conv layers"
+            )
+
+
 def count_dropouts_and_find_flatten(layers: nn.ModuleList):
     """Helper: count nn.Dropout occurrences and find first Flatten index and whether Dropout follows."""
     total_dropouts = 0
@@ -201,6 +264,7 @@ def test_dropout_after_flatten_when_linear_layer():
 
     assert total_dropouts == 1, f"Expected exactly one Dropout, found {total_dropouts}"
     assert flatten_followed, "Expected Dropout to appear immediately after Flatten"
+
 
 def test_dropout_appended_when_no_linear_layers():
     # NetworkConfig with a CONV then POOL (no linear) -> flatten+Dropout should be appended at the end
