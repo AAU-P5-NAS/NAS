@@ -13,10 +13,6 @@ console = Console()
 
 
 def main():
-    # Handle arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--show-samples", action="store_true")
-
     console.print("[bold blue]Initializing Neural Architecture Search...[/bold blue]")
 
     # Clean up old models
