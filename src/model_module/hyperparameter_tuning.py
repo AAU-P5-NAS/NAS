@@ -59,9 +59,9 @@ def create_standard_architecture(number_of_classes: int, dropout_rate_linear_lay
         torch.nn.MaxPool2d(2, 2),
         # Fully connected
         torch.nn.Flatten(),
+        torch.nn.Dropout(dropout_rate_linear_layer),
         torch.nn.Linear(256 * 4 * 4, 512),  # Adjusted input size after removing Block 4
         torch.nn.ReLU(),
-        torch.nn.Dropout(dropout_rate_linear_layer),
         torch.nn.Linear(512, number_of_classes),
     )
 
