@@ -30,7 +30,7 @@ from torch.nn import CrossEntropyLoss
 console = Console()
 
 
-def create_standard_architecture(number_of_classes: int, dropout_rate_pooling_layer: float, dropout_rate_linear_layer: float) -> torch.nn.Sequential:
+def create_standard_architecture(number_of_classes: int, dropout_rate_linear_layer: float) -> torch.nn.Sequential:
     """Create a standard architecture for SL hyperparameter tuning"""
     model = torch.nn.Sequential(
         # Block 1
@@ -41,7 +41,6 @@ def create_standard_architecture(number_of_classes: int, dropout_rate_pooling_la
         torch.nn.BatchNorm2d(64),
         torch.nn.ReLU(),
         torch.nn.MaxPool2d(2, 2),
-        torch.nn.Dropout(dropout_rate_pooling_layer),
         # Block 2
         torch.nn.Conv2d(64, 128, kernel_size=3, padding=1),
         torch.nn.BatchNorm2d(128),
@@ -50,7 +49,6 @@ def create_standard_architecture(number_of_classes: int, dropout_rate_pooling_la
         torch.nn.BatchNorm2d(128),
         torch.nn.ReLU(),
         torch.nn.MaxPool2d(2, 2),
-        torch.nn.Dropout(dropout_rate_pooling_layer),
         # Block 3
         torch.nn.Conv2d(128, 256, kernel_size=3, padding=1),
         torch.nn.BatchNorm2d(256),
@@ -59,7 +57,6 @@ def create_standard_architecture(number_of_classes: int, dropout_rate_pooling_la
         torch.nn.BatchNorm2d(256),
         torch.nn.ReLU(),
         torch.nn.MaxPool2d(2, 2),
-        torch.nn.Dropout(dropout_rate_pooling_layer),
         # Fully connected
         torch.nn.Flatten(),
         torch.nn.Linear(256 * 4 * 4, 512),  # Adjusted input size after removing Block 4
@@ -129,11 +126,11 @@ class SLHyperparameterOptimizer:
                 )
 
             with console.status("Suggesting hyperparameters (dropout rates)..."):
-                dropout_rate_pooling_layer = trial.suggest_float(
+                """dropout_rate_pooling_layer = trial.suggest_float(
                     "dropout_rate_pooling_layer",
                     sl.dropout_rate_pooling_layer_min,
                     sl.dropout_rate_pooling_layer_max,
-                )
+                )"""
                 dropout_rate_linear_layer = trial.suggest_float(
                     "dropout_rate_linear_layer",
                     sl.dropout_rate_linear_layer_min,
@@ -146,7 +143,7 @@ class SLHyperparameterOptimizer:
                     train_loader, test_loader = data_importer.get_dataloaders(batch_size=batch_size)
                     train_num_classes, test_num_classes = data_importer.get_num_classes()
                 with console.status("Creating standard architecture..."):
-                    self.standard_architecture = create_standard_architecture(train_num_classes, dropout_rate_pooling_layer, dropout_rate_linear_layer)
+                    self.standard_architecture = create_standard_architecture(train_num_classes, dropout_rate_linear_layer)
                 if optimizer_type == "SGD":
                     with console.status("Suggesting hyperparameters (momentum)..."):
                         momentum = trial.suggest_float(
@@ -191,7 +188,7 @@ class SLHyperparameterOptimizer:
 
                 metrics = trainer.test()
             
-                reward_calculator = WeightedSumRS(weights=Weights(accuracy=0.5, flops=0.5))
+                reward_calculator = WeightedSumRS(weights=Weights(accuracy=1.0))
                 reward = reward_calculator.compute_reward(metrics)
 
             except Exception as e:
