@@ -9,6 +9,8 @@ from src.utils.network_utils import (
     update_spatial_dims,
 )
 
+DROPOUT_PROBABILITY = 0.2
+
 
 class GraphCnn(nn.Module):
     def __init__(
@@ -21,22 +23,21 @@ class GraphCnn(nn.Module):
         self.layers = nn.ModuleList()
         self.layer_shapes: dict[int, tuple[int, int, int]] = {}
         self.projections = nn.ModuleDict()
+        self.has_flattened = False
         self.build()
 
     def build(self):
         in_channels, h, w = self.input_dimensions
-        has_flattened = False
+        apply_batch = (
+            sum(1 for layer in self.net_config.layers if layer.layer_type == LayerType.CONV) >= 4
+        )
         for index, layer_config in enumerate(self.net_config.layers):
-            if layer_config.layer_type == LayerType.LINEAR and not has_flattened:
-                self.layers.append(nn.Flatten())
-                has_flattened = True
-                in_channels *= h * w
-                h, w = 1, 1  # no longer relevant
-
             if layer_config.layer_type is LayerType.NONE:
                 continue
 
-            layer, out_channels, h, w = build_single_layer(layer_config, in_channels, h, w)
+            layer, out_channels, h, w = self.build_single_layer(
+                layer_config, in_channels, h, w, apply_batch
+            )
             self.layers.append(layer)
             self.layer_shapes[index] = (out_channels, h, w)
 
@@ -46,9 +47,11 @@ class GraphCnn(nn.Module):
 
             in_channels = out_channels
 
-        if not has_flattened:
+        if not self.has_flattened:
             self.layers.append(nn.Flatten())
+            self.layers.append(nn.Dropout(DROPOUT_PROBABILITY))
             in_channels *= h * w
+            h, w = 1, 1
 
         if in_channels != self.num_classes:
             self.layers.append(nn.Linear(in_channels, self.num_classes))
@@ -121,60 +124,73 @@ class GraphCnn(nn.Module):
             if in_channels != out_channels:
                 self.projections[proj_name] = nn.Linear(in_channels, out_channels)
 
+    def build_single_layer(
+        self, layer_config: LayerConfig, in_channels: int, h: int, w: int, apply_batch: bool = True
+    ):
+        """Builds one layer from LayerConfig and returns:
+        - pytorch module (nn.module)
+        - updated (in_channels, h, w)
+        """
+        modules = []
 
-def build_single_layer(layer_config: LayerConfig, in_channels: int, h: int, w: int):
-    """Builds one layer from LayerConfig and returns:
-    - pytorch module (nn.module)
-    - updated (in_channels, h, w)
-    """
-    modules = []
+        if layer_config.layer_type == LayerType.CONV:
+            stride = layer_config.stride.to_stride()
+            kernel = layer_config.kernel_size.to_kernel()
+            padding = kernel // 2
+            out_ch = layer_config.out_channels.to_channels()
 
-    if layer_config.layer_type == LayerType.CONV:
-        stride = layer_config.stride.to_stride()
-        kernel = layer_config.kernel_size.to_kernel()
-        padding = kernel // 2
-        out_ch = layer_config.out_channels.to_channels()
+            conv = nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=out_ch,
+                kernel_size=kernel,
+                stride=stride,
+                padding=padding,
+            )
+            modules.append(conv)
 
-        conv = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=out_ch,
-            kernel_size=kernel,
-            stride=stride,
-            padding=padding,
-        )
-        modules.append(conv)
+            # Add batch norm if specified
+            if apply_batch:
+                modules.append(nn.BatchNorm2d(out_ch))
 
-        # Add activation
-        if layer_config.activation is not None:
-            modules.append(layer_config.activation.to_module())
+            # Add activation
+            if layer_config.activation is not None:
+                modules.append(layer_config.activation.to_module())
 
-        # Update dimensions
-        h, w = update_spatial_dims(h, w, kernel, stride, padding)
-        return nn.Sequential(*modules), out_ch, h, w
+            # Update dimensions
+            h, w = update_spatial_dims(h, w, kernel, stride, padding)
+            return nn.Sequential(*modules), out_ch, h, w
 
-    elif layer_config.layer_type == LayerType.POOL:
-        kernel = layer_config.kernel_size.to_kernel()
-        stride = layer_config.stride.to_stride()
+        elif layer_config.layer_type == LayerType.POOL:
+            kernel = layer_config.kernel_size.to_kernel()
+            stride = layer_config.stride.to_stride()
 
-        if layer_config.pool_mode is PoolMode.MAX:
-            pool = nn.MaxPool2d(kernel, stride)
+            if layer_config.pool_mode is PoolMode.MAX:
+                pool = nn.MaxPool2d(kernel, stride)
+            else:
+                pool = nn.AvgPool2d(kernel, stride)
+
+            modules.append(pool)
+            h, w = update_spatial_dims(h, w, kernel, stride)
+            return nn.Sequential(*modules), in_channels, h, w
+        elif layer_config.layer_type == LayerType.LINEAR:
+            if not self.has_flattened:
+                modules.append(nn.Flatten())
+                modules.append(nn.Dropout(DROPOUT_PROBABILITY))
+                self.has_flattened = True
+
+                in_channels = in_channels * h * w
+                h, w = 1, 1
+
+            out_units = layer_config.linear_units.to_units()
+
+            if out_units is None:
+                raise ValueError("Linear layer must define number of units")
+
+            fc = nn.Linear(in_channels, out_units)
+            modules.append(fc)
+            if layer_config.activation is not None:
+                modules.append(layer_config.activation.to_module())
+            return nn.Sequential(*modules), out_units, 1, 1
+
         else:
-            pool = nn.AvgPool2d(kernel, stride)
-
-        modules.append(pool)
-        h, w = update_spatial_dims(h, w, kernel, stride)
-        return nn.Sequential(*modules), in_channels, h, w
-
-    elif layer_config.layer_type == LayerType.LINEAR:
-        out_units = layer_config.linear_units.to_units()
-        if out_units is None:
-            raise ValueError("Linear layer must define number of units")
-
-        fc = nn.Linear(in_channels, out_units)
-        modules.append(fc)
-        if layer_config.activation is not None:
-            modules.append(layer_config.activation.to_module())
-        return nn.Sequential(*modules), out_units, 1, 1
-
-    else:
-        raise ValueError("layer type not supported")
+            raise ValueError("layer type not supported")

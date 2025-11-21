@@ -16,19 +16,13 @@ console = Console()
 
 
 def main():
-    show = False
-
     # Handle arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--show-samples", action="store_true")
     parser.add_argument("--optimize-hyperparameters", type=int, default=5, help="If set, runs hyperparameter optimization with given number of trials")
     parser.add_argument("--clean-saved-models", action="store_true")
     parser.add_argument("--policy-seed", type=int, default=None, help="Random seed for reproducibility")
     parser.add_argument("--torch-seed", type=int, default=None, help="Random seed for classifier initialization")
     parser.add_argument("--optuna-seed", type=int, default=None, help="Random seed for hyperparameter optimization")
-    parser.add_argument(
-        "--dataset", type=str, default="CIFAR_10", help="Dataset to use, default: CIFAR_10"
-    )
 
     args = parser.parse_args()
 
@@ -57,8 +51,6 @@ def main():
         console.print(f"[bold magenta]Best Hyperparameters: \n{best_hyperparameters}[/bold magenta]")
         return
 
-    dataset = DatasetOption[args.dataset]
-
     console.print("[bold blue]Initializing Neural Architecture Search...[/bold blue]")
 
     # Clean up old models
@@ -68,12 +60,12 @@ def main():
 
     # Initialize agent with PPO algorithm
     agent = SBThreeAgent(
-        policy_algorithm_class=MaskablePPO, policy=CustomMaskablePolicy, showSamples=show, policy_seed=args.policy_seed, data_set=dataset
+        policy_algorithm_class=MaskablePPO, policy=CustomMaskablePolicy, policy_seed=args.policy_seed
     )
 
     # Train the agent
     console.print("[bold green]Starting training...[/bold green]")
-    agent.train(total_timesteps=30, log_interval=1)
+    agent.train(total_timesteps=30)
 
     # Save the trained model
     agent.save_model()

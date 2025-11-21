@@ -1,17 +1,20 @@
 from typing import Optional
 import torch
+from src.model_module.logger import TensorboardLogger
+from src.model_module.hyperparameters import SLHyperParameters
 from src.model_module.environment import CustomEnv
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy
-from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.vec_env import DummyVecEnv
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.logger import TensorBoardOutputFormat
+
 from sb3_contrib.common.wrappers import ActionMasker
 
 from src.data_module.importer import DatasetOption
 from src.classification_module.reward import WeightedSumRS, Weights
 import os
+
+from stable_baselines3.common.logger import Logger
+from torch.utils.tensorboard import SummaryWriter
+from stable_baselines3.common.logger import TensorBoardOutputFormat
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -20,27 +23,25 @@ def mask_fn(env):
     return env.get_action_mask()
 
 
-class CustomEnvCallBack(BaseCallback):
-    def __init__(self, verbose=0):
-        super(CustomEnvCallBack, self).__init__(verbose)
+hyperparameters = SLHyperParameters(
+    training_epochs=15,
+    learning_rate=0.001,
+    momentum=0.9,
+    batch_size=64,
+)
 
-    def _on_training_start(self):
-        output_formats = self.logger.output_formats
-        # Save reference to tensorboard formatter object
-        # note: the failure case (not formatter found) is not handled here, should be done with try/except.
-        self.tensorboard_formatter = next(
-            formatter
-            for formatter in output_formats
-            if isinstance(formatter, TensorBoardOutputFormat)
-        )
-
-    def _on_step(self) -> bool:
-        if isinstance(self.training_env, DummyVecEnv):
-            for env in self.training_env.envs:
-                if isinstance(env, Monitor):
-                    if isinstance(env.env, CustomEnv):
-                        env.env._write_summary(self.logger, self.tensorboard_formatter.writer)
-        return True
+# Tensorboard logging setup
+log_folder = "tensorboard_logs/"
+log_interval = 1  # log every n steps
+num_existing_logs = len(
+    [name for name in os.listdir(log_folder) if os.path.isdir(os.path.join(log_folder, name))]
+)
+run_name = f"NAS_run {num_existing_logs}"
+logger = Logger(
+    folder=log_folder, output_formats=[TensorBoardOutputFormat(f"{log_folder}/{run_name}")]
+)
+writer = SummaryWriter(log_dir=f"{log_folder}/{run_name}")
+tb_logger = TensorboardLogger(logger=logger, writer=writer, log_folder=log_folder)  # created once
 
 
 class SBThreeAgent:
@@ -53,28 +54,19 @@ class SBThreeAgent:
         self,
         policy_algorithm_class: type[BaseAlgorithm],
         policy: type[BasePolicy] | str = "MlpPolicy",
-        learning_rate: float = 0.001,
-        training_epochs: int = 15,
-        arch_learning_rate: float = 0.001,
-        arch_momentum: float = 0.9,
-        data_set: DatasetOption = DatasetOption.CIFAR_10,
-        batch_size: int = 64,
-        reward_weights: Weights | None = None,
-        showSamples: bool = False,
         policy_seed: Optional[int] = None,
+        rl_learning_rate: float = 0.001,
+        hyperparameters: SLHyperParameters = hyperparameters,
+        reward_weights: Weights | None = None,
     ):
         self.env = ActionMasker(
             CustomEnv(
                 device=device,
-                logdir=self.TB_LOG_DIRECTORY,
-                training_epochs=training_epochs,
-                arch_learning_rate=arch_learning_rate,
-                arch_momentum=arch_momentum,
-                batch_size=batch_size,
+                hyperparameters=hyperparameters,
+                tb_logger=tb_logger,
                 reward_strategy=WeightedSumRS(weights=reward_weights)
                 if reward_weights
                 else WeightedSumRS(Weights(accuracy=0.5, flops=0.5)),
-                showSamples=showSamples,
             ),
             action_mask_fn=mask_fn,
         )
@@ -84,22 +76,19 @@ class SBThreeAgent:
             verbose=1,
             gamma=1,  # type: ignore # extremely important to have gamma=1 for maximum discount
             device="cpu",
-            learning_rate=learning_rate,
-            tensorboard_log=self.TB_LOG_DIRECTORY,
+            learning_rate=rl_learning_rate,
             seed=policy_seed,
         )
+        self.model.set_logger(tb_logger.logger)
         self.model_save_path = f"{self.MODEL_SAVE_DIRECTORY}{self.model.__class__.__name__}"
 
         print(next(self.model.policy.parameters()).device)  # should output cuda:0
 
         self.check_directories()
 
-    def train(self, total_timesteps: int = 10000, log_interval: int = 1):
+    def train(self, total_timesteps: int = 10000):
         self.model.learn(
             total_timesteps=total_timesteps,
-            tb_log_name=self.TB_LOG_NAME,
-            log_interval=log_interval,
-            callback=CustomEnvCallBack(),
         )
 
     def save_model(self):
@@ -128,7 +117,7 @@ class SBThreeAgent:
             while not done:
                 action, _ = self.model.predict(obs, deterministic=True)
                 obs, reward, terminated, truncated, _ = self.env.step(action)
-                episode_reward += float(reward)
+                episode_reward += reward  # type: ignore
                 done = terminated or truncated
 
             total_rewards.append(episode_reward)

@@ -281,14 +281,11 @@ class RLHyperparameterOptimizer:
 
         try:
             from src.model_module.sb_three import SBThreeAgent
-
+            
+            """THIS DOES NOT SUPPORT REPRODUCIBILITY YET"""
             agent = SBThreeAgent(
                 policy_algorithm_class=agent_class,
-                learning_rate=learning_rate_choice,
-                training_epochs=sl_hyperparams.get("training_epochs", 15),
-                arch_learning_rate=sl_hyperparams.get("arch_lr", 0.001),
-                arch_momentum=sl_hyperparams.get("arch_momentum", 0.9),
-                batch_size=sl_hyperparams.get("batch_size", 64),
+                rl_learning_rate=learning_rate_choice,
             )
 
             agent.train(total_timesteps=total_timesteps)

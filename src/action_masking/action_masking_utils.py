@@ -115,6 +115,9 @@ NO_ACTION_DECISIONS = Decisions(
 )
 
 
+E = TypeVar("E", bound=enum.Enum)
+
+
 def transform_decisions_to_action_indices(decisions: Decisions, slices: Slices) -> np.ndarray:
     return np.array(
         [
@@ -131,23 +134,6 @@ def transform_decisions_to_action_indices(decisions: Decisions, slices: Slices) 
             else slices.skip_connection.stop,
         ]
     )
-
-
-def transform_action_indices_to_decisions(action_indices: np.ndarray, slices: Slices):
-    return Decisions(
-        action_choice=StandardAction(action_indices[0]),
-        layer_type_choice=LayerType(action_indices[1]),
-        out_channels_choice=OutChannels(action_indices[2]),
-        kernel_size_choice=KernelSize(action_indices[3]),
-        stride_choice=Stride(action_indices[4]),
-        linear_units_choice=LinearUnits(action_indices[5]),
-        pool_mode_choice=PoolMode(action_indices[6]),
-        activation_function_choice=ActivationFunction(action_indices[7]),
-        skip_connection_choice=action_indices[8],
-    )
-
-
-E = TypeVar("E", bound=enum.Enum)
 
 
 def sample_action_for_slice(ctx: MaskContext, enum_class_type: Type[E], slice_name: str) -> E:

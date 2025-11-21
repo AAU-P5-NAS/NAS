@@ -77,16 +77,11 @@ def visualize_samples(
     plt.tight_layout()
 
 
-
 def visualize_cifar_samples(
     dataloader: torch.utils.data.DataLoader,
     label_fn: Callable,
-    show: bool = False,
     num_samples: int = 9,
 ):
-    if not show:
-        return
-
     images, labels = next(iter(dataloader))
     n = min(num_samples, images.size(0))
 
