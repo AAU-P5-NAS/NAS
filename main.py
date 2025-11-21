@@ -36,9 +36,6 @@ def main():
     if args.optuna_seed is not None:
         console.print(f"[yellow]Set optuna seed to '{args.optuna_seed}'[/yellow]")
 
-    if args.show_samples:
-        show = True
-
     if args.optimize_hyperparameters:
         from src.model_module.hyperparameter_tuning import (
             SLHyperparameterOptimizer,
