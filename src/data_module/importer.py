@@ -1,7 +1,6 @@
 from typing import Tuple
 from rich.console import Console
 from src.data_module.dataset import DatasetOption
-from src.data_module.import_utils import visualize_cifar_samples, visualize_samples
 import torch
 
 console = Console()
@@ -55,15 +54,6 @@ class DataImporter:
             self.train_dataset, batch_size=batch_size, shuffle=shuffle
         )
         test_dataloader = torch.utils.data.DataLoader(self.test_dataset, batch_size=batch_size)
-
-        if self.dataset_option == DatasetOption.CIFAR_10:
-            visualize_cifar_samples(
-                train_dataloader, self.dataset_option.get_label_fn(), showSamples, num_samples=30
-            )
-        else:
-            visualize_samples(
-                train_dataloader, self.dataset_option.get_label_fn(), showSamples, num_samples=30
-            )
 
         return train_dataloader, test_dataloader
 
