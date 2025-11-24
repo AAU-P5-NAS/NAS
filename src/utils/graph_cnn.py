@@ -2,6 +2,7 @@ from typing import Dict, cast
 from torch import Tensor
 import torch.nn as nn
 from src.utils.network_utils import (
+    SINGLE_LAYER_OBSERVATION_SIZE,
     LayerConfig,
     LayerType,
     NetworkConfig,
@@ -178,3 +179,33 @@ def build_single_layer(layer_config: LayerConfig, in_channels: int, h: int, w: i
 
     else:
         raise ValueError("layer type not supported")
+
+
+def flatten_cnn_config(rlconfig: NetworkConfig, max_layers: int, padded_with_zeros:bool=True) -> list[int]:
+    # each layer has 8 slots, 0 for unused slots (none values for enums)
+    flat_config = []
+    for index, layer in enumerate(rlconfig.layers):
+        data = layer.model_dump()
+        flat_layer_config = []
+        for key, item in data.items():
+            if key == "skip_connection":
+                if item is None:
+                    flat_layer_config.append(
+                        max_layers - 1
+                    )  # no skip connection -> index of last layer
+                else:
+                    flat_layer_config.append(item)
+            else:
+                flat_layer_config.append(item.value)
+
+        if len(flat_layer_config) != SINGLE_LAYER_OBSERVATION_SIZE:
+            raise ValueError("Layer config size mismatch")
+
+        flat_config.extend(flat_layer_config)
+    if max_layers * SINGLE_LAYER_OBSERVATION_SIZE < len(flat_config):
+        raise ValueError("flat_config is larger than allowed size")
+
+    if padded_with_zeros:
+        flat_config.extend((max_layers * SINGLE_LAYER_OBSERVATION_SIZE - len(flat_config)) * [0])
+
+    return flat_config

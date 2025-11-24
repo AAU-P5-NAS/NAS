@@ -2,6 +2,7 @@ import numpy as np
 import sys
 import os
 
+from src.utils.graph_cnn import flatten_cnn_config
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.action_masking.action_masking_utils import (
@@ -12,6 +13,9 @@ from src.action_masking.action_masking_utils import (
 )
 from src.utils.network_utils import (
     SINGLE_LAYER_OBSERVATION_SIZE,
+    Decisions,
+    LayerConfig,
+    NetworkConfig,
     StandardAction,
     LayerType,
     OutChannels,
@@ -23,6 +27,7 @@ from src.utils.network_utils import (
     calculate_output_dimensions,
     get_latest_layer,
     get_layer_from_index,
+    get_observation_with_new_layer,
     get_output_dimensions,
     get_valid_kernel_sizes,
     get_valid_strides,
@@ -51,7 +56,6 @@ def sample_actions(ctx: MaskContext):
     ctx.decisions.linear_units_choice = sample_action_for_slice(ctx, LinearUnits, "linear_units")
     ctx.logits = mask_pool_mode_sequential(ctx)
     ctx.decisions.pool_mode_choice = sample_action_for_slice(ctx, PoolMode, "pool_mode")
-    ctx.logits = mask_activation_function_sequential(ctx)
     ctx.decisions.activation_function_choice = sample_action_for_slice(
         ctx, ActivationFunction, "activation_function"
     )
@@ -82,11 +86,6 @@ def mask_action_type_sequential(ctx: MaskContext):
 
 def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
-
-    if ctx.decisions.action_choice == StandardAction.NONE:
-        new_logits[ctx.slices.layer_type.all] = -np.inf
-        new_logits[ctx.slices.layer_type[LayerType.NONE]] = 1
-        return new_logits
 
     linear_layer_exists = any(
         ctx.observation[i] == LayerType.LINEAR.value
@@ -126,7 +125,6 @@ def mask_out_channels_sequential(ctx: MaskContext):
 
 def mask_kernel_size_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
-
     if (
         ctx.decisions.layer_type_choice == LayerType.NONE
         or ctx.decisions.layer_type_choice == LayerType.LINEAR
@@ -135,7 +133,6 @@ def mask_kernel_size_sequential(ctx: MaskContext):
         new_logits[ctx.slices.kernel_size.all] = -np.inf
         new_logits[ctx.slices.kernel_size[KernelSize.NONE]] = 1
         return new_logits
-
     latest_output_dims = get_output_dimensions(
         ctx.observation, ctx.input_dimensions[1:], ctx.max_layers
     )
@@ -156,16 +153,18 @@ def mask_kernel_size_sequential(ctx: MaskContext):
 
 def mask_stride_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
-
+    kernel_size_chosen = ctx.decisions.kernel_size_choice
+    print("kernel size chosen", kernel_size_chosen)
     if (
         ctx.decisions.layer_type_choice == LayerType.NONE
         or ctx.decisions.layer_type_choice == LayerType.LINEAR
+        or kernel_size_chosen is KernelSize.NONE
     ):
         new_logits[ctx.slices.stride.all] = -np.inf
         new_logits[ctx.slices.stride[Stride.NONE]] = 1
         return new_logits
 
-    kernel_size_chosen = ctx.decisions.kernel_size_choice
+
     latest_output_dims = get_output_dimensions(
         ctx.observation, ctx.input_dimensions[1:], ctx.max_layers
     )
@@ -207,21 +206,10 @@ def mask_pool_mode_sequential(ctx: MaskContext):
     new_logits[ctx.slices.pool_mode[PoolMode.NONE]] = -np.inf
     return new_logits
 
-
-def mask_activation_function_sequential(ctx: MaskContext):
-    new_logits = ctx.logits.copy()
-    # Mask NONE activation - not useful for hidden layers
-    new_logits[ctx.slices.activation_function[ActivationFunction.NONE]] = -np.inf
-    # Mask SOFTMAX activation - should only be used in output layer, not hidden layers
-    new_logits[ctx.slices.activation_function[ActivationFunction.SOFTMAX]] = -np.inf
-
-    return new_logits
-
-
-def mask_skip_connection_sequential(ctx: MaskContext):
+def mask_skip_connection_sequential(ctx: MaskContext): 
     new_logits = ctx.logits.copy()
 
-    if ctx.action_count <= 2:
+    if ctx.action_count < 2:
         # first two layers are not allowed to have skip connections from previous layers.
         new_logits[ctx.slices.skip_connection.all] = -np.inf
         new_logits[ctx.slices.skip_connection[ctx.max_layers - 1]] = (
@@ -229,12 +217,18 @@ def mask_skip_connection_sequential(ctx: MaskContext):
         )
         return new_logits
 
-    last_layer_output_dims = get_output_dimensions(
-        ctx.observation, ctx.input_dimensions[1:], ctx.max_layers
-    )
-    input_dim = ctx.input_dimensions[1:]
+    if ctx.decisions.layer_type_choice == LayerType.LINEAR:
+        for i in range(ctx.action_count - 1, ctx.max_layers - 1):
+            new_logits[ctx.slices.skip_connection[i]] = -np.inf
+        return new_logits
 
-    for i in range(0, ctx.action_count - 2):
+    input_dim = ctx.input_dimensions[1:]
+    observation_with_new_layer = get_observation_with_new_layer(ctx.observation, ctx)
+    last_layer_output_dims = get_output_dimensions(
+        np.array(observation_with_new_layer, dtype=np.float32), input_dim, ctx.max_layers
+    )
+
+    for i in range(0, ctx.action_count - 1):
         currentLayerConfig = get_layer_from_index(ctx.observation, i, ctx.max_layers)
         output_dim = calculate_output_dimensions(input_dim, currentLayerConfig)
 
@@ -244,9 +238,10 @@ def mask_skip_connection_sequential(ctx: MaskContext):
         input_dim = output_dim
 
     # mask previous layer, current layer and future layers
-    for i in range(ctx.action_count - 2, ctx.max_layers):
+    for i in range(ctx.action_count - 1, ctx.max_layers - 1):
         new_logits[ctx.slices.skip_connection[i]] = -np.inf
 
     # Always keep "no skip" valid
     new_logits[ctx.slices.skip_connection[ctx.max_layers - 1]] = 1.0
     return new_logits
+
