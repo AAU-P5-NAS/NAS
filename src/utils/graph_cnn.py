@@ -193,8 +193,8 @@ class GraphCnn(nn.Module):
                 modules.append(layer_config.activation.to_module())
             return nn.Sequential(*modules), out_units, 1, 1
 
-    else:
-        raise ValueError("layer type not supported")
+        else:
+            raise ValueError("layer type not supported")
 
 
 def flatten_cnn_config(rlconfig: NetworkConfig, max_layers: int, padded_with_zeros:bool=True) -> list[int]:
