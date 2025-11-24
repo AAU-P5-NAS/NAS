@@ -139,7 +139,7 @@ class CustomEnv(gym.Env):
 
         self.info = {}
 
-        decisions = transform_action_indices_to_decisions(decision_logits, self.logit_slices)
+        decisions = transform_action_indices_to_decisions(decision_logits, MAX_LAYERS)
         if decisions.action_choice == StandardAction.NONE:# Stop and evaluate
             self.evaluated_this_step = True
             reward = self._evaluate_architecture(self.current_network_config)

@@ -228,6 +228,24 @@ class NetworkConfig(BaseModel):
             if layer.layer_type == LayerType.LINEAR:
                 seen_linear = True
         return v
+    
+def transform_action_indices_to_decisions(action_indices: np.ndarray, max_layers:int):
+    actions_as_ints = [int(x) for x in np.array(action_indices).flatten()]
+
+    if len(actions_as_ints) < 9:
+        raise ValueError(f"Expected action vector with >=9 entries, got {len(actions_as_ints)}: {action_indices}")
+
+    return Decisions(
+        action_choice=StandardAction(actions_as_ints[0]),
+        layer_type_choice=LayerType(actions_as_ints[1]),
+        out_channels_choice=OutChannels(actions_as_ints[2]),
+        kernel_size_choice=KernelSize(actions_as_ints[3]),
+        stride_choice=Stride(actions_as_ints[4]),
+        linear_units_choice=LinearUnits(actions_as_ints[5]),
+        pool_mode_choice=PoolMode(actions_as_ints[6]),
+        activation_function_choice=ActivationFunction(actions_as_ints[7]),
+        skip_connection_choice=actions_as_ints[8] if actions_as_ints[8] != max_layers - 1 else None 
+    )
 
 def get_number_of_actions_from_observation(observation: np.ndarray) -> int:
     """Count the number of defined layers in the observation array."""
