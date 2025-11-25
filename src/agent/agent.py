@@ -29,20 +29,21 @@ hyperparameters = SLHyperParameters(
     optimizer_type="Adam",
 )
 
-# Tensorboard logging setup
-log_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tensorboard_logs")
-log_folder = os.path.normpath(log_folder)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+log_folder = os.path.join(project_root, "tensorboard_logs")
+os.makedirs(log_folder, exist_ok=True)
+
+print("TensorBoard logs will be saved to:", log_folder)
 log_interval = 1  # log every n steps
 num_existing_logs = len(
     [name for name in os.listdir(log_folder) if os.path.isdir(os.path.join(log_folder, name))]
 )
 run_name = f"NAS_run {num_existing_logs}"
 logger = Logger(
-    folder=log_folder, output_formats=[TensorBoardOutputFormat(f"{log_folder}/{run_name}")]
+    folder=log_folder, output_formats=[TensorBoardOutputFormat(os.path.join(log_folder, run_name))]
 )
-writer = SummaryWriter(log_dir=f"{log_folder}/{run_name}")
+writer = SummaryWriter(log_dir=os.path.join(log_folder, run_name))
 tb_logger = TensorboardLogger(logger=logger, writer=writer, log_folder=log_folder)  # created once
-
 
 class RLAgent:
     TB_LOG_NAME: str = "RLAgent_run"
