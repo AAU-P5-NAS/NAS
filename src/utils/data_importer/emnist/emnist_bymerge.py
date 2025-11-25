@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import torch
 from rich.console import Console
-from src.data_module.import_utils import (
+from src.utils.data_importer.import_utils import (
     fetch_dataset_from_url,
     GRAYSCALE_NUM_CHANNELS,
     DEFAULT_H,
@@ -12,15 +12,15 @@ from src.data_module.import_utils import (
 console = Console()
 
 
-EMNIST_BYMERGE_TEST_PATH: str = "src/data_module/emnist/emnist_bymerge_test.csv"
-EMNIST_BYMERGE_TRAIN_PATH: str = "src/data_module/emnist/emnist_bymerge_train.csv"
+EMNIST_BYMERGE_TEST_PATH: str = "src/utils/data_importer/emnist/emnist_bymerge_test.csv"
+EMNIST_BYMERGE_TRAIN_PATH: str = "src/utils/data_importer/emnist/emnist_bymerge_train.csv"
 EMNIST_BYMERGE_TEST_URL: str = (
     "https://drive.google.com/file/d/1MBVuTQGXWUhDVinfPDkLiJAxARANos1m/view?usp=drive_link"
 )
 EMNIST_BYMERGE_TRAIN_URL: str = (
     "https://drive.google.com/file/d/1SBFa4tabL3APvCAUqwpm4F8VOGmW6n8t/view?usp=drive_link"
 )
-EMNIST_BYMERGE_MAPPING_PATH: str = "src/data_module/emnist/emnist_bymerge_mapping.txt"
+EMNIST_BYMERGE_MAPPING_PATH: str = "src/utils/data_importer/emnist/emnist_bymerge_mapping.txt"
 EMNIST_BYMERGE_MAPPING_URL: str = (
     "https://drive.google.com/file/d/1EZzalwy1KaNT5GBtfsxn0R3eCdqz4lfQ/view?usp=drive_link"
 )

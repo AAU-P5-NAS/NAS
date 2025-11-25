@@ -2,9 +2,9 @@ import torch
 from rich.console import Console
 import pandas as pd
 
-from src.data_module.import_utils import DEFAULT_H, DEFAULT_W, GRAYSCALE_NUM_CHANNELS
+from src.utils.data_importer.import_utils import DEFAULT_H, DEFAULT_W, GRAYSCALE_NUM_CHANNELS
 
-KAGGLE_DEFAULT_PATH: str = "src/data_module/az_images_data.csv"
+KAGGLE_DEFAULT_PATH: str = "src/utils/data_importer/az_images_data.csv"
 console = Console()
 
 

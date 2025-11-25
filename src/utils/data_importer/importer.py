@@ -1,6 +1,6 @@
 from typing import Tuple
 from rich.console import Console
-from src.data_module.dataset import DatasetOption
+from src.utils.data_importer.dataset import DatasetOption
 import torch
 
 console = Console()

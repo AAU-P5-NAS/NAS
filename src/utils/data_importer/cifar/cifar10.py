@@ -5,11 +5,11 @@ from torch.utils.data import TensorDataset
 import numpy as np
 from rich.console import Console
 
-from src.data_module.import_utils import fetch_dataset_from_url
+from src.utils.data_importer.import_utils import fetch_dataset_from_url
 
 console = Console()
 
-CIFAR10_DEST = "src/data_module/cifar"
+CIFAR10_DEST = "src/utils/data_importer/cifar"
 CIFAR10_BATCH_URLS = {
     1: "https://drive.google.com/file/d/1ahjxkJFq7Xd55lRy-1HfZ_hI0vWDCrBC/view?usp=drive_link",  # All batches are in the same archive
     2: "https://drive.google.com/file/d/151BSAdwy-jgcVqzB_FBhqtuoBytnj9kE/view?usp=drive_link",

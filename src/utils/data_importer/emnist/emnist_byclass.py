@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from rich.console import Console
 
-from src.data_module.import_utils import (
+from src.utils.data_importer.import_utils import (
     fetch_dataset_from_url,
     GRAYSCALE_NUM_CHANNELS,
     DEFAULT_H,
@@ -12,15 +12,15 @@ from src.data_module.import_utils import (
 
 console = Console()
 
-EMNIST_BYCLASS_TEST_PATH: str = "src/data_module/emnist/emnist_byclass_test.csv"
-EMNIST_BYCLASS_TRAIN_PATH: str = "src/data_module/emnist/emnist_byclass_train.csv"
+EMNIST_BYCLASS_TEST_PATH: str = "src/utils/data_importer/emnist/emnist_byclass_test.csv"
+EMNIST_BYCLASS_TRAIN_PATH: str = "src/utils/data_importer/emnist/emnist_byclass_train.csv"
 EMNIST_BYCLASS_TEST_URL: str = (
     "https://drive.google.com/file/d/1a6te_dwNlUDPjmqsn6DyqjZ5KMHYVVWL/view?usp=drive_link"
 )
 EMNIST_BYCLASS_TRAIN_URL: str = (
     "https://drive.google.com/file/d/1K2HDLMDO6WiG0TOi_ntlGbKCeQud_BWE/view?usp=drive_link"
 )
-EMNIST_BYCLASS_MAPPING_PATH: str = "src/data_module/emnist/emnist_byclass_mapping.txt"
+EMNIST_BYCLASS_MAPPING_PATH: str = "src/utils/data_importer/emnist/emnist_byclass_mapping.txt"
 EMNIST_BYCLASS_MAPPING_URL: str = (
     "https://drive.google.com/file/d/1rkwVPW1Ui8y_p--Br_3xZtVEjkB3cdg-/view?usp=drive_link"
 )

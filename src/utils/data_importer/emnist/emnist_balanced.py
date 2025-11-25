@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from rich.console import Console
 
-from src.data_module.import_utils import (
+from src.utils.data_importer.import_utils import (
     GRAYSCALE_NUM_CHANNELS,
     DEFAULT_H,
     DEFAULT_W,
@@ -13,15 +13,15 @@ from src.data_module.import_utils import (
 console = Console()
 
 
-EMNIST_BALANCED_TEST_PATH: str = "src/data_module/emnist/emnist_balanced_test.csv"
-EMNIST_BALANCED_TRAIN_PATH: str = "src/data_module/emnist/emnist_balanced_train.csv"
+EMNIST_BALANCED_TEST_PATH: str = "src/utils/data_importer/emnist/emnist_balanced_test.csv"
+EMNIST_BALANCED_TRAIN_PATH: str = "src/utils/data_importer/emnist/emnist_balanced_train.csv"
 EMNIST_BALANCED_TEST_URL: str = (
     "https://drive.google.com/file/d/1jehd5hTLVj1kNlZ8W2cHVLx4kvHtBibK/view?usp=drive_link"
 )
 EMNIST_BALANCED_TRAIN_URL: str = (
     "https://drive.google.com/file/d/19c5N_t_PXitd-mq25DH685C7ASbWAGFc/view?usp=drive_link"
 )
-EMNIST_BALANCED_MAPPING_PATH: str = "src/data_module/emnist/emnist_balanced_mapping.txt"
+EMNIST_BALANCED_MAPPING_PATH: str = "src/utils/data_importer/emnist/emnist_balanced_mapping.txt"
 EMNIST_BALANCED_MAPPING_URL: str = (
     "https://drive.google.com/file/d/1rTFBWDSZOmB0ayFigk1DJTH-Fr7qeIsz/view?usp=drive_link"
 )

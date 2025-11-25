@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import torch
 from rich.console import Console
-from src.data_module.import_utils import (
+from src.utils.data_importer.import_utils import (
     DEFAULT_H,
     DEFAULT_W,
     GRAYSCALE_NUM_CHANNELS,
@@ -11,15 +11,15 @@ from src.data_module.import_utils import (
 
 console = Console()
 
-EMNIST_LETTERS_TEST_PATH: str = "src/data_module/emnist/emnist_letters_test.csv"
-EMNIST_LETTERS_TRAIN_PATH: str = "src/data_module/emnist/emnist_letters_train.csv"
+EMNIST_LETTERS_TEST_PATH: str = "src/utils/data_importer/emnist/emnist_letters_test.csv"
+EMNIST_LETTERS_TRAIN_PATH: str = "src/utils/data_importer/emnist/emnist_letters_train.csv"
 EMNIST_TEST_URL: str = (
     "https://drive.google.com/file/d/17vPi4bWNX0q7y7190FF6L9M-szizzYp2/view?usp=drive_link"
 )
 EMNIST_TRAIN_URL: str = (
     "https://drive.google.com/file/d/1K4nwU7sqPTkltz7-gtC0ds6IyPdDwh7B/view?usp=drive_link"
 )
-EMNIST_MAPPING_PATH: str = "src/data_module/emnist/emnist_letters_mapping.txt"
+EMNIST_MAPPING_PATH: str = "src/utils/data_importer/emnist/emnist_letters_mapping.txt"
 EMNIST_MAPPING_URL: str = (
     "https://drive.google.com/file/d/1FOEMfym9mLCFijxpA9RWCbFysnU3UfUE/view?usp=drive_link"
 )

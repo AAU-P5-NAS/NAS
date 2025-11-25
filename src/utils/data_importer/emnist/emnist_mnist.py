@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import torch
 from rich.console import Console
-from src.data_module.import_utils import (
+from src.utils.data_importer.import_utils import (
     fetch_dataset_from_url,
     GRAYSCALE_NUM_CHANNELS,
     DEFAULT_H,
@@ -12,9 +12,9 @@ from src.data_module.import_utils import (
 console = Console()
 
 
-EMNIST_MNIST_TEST_PATH: str = "src/data_module/emnist/emnist_mnist_test.csv"
-EMNIST_MNIST_TRAIN_PATH: str = "src/data_module/emnist/emnist_mnist_train.csv"
-EMNIST_MNIST_MAPPING_PATH: str = "src/data_module/emnist/emnist_mnist_mapping.txt"
+EMNIST_MNIST_TEST_PATH: str = "src/utils/data_importer/emnist/emnist_mnist_test.csv"
+EMNIST_MNIST_TRAIN_PATH: str = "src/utils/data_importer/emnist/emnist_mnist_train.csv"
+EMNIST_MNIST_MAPPING_PATH: str = "src/utils/data_importer/emnist/emnist_mnist_mapping.txt"
 EMNIST_MNIST_TEST_URL: str = (
     "https://drive.google.com/file/d/1E6UT193I2KWPa6wnobDg2FpAR51zL657/view?usp=drive_link"
 )
