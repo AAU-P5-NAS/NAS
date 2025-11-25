@@ -87,7 +87,6 @@ def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig)
         h, w = update_spatial_dims(
             h, w, layer.kernel_size.to_kernel(), layer.stride.to_stride(), padding
         )
-        print("hw: ",h, w)
     elif layer.layer_type == LayerType.POOL:
         h, w = update_spatial_dims(h, w, layer.kernel_size.to_kernel(), layer.stride.to_stride())
     return h, w
@@ -101,9 +100,7 @@ def get_output_dimensions(
         if observation[i] == 0:
             break  # No more layers defined
         layer = get_layer_from_index(observation, i // SINGLE_LAYER_OBSERVATION_SIZE, max_layers)
-        print("LAYER", layer)
         input_dims = calculate_output_dimensions(input_dims, layer)
-        print("outdim", input_dims[0], " ," ,input_dims[1])
     return input_dims
 
 

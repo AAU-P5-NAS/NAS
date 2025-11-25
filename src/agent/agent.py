@@ -23,9 +23,10 @@ def mask_fn(env):
 
 hyperparameters = SLHyperParameters(
     training_epochs=15,
-    learning_rate=0.001,
-    momentum=0.9,
-    batch_size=64,
+    learning_rate=0.00132,
+    momentum=0.9,   
+    batch_size=32,
+    optimizer_type="Adam",
 )
 
 # Tensorboard logging setup
@@ -78,10 +79,6 @@ class RLAgent:
         )
         self.model.set_logger(tb_logger.logger)
         self.model_save_path = f"{self.MODEL_SAVE_DIRECTORY}{self.model.__class__.__name__}"
-        print("is cuda available:", torch.cuda.is_available())
-        print(next(self.model.policy.parameters()).device)  # should output cuda:0
-        print(torch.cuda)  # Should not be None
-        print(torch.backends.cudnn.version())  # Should be > 0
         self.check_directories()
 
     def train(self, total_timesteps: int = 10000):

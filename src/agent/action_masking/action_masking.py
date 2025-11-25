@@ -142,7 +142,6 @@ def mask_kernel_size_sequential(ctx: MaskContext):
 def mask_stride_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
     kernel_size_chosen = ctx.decisions.kernel_size_choice
-    print("kernel size chosen", kernel_size_chosen)
     if (
         ctx.decisions.layer_type_choice == LayerType.NONE
         or ctx.decisions.layer_type_choice == LayerType.LINEAR
