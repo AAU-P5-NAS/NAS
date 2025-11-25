@@ -1,5 +1,5 @@
 import torch
-from src.model_module.logger import TensorboardLogger
+from src.utils.logger import TensorboardLogger
 from src.model_module.hyperparameters import SLHyperParameters
 from src.model_module.environment import CustomEnv
 from stable_baselines3.common.base_class import BaseAlgorithm
