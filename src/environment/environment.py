@@ -6,7 +6,7 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
-from src.model_module.hyperparameters import SLHyperParameters
+from src.utils.hyperparameters import SLHyperParameters
 from src.utils.logger import NoOpLogger, TensorboardLogger
 from src.classification_module.reward import RewardStrategy
 from src.classification_module.train import Trainer
@@ -29,7 +29,7 @@ from torch.nn import CrossEntropyLoss
 from rich.console import Console
 from src.utils.graph_cnn import GraphCnn
 
-from src.action_masking.action_masking_utils import (
+from src.agent.action_masking.action_masking_utils import (
     get_logit_slices,
 )
 

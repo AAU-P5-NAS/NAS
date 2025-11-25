@@ -4,8 +4,8 @@ import warnings
 import shutil
 from sb3_contrib.ppo_mask import MaskablePPO
 
-from model_module.agent import RLAgent
-from src.action_masking.action_masking_policy import CustomMaskablePolicy
+from src.agent.agent import RLAgent
+from src.agent.action_masking.action_masking_policy import CustomMaskablePolicy
 
 warnings.filterwarnings("ignore", message="Unsupported operator aten::tanh")
 console = Console()

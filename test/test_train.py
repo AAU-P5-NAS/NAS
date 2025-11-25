@@ -2,7 +2,7 @@ import torch
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter
 from src.data_module.dataset import DatasetOption
-from src.classification_module.metrics import Metrics
+from src.environment.metrics import Metrics
 
 
 def test_stop_when_trains_too_long():

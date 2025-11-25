@@ -1,7 +1,7 @@
 import pytest
 import torch
 from torch import nn
-from src.classification_module.metrics import MetrcicsEvaluator, Metrics, InvalidMetricError
+from src.environment.metrics import MetrcicsEvaluator, Metrics, InvalidMetricError
 
 NUM_CLASSES = 28
 

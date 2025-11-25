@@ -5,7 +5,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 from rich.console import Console
 
-from src.classification_module.metrics import Metrics
+from src.environment.metrics import Metrics
 from src.utils.network_utils import LayerConfig, NetworkConfig
 
 

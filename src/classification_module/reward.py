@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, field_validator
-from src.classification_module.metrics import Metrics
+from src.environment.metrics import Metrics
 import numpy as np
 import abc
 import random

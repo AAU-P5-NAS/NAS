@@ -6,32 +6,17 @@ import torch.nn as nn
 
 if TYPE_CHECKING:
     # Only imported for type checking to avoid circular imports at runtime.
-    from src.action_masking.action_masking_utils import MaskContext
-
-
-class InvalidActionError(Exception):
-    """Raised when an invalid action is provided to modify the network architecture."""
-
-    pass
+    from src.agent.action_masking.action_masking_utils import MaskContext
 
 
 class InvalidLayerConfigError(Exception):
     """Raised when a single CNN layer has invalid parameters."""
-
     pass
 
 
 class InvalidLayerOrderError(Exception):
     """Raised when CNN layers are in an invalid order (e.g. Conv after Linear)."""
-
     pass
-
-
-class CNNExportError(Exception):
-    """Raised when CNN layers are in an invalid order (e.g. Conv after Linear)."""
-
-    pass
-
 
 SINGLE_LAYER_OBSERVATION_SIZE = 8  # format [layer_type, out_channels, kernel_size, stride, pool_mode, activation, linear_units, skip_connection]
 

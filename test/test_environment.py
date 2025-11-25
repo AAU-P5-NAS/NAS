@@ -1,6 +1,6 @@
-from model_module.hyperparameters import SLHyperParameters
-from model_module.logger import NoOpLogger
-import src.model_module.environment as environment_module
+from src.utils.hyperparameters import SLHyperParameters
+from src.utils.logger import NoOpLogger
+import src.environment.environment as environment_module
 from src.classification_module.reward import WeightedSumRS, Weights
 
 test_logger = NoOpLogger()

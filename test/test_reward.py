@@ -1,6 +1,6 @@
 import pytest
 from src.classification_module.reward import WeightedSumRS, TchebycheffReward, Weights
-from src.classification_module.metrics import Metrics
+from src.environment.metrics import Metrics
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 from typing import Optional
 import numpy as np
-from src.action_masking.action_masking import sample_actions, mask_skip_connection_sequential
-from src.action_masking.action_masking_utils import (
+from src.agent.action_masking.action_masking import sample_actions
+from src.agent.action_masking.action_masking_utils import (
     MaskContext,
     get_logit_slices,
     standard_stochastic_sampling,
@@ -19,7 +19,6 @@ from src.utils.network_utils import (
     LinearUnits,
     PoolMode,
     ActivationFunction,
-    calculate_output_dimensions
 )
 
 

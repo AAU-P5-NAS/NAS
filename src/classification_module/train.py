@@ -5,8 +5,7 @@ from torch.utils.data import DataLoader
 from torch.nn.modules.loss import _Loss
 from torch.optim.optimizer import Optimizer
 from typing import Tuple, List
-from src.classification_module.metrics import MetrcicsEvaluator
-from src.classification_module.metrics import Metric_literal, Metrics
+from src.environment.metrics import Metric_literal, Metrics, MetrcicsEvaluator
 from threading import Event, Timer
 
 
