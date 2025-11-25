@@ -77,8 +77,6 @@ class CustomEnv(gym.Env):
         self.trainer = Trainer(
             dataloaders=self.loader_tuple,
             loss_function=CrossEntropyLoss(),
-            num_classes=self.data_importer.get_num_classes()[0],
-            dimensions=self.dimensions,
         )
         self.evaluator = Evaluator(
             num_classes=self.data_importer.get_num_classes()[0],

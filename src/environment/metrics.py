@@ -55,16 +55,6 @@ class Evaluator:
         loss_function:Callable[[Tensor, Tensor], Tensor],
         device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         average: Optional[Literal["micro", "macro", "weighted", "none"]] = "macro",
-        chosen_metrics: List[Metric_literal] = [
-            "accuracy",
-            "precision",
-            "recall",
-            "f1_score",
-            "test_loss",
-            "flops",
-            "runtime",
-            "architecture_size",
-        ],
     ):
         task: str = "multiclass"
         self.device = device

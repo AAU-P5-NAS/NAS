@@ -13,9 +13,6 @@ class Trainer:
         self,
         dataloaders: Tuple[DataLoader, DataLoader],
         loss_function: _Loss,
-        num_classes: int,
-        dimensions: tuple[int, int, int],
-
     ):
         self.train_loader, self.test_loader = dataloaders
         self.device: torch.device = (
