@@ -1,5 +1,5 @@
 """Hyperparameter optimization with separated RL and SL tuning"""
-
+""" 
 from __future__ import annotations
 import optuna
 from typing import Dict, Any, Optional
@@ -23,12 +23,10 @@ from src.utils.network_utils import (
     PoolMode,
     LinearUnits,
 )
-from src.utils.cnn_builder import CNNBuilder
 from torch.nn import CrossEntropyLoss
 
 
 def create_standard_architecture() -> NetworkConfig:
-    """Create a standard architecture for SL hyperparameter tuning"""
     layers = [
         LayerConfig(
             layer_type=LayerType.CONV,
@@ -74,7 +72,6 @@ def create_standard_architecture() -> NetworkConfig:
 
 
 class SLHyperparameterOptimizer:
-    """Optimize Supervised Learning hyperparameters using a standard architecture"""
 
     def __init__(
         self,
@@ -91,7 +88,6 @@ class SLHyperparameterOptimizer:
         self.standard_architecture = create_standard_architecture()
 
     def _objective(self, trial: optuna.Trial) -> float:
-        """Objective function for SL hyperparameter optimization"""
 
         sl = self.search_space.sl_hyperparameters
 
@@ -212,7 +208,6 @@ class SLHyperparameterOptimizer:
         self,
         study_name: str = "sl_hyperparameter_optimization",
     ) -> Dict[str, Any]:
-        """Run Bayesian optimization for SL hyperparameters"""
 
         self.console.print(
             "[bold blue]Starting SL hyperparameter optimization with standard architecture...[/bold blue]"
@@ -239,7 +234,6 @@ class SLHyperparameterOptimizer:
 
 
 class RLHyperparameterOptimizer:
-    """Optimize RL hyperparameters using discrete choices only"""
 
     def __init__(
         self,
@@ -261,7 +255,6 @@ class RLHyperparameterOptimizer:
         total_timesteps: int,
         sl_hyperparams: Dict[str, Any],
     ) -> float:
-        """Objective function for RL hyperparameter optimization"""
 
         learning_rate_choice = trial.suggest_categorical(
             "rl_lr",
@@ -269,7 +262,7 @@ class RLHyperparameterOptimizer:
         )
 
         try:
-            from src.model_module.sb_three import SBThreeAgent
+            from model_module.agent import SBThreeAgent
 
             agent = SBThreeAgent(
                 policy_algorithm_class=agent_class,
@@ -296,7 +289,6 @@ class RLHyperparameterOptimizer:
         total_timesteps: int = 10000,
         study_name: str = "rl_hyperparameter_optimization",
     ) -> Dict[str, Any]:
-        """Run discrete optimization for RL hyperparameters"""
 
         self.console.print(
             "[bold blue]Starting RL hyperparameter optimization (discrete choices only)...[/bold blue]"
@@ -326,7 +318,6 @@ class RLHyperparameterOptimizer:
 
 
 class HyperparameterOptimizer:
-    """Legacy optimizer"""
 
     def __init__(self, *args, **kwargs):
         self.console = Console()
@@ -341,3 +332,4 @@ class HyperparameterOptimizer:
         raise NotImplementedError(
             "Use SLHyperparameterOptimizer and RLHyperparameterOptimizer separately"
         )
+ """

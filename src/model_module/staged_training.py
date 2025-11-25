@@ -1,4 +1,4 @@
-"""Multi-stage training system that alternates between architecture search and hyperparameter optimization"""
+""" 
 
 from __future__ import annotations
 from typing import Dict, Any
@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.table import Table
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3 import A2C
-from src.model_module.sb_three import SBThreeAgent
+from model_module.agent import RLAgent
 from src.model_module.hyperparameter_tuning import (
     SLHyperparameterOptimizer,
     RLHyperparameterOptimizer,
@@ -19,7 +19,6 @@ import os
 
 
 class StageConfig(BaseModel):
-    """Configuration for a training stage"""
 
     name: str
     timesteps: int
@@ -27,7 +26,6 @@ class StageConfig(BaseModel):
 
 
 class MultiStageTrainer:
-    """Coordinates multi-stage training alternating between architecture search and hyperparameter optimization"""
 
     def __init__(
         self,
@@ -48,7 +46,6 @@ class MultiStageTrainer:
         timesteps: int = 50000,
         hyperparams: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
-        """Stage 1: Find the best architecture using default or provided hyperparameters"""
 
         self.console.print("\n[bold cyan]╔════════════════════════════════════════╗[/bold cyan]")
         self.console.print("[bold cyan]║  Stage 1: Architecture Search          ║[/bold cyan]")
@@ -114,7 +111,6 @@ class MultiStageTrainer:
         rl_timesteps: int = 10000,
         optimize_rl: bool = False,
     ) -> Dict[str, Any]:
-        """Stage 2: Optimize SL hyperparameters (and optionally RL)"""
 
         self.console.print("\n[bold cyan]╔════════════════════════════════════════╗[/bold cyan]")
         self.console.print("[bold cyan]║  Stage 2: Hyperparameter Optimization  ║[/bold cyan]")
@@ -184,7 +180,6 @@ class MultiStageTrainer:
         self,
         timesteps: int = 50000,
     ) -> Dict[str, Any]:
-        """Stage 3: Architecture search with optimized hyperparameters"""
 
         self.console.print("\n[bold cyan]╔════════════════════════════════════════╗[/bold cyan]")
         self.console.print("[bold cyan]║  Stage 3: Architecture Search (Optimized) ║[/bold cyan]")
@@ -249,7 +244,6 @@ class MultiStageTrainer:
         return stage_info
 
     def print_summary(self):
-        """Print summary of all stages"""
 
         table = Table(title="Multi-Stage Training Summary")
         table.add_column("Stage", style="cyan", no_wrap=True)
@@ -284,7 +278,6 @@ class MultiStageTrainer:
         improvement_threshold: float = 0.001,
         no_improvement_limit: int = 2,
     ):
-        """Run iterative multi-stage training until convergence"""
 
         self.console.print(
             "[bold blue]╔══════════════════════════════════════════════════╗[/bold blue]"
@@ -384,3 +377,4 @@ class MultiStageTrainer:
             "total_iterations": iteration,
             "converged": iterations_without_improvement >= no_improvement_limit,
         }
+ """

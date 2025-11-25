@@ -2,10 +2,9 @@ import os
 from rich.console import Console  # Add this import
 import warnings
 import shutil
-import argparse
 from sb3_contrib.ppo_mask import MaskablePPO
 
-from src.model_module.sb_three import SBThreeAgent
+from model_module.agent import RLAgent
 from src.action_masking.action_masking_policy import CustomMaskablePolicy
 
 warnings.filterwarnings("ignore", message="Unsupported operator aten::tanh")
@@ -21,7 +20,7 @@ def main():
         console.print("[yellow]Deleted old saved models[/yellow]")
 
     # Initialize agent with PPO algorithm
-    agent = SBThreeAgent(
+    agent = RLAgent(
         policy_algorithm_class=MaskablePPO,
         policy=CustomMaskablePolicy,
     )

@@ -42,8 +42,8 @@ writer = SummaryWriter(log_dir=f"{log_folder}/{run_name}")
 tb_logger = TensorboardLogger(logger=logger, writer=writer, log_folder=log_folder)  # created once
 
 
-class SBThreeAgent:
-    TB_LOG_NAME: str = "SBThreeAgent_run"
+class RLAgent:
+    TB_LOG_NAME: str = "RLAgent_run"
     TB_LOG_DIRECTORY: str = "tensorboard_logs/"
     MODEL_SAVE_DIRECTORY: str = "saved_models/"
     model_save_path: str
