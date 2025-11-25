@@ -2,22 +2,16 @@ import numpy as np
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from src.utils.layer_config import LayerType, StandardAction, OutChannels, KernelSize, Stride, LinearUnits, PoolMode, ActivationFunction
 from src.agent.action_masking.action_masking_utils import (
     NO_ACTION_DECISIONS,
     MaskContext,
     sample_action_for_slice,
     sample_skip_connection,
 )
-from src.utils.network_utils import (
+from src.utils.network_config import (
     SINGLE_LAYER_OBSERVATION_SIZE,
-    StandardAction,
-    LayerType,
-    OutChannels,
-    KernelSize,
-    Stride,
-    LinearUnits,
-    PoolMode,
-    ActivationFunction,
     calculate_output_dimensions,
     get_latest_layer,
     get_layer_from_index,

@@ -13,24 +13,26 @@ from src.environment.reward import RewardStrategy
 from src.environment.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
 from src.utils.architecture import Architecture, flatten_cnn_config
-from src.utils.network_utils import (
+from src.utils.network_config import (
+    NetworkConfig,
+)
+from src.utils.layer_config import (
     LayerConfig,
     LayerType,
-    NetworkConfig,
+    StandardAction,
     OutChannels,
     KernelSize,
-    StandardAction,
     Stride,
     LinearUnits,
     PoolMode,
     ActivationFunction,
-    transform_action_indices_to_decisions,
 )
 from torch.nn import CrossEntropyLoss
 from rich.console import Console
 
 from src.agent.action_masking.action_masking_utils import (
     get_logit_slices,
+    transform_action_indices_to_decisions,
 )
 
 MAX_LAYERS = 16

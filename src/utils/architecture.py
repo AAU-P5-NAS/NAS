@@ -1,13 +1,15 @@
 from typing import Dict, cast
 from torch import Tensor
 import torch.nn as nn
-from src.utils.network_utils import (
+from src.utils.network_config import (
     SINGLE_LAYER_OBSERVATION_SIZE,
+    NetworkConfig,
+    update_spatial_dims,
+)
+from src.utils.layer_config import (
     LayerConfig,
     LayerType,
-    NetworkConfig,
     PoolMode,
-    update_spatial_dims,
 )
 
 DROPOUT_PROBABILITY = 0.2

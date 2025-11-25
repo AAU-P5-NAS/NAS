@@ -2,18 +2,20 @@ import torch
 from torch import Tensor, nn
 import pytest
 
-from src.utils.network_utils import (
+from src.utils.network_config import (
     NetworkConfig,
+)
+from src.utils.architecture import Architecture
+from src.utils.layer_config import (
     LayerConfig,
     LayerType,
-    LinearUnits,
     OutChannels,
     KernelSize,
     Stride,
-    ActivationFunction,
+    LinearUnits,
     PoolMode,
+    ActivationFunction,
 )
-from utils.architecture import Architecture
 
 
 @pytest.fixture

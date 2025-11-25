@@ -6,7 +6,8 @@ import torch
 from rich.console import Console
 
 from src.environment.metrics import Metrics
-from src.utils.network_utils import LayerConfig, NetworkConfig
+from src.utils.network_config import  NetworkConfig
+from src.utils.layer_config import LayerConfig
 
 
 class LogData(BaseModel):

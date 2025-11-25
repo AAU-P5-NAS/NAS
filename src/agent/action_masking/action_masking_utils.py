@@ -1,5 +1,5 @@
 import enum
-from typing import Callable, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Callable, Optional, Tuple, Type, TypeVar
 from pydantic import BaseModel, ConfigDict
 import numpy as np
 
@@ -8,19 +8,55 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+if TYPE_CHECKING:
+    # Only imported for type checking to avoid circular imports at runtime.
+    from src.utils.layer_config import StandardAction, LayerType, OutChannels, KernelSize, Stride, LinearUnits, PoolMode, ActivationFunction
 
-from src.utils.network_utils import (
-    Decisions,
-    StandardAction,
-    LayerType,
-    OutChannels,
-    KernelSize,
-    Stride,
-    LinearUnits,
-    PoolMode,
-    ActivationFunction,
+
+
+class Decisions(BaseModel):
+    action_choice: StandardAction
+    layer_type_choice: LayerType
+    out_channels_choice: OutChannels
+    kernel_size_choice: KernelSize
+    stride_choice: Stride
+    linear_units_choice: LinearUnits
+    pool_mode_choice: PoolMode
+    activation_function_choice: ActivationFunction
+    skip_connection_choice: Optional[int]
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+EMPTY_DECISIONS = Decisions(
+    action_choice=StandardAction.NONE,
+    layer_type_choice=LayerType.NONE,
+    out_channels_choice=OutChannels.NONE,
+    kernel_size_choice=KernelSize.NONE,
+    stride_choice=Stride.NONE,
+    linear_units_choice=LinearUnits.NONE,
+    pool_mode_choice=PoolMode.NONE,
+    skip_connection_choice=None,
+    activation_function_choice=ActivationFunction.NONE,
 )
 
+    
+def transform_action_indices_to_decisions(action_indices: np.ndarray, max_layers:int):
+    actions_as_ints = [int(x) for x in np.array(action_indices).flatten()]
+
+    if len(actions_as_ints) < 9:
+        raise ValueError(f"Expected action vector with >=9 entries, got {len(actions_as_ints)}: {action_indices}")
+
+    return Decisions(
+        action_choice=StandardAction(actions_as_ints[0]),
+        layer_type_choice=LayerType(actions_as_ints[1]),
+        out_channels_choice=OutChannels(actions_as_ints[2]),
+        kernel_size_choice=KernelSize(actions_as_ints[3]),
+        stride_choice=Stride(actions_as_ints[4]),
+        linear_units_choice=LinearUnits(actions_as_ints[5]),
+        pool_mode_choice=PoolMode(actions_as_ints[6]),
+        activation_function_choice=ActivationFunction(actions_as_ints[7]),
+        skip_connection_choice=actions_as_ints[8] if actions_as_ints[8] != max_layers - 1 else None 
+    )
 
 class LogitSlice:
     def __init__(self, slc: slice):
@@ -174,3 +210,26 @@ def standard_stochastic_sampling(logits: np.ndarray) -> int:
 def max_sampling(logits: np.ndarray) -> int:
     """Selects the index with the highest logit value."""
     return int(np.argmax(logits))
+
+
+
+
+def get_valid_strides(
+    last_layer_output_dims: tuple[int, int], kernel_size: KernelSize, padding: int = 1
+) -> list[Stride]:
+    """Get valid stride values that won't make output dimensions too small. Assumes square kernels and no dilation."""
+    h, w = last_layer_output_dims
+    min_dim = min(h, w)
+    max_stride = min_dim + 2 * padding - kernel_size.to_kernel() + 1
+    valid_strides = []
+
+    if max_stride < 1:
+        return valid_strides
+
+    valid_strides.extend(
+        stride
+        for stride in Stride
+        if stride.to_stride() is not None and stride.to_stride() <= max_stride
+    )
+    return valid_strides
+

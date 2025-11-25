@@ -2,17 +2,16 @@ from typing import Optional
 import numpy as np
 from src.agent.action_masking.action_masking import sample_actions
 from src.agent.action_masking.action_masking_utils import (
+    EMPTY_DECISIONS,
     MaskContext,
     get_logit_slices,
     standard_stochastic_sampling,
 )
-from utils.architecture import flatten_cnn_config
-from src.utils.network_utils import (
+from src.utils.architecture import flatten_cnn_config
+from src.utils.layer_config import (
     LayerConfig,
-    NetworkConfig,
-    EMPTY_DECISIONS,
-    StandardAction,
     LayerType,
+    StandardAction,
     OutChannels,
     KernelSize,
     Stride,
@@ -20,6 +19,8 @@ from src.utils.network_utils import (
     PoolMode,
     ActivationFunction,
 )
+from src.utils.network_config import NetworkConfig
+
 
 
 def get_obs(network_config: NetworkConfig, max_layers: int) -> np.ndarray:
