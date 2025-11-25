@@ -118,7 +118,7 @@ NO_ACTION_DECISIONS = Decisions(
 E = TypeVar("E", bound=enum.Enum)
 
 
-def transform_decisions_to_action_indices(decisions: Decisions, slices: Slices) -> np.ndarray:
+def transform_decisions_to_action_indices(decisions: Decisions, slices: Slices, max_layers:int) -> np.ndarray:
     return np.array(
         [
             decisions.action_choice.value,
@@ -131,7 +131,7 @@ def transform_decisions_to_action_indices(decisions: Decisions, slices: Slices) 
             decisions.activation_function_choice.value,
             decisions.skip_connection_choice
             if decisions.skip_connection_choice is not None
-            else slices.skip_connection.stop,
+            else max_layers-1,
         ]
     )
 

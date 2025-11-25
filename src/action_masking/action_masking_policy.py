@@ -57,7 +57,7 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
         # 5. Transform decisions to action indices tensor
         # Actions must be a tensor of a specific shape for SB3
         actions = torch.tensor(
-            np.array(transform_decisions_to_action_indices(decisions, ctx.slices), dtype=np.int64),
+            np.array(transform_decisions_to_action_indices(decisions, ctx.slices, ctx.max_layers), dtype=np.int64),
             device=obs.device,
             dtype=torch.long,
         ).unsqueeze(0)
