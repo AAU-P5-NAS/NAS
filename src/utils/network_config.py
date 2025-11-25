@@ -1,12 +1,8 @@
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple
 import numpy as np
 from pydantic import BaseModel, field_validator
-
-""" if TYPE_CHECKING: """
-# Only imported for type checking to avoid circular imports at runtime.
 from src.agent.action_masking.action_masking_utils import MaskContext
 from src.utils.layer_config import LayerConfig, LayerType, OutChannels, KernelSize, Stride, LinearUnits, PoolMode, ActivationFunction
-
 
 class InvalidLayerConfigError(Exception):
     """Raised when a single CNN layer has invalid parameters."""

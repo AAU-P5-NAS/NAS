@@ -1,13 +1,11 @@
 import os
 from rich.console import Console  # Add this import
-import warnings
 import shutil
 from sb3_contrib.ppo_mask import MaskablePPO
 
 from src.agent.agent import RLAgent
 from src.agent.action_masking.action_masking_policy import CustomMaskablePolicy
 
-warnings.filterwarnings("ignore", message="Unsupported operator aten::tanh")
 console = Console()
 
 
