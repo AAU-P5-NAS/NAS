@@ -2,6 +2,7 @@ import os
 from rich.console import Console  # Add this import
 import shutil
 from sb3_contrib.ppo_mask import MaskablePPO
+import torch
 
 from src.agent.agent import RLAgent
 from src.agent.action_masking.action_masking_policy import CustomMaskablePolicy
@@ -10,6 +11,11 @@ console = Console()
 
 
 def main():
+    cuda_available = torch.cuda.is_available()
+    if cuda_available:
+        console.print("[bold green]CUDA is available. Using GPU for training.[/bold green]")
+    else:
+        console.print("[bold red]CUDA is not available. Using CPU for training.[/bold red]")
     console.print("[bold blue]Initializing Neural Architecture Search...[/bold blue]")
 
     # Clean up old models
