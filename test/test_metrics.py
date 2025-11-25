@@ -1,13 +1,14 @@
 import pytest
 import torch
 from torch import nn
-from src.environment.metrics import MetrcicsEvaluator, Metrics, InvalidMetricError
+from src.environment.metrics import Evaluator, Metrics, InvalidMetricError
 
 NUM_CLASSES = 28
 
 @pytest.fixture
 def evaluator():
-    return MetrcicsEvaluator(num_classes=NUM_CLASSES, dimensions=(3, 28, 28), device=torch.device("cpu"))
+    dl = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(torch.randn(10, 3, 28, 28), torch.randint(0, NUM_CLASSES, (10,))))
+    return Evaluator(num_classes=NUM_CLASSES, loss_function=torch.nn.CrossEntropyLoss(), dataloaders=(dl, dl), dimensions=(3, 28, 28), device=torch.device("cpu"))
 
 
 @pytest.fixture

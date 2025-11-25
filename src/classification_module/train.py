@@ -1,11 +1,10 @@
 from typing import Optional
 import torch
-from torch import nn, Tensor
+from torch import nn
 from torch.utils.data import DataLoader
 from torch.nn.modules.loss import _Loss
 from torch.optim.optimizer import Optimizer
-from typing import Tuple, List
-from src.environment.metrics import Metric_literal, Metrics, MetrcicsEvaluator
+from typing import Tuple
 from threading import Event, Timer
 
 
@@ -13,37 +12,21 @@ class Trainer:
     def __init__(
         self,
         dataloaders: Tuple[DataLoader, DataLoader],
-        model: nn.Module,
         loss_function: _Loss,
-        optimizer: Optimizer,
         num_classes: int,
         dimensions: tuple[int, int, int],
-        chosen_metrics: List[Metric_literal] = [
-            "accuracy",
-            "precision",
-            "recall",
-            "f1_score",
-            "test_loss",
-            "flops",
-            "runtime",
-            "architecture_size",
-        ],
+
     ):
         self.train_loader, self.test_loader = dataloaders
-        self.model: nn.Module = model
         self.device: torch.device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
-        # IMPORTANT: Pass device to evaluator so metrics are on same device as model
-        self.evaluator: MetrcicsEvaluator = MetrcicsEvaluator(
-            device=self.device, num_classes=num_classes, dimensions=dimensions
-        )
-        self.model.to(self.device)
-        self.loss_function: _Loss = loss_function.to(self.device)
-        self.optimizer: Optimizer = optimizer
-        self.chosen_metrics: List[Metric_literal] = chosen_metrics
 
-    def train(self, max_training_time: Optional[int] = 300):
+        self.loss_function: _Loss = loss_function.to(self.device)
+
+    def train(self,model: nn.Module, optimizer: Optimizer, max_training_time: Optional[int] = 300):
+        model = model.to(self.device)
+        
         # Set up max training timer
         stop_event = Event()
         timer = None
@@ -55,7 +38,7 @@ class Trainer:
         stopped_by_timeout = False
 
         # Train the model
-        self.model.train()
+        model.train()
         for X, Y in self.train_loader:
             # Stop training if it takes too long
             if stop_event.is_set():
@@ -66,20 +49,20 @@ class Trainer:
             Y = Y.to(self.device, non_blocking=True)
 
             # Compute prediction error
-            predictions = self.model(X)
+            predictions = model(X)
             loss = self.loss_function(predictions, Y)
 
             # Backpropagation
-            self.optimizer.zero_grad()
+            optimizer.zero_grad()
             loss.backward()
-            self.optimizer.step()
+            optimizer.step()
         # Clear timer
         if timer is not None:
             timer.cancel()
 
         # Return if stopped prematurely
         return stopped_by_timeout
-
+""" 
     def test(self) -> Metrics:
         self.model.eval()
         test_loss: float = 0
@@ -113,3 +96,4 @@ class Trainer:
             metrics.__setattr__("test_loss", test_loss)
 
         return metrics
+ """

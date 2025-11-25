@@ -2,7 +2,6 @@ import torch
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter
 from src.data_module.dataset import DatasetOption
-from src.environment.metrics import Metrics
 
 
 def test_stop_when_trains_too_long():
@@ -26,18 +25,13 @@ def test_stop_when_trains_too_long():
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     trainer = Trainer(
         dataloaders=dataloaders,
-        model=model,
-        optimizer=optimizer,
         loss_function=torch.nn.CrossEntropyLoss(),
         num_classes=number_of_classes,
         dimensions=(1, 28, 28),
     )
 
-    stopped_while_trianing = trainer.train(1)
+    stopped_while_trianing = trainer.train(model, optimizer, 1)
     assert stopped_while_trianing is True
 
-    stopped_while_trianing = trainer.train()
+    stopped_while_trianing = trainer.train(model, optimizer)
     assert stopped_while_trianing is False
-
-    test_return_metrics = trainer.test()
-    assert isinstance(test_return_metrics, Metrics)

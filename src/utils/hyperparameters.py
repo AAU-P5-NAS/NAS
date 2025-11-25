@@ -61,6 +61,23 @@ class SLHyperParameters(BaseModel):
             "optimizer_type": self.optimizer_type,
         }
 
+    def get_optimizer(self, params) -> Any:
+        """Get optimizer instance based on type
+
+        Args:
+            params: Iterable of parameters to optimize (e.g., model.parameters())
+        """
+        import torch.optim as optim
+
+        if self.optimizer_type == "SGD":
+            return optim.SGD(params, lr=self.learning_rate, momentum=self.momentum)
+        elif self.optimizer_type == "Adam":
+            return optim.Adam(params, lr=self.learning_rate)
+        elif self.optimizer_type == "RMSprop":
+            return optim.RMSprop(params, lr=self.learning_rate, momentum=self.momentum)
+        else:
+            raise ValueError(f"Unsupported optimizer type: {self.optimizer_type}")
+
 
 class RewardWeightsConfig(BaseModel):
     """Configuration for reward function weights"""

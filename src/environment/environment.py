@@ -6,6 +6,7 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
+from src.environment.metrics import Evaluator
 from src.utils.hyperparameters import SLHyperParameters
 from src.utils.logger import NoOpLogger, TensorboardLogger
 from src.environment.reward import RewardStrategy
@@ -62,6 +63,7 @@ class CustomEnv(gym.Env):
         self.reward_strategy = reward_strategy
         self.tb_logger = tb_logger
         self.data_importer = DataImporter(dataset_option=dataset)
+
         self.logit_slices = get_logit_slices(max_layers=MAX_LAYERS)
         self.loader_tuple = self.data_importer.get_dataloaders(
             batch_size=self.hyperparameters.batch_size
@@ -72,6 +74,20 @@ class CustomEnv(gym.Env):
         self.console = Console()
         self.current_network_config = NetworkConfig(layers=[])
         self.actions_taken = 0  # Track steps in episode
+        self.trainer = Trainer(
+            dataloaders=self.loader_tuple,
+            loss_function=CrossEntropyLoss(),
+            num_classes=self.data_importer.get_num_classes()[0],
+            dimensions=self.dimensions,
+        )
+        self.evaluator = Evaluator(
+            num_classes=self.data_importer.get_num_classes()[0],
+            dataloaders=self.loader_tuple,
+            dimensions=self.dimensions,
+            device=torch.device(self.device),
+            loss_function=CrossEntropyLoss(),
+        )
+
 
     def _get_action_space(self) -> spaces.Space:
         return spaces.MultiDiscrete(
@@ -87,6 +103,7 @@ class CustomEnv(gym.Env):
                 MAX_LAYERS,  # for skip connection option
             ]
         )
+
 
     def _get_observation_space(self) -> spaces.Space:
         observation_space_vector: List[int] = []
@@ -104,9 +121,11 @@ class CustomEnv(gym.Env):
 
         return spaces.MultiDiscrete(observation_space_vector)
 
+
     def _get_observation(self) -> np.ndarray:
         flattened_obs = flatten_cnn_config(self.current_network_config, MAX_LAYERS)
         return np.array(flattened_obs, dtype=np.float32)
+
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
         """Start a new episode.
@@ -127,6 +146,7 @@ class CustomEnv(gym.Env):
         observation = self._get_observation()
         return observation, self.info
 
+
     def step(self, decision_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
 
@@ -141,8 +161,7 @@ class CustomEnv(gym.Env):
 
         decisions = transform_action_indices_to_decisions(decision_logits, MAX_LAYERS)
         if decisions.action_choice == StandardAction.NONE:# Stop and evaluate
-            self.evaluated_this_step = True
-            reward = self._evaluate_architecture(self.current_network_config)
+            reward = self.evaluate_architecture(self.current_network_config)
             terminated = True
             truncated = False
             self.actions_taken = 0  # Reset for next episode
@@ -162,12 +181,42 @@ class CustomEnv(gym.Env):
 
         return obs, reward, terminated, truncated, self.info
 
-    def _train_classifier(
+
+    def evaluate_architecture(self, new_architecture: NetworkConfig) -> float | dict[str, float]:
+        """Evaluate the given architecture by training and testing it, returning the computed reward.
+
+        :Args:
+        - new_architecture: The CNN architecture to evaluate.
+
+        :Returns:
+        - float: The computed reward based on evaluation metrics.
+        """
+        architecture = GraphCnn(
+            net_config=new_architecture,
+            num_classes=self.data_importer.get_num_classes()[0],
+            input_dimensions=self.dimensions,
+        )
+
+        trained_model, training_time = self.train_classifier(model=architecture)
+
+        evaluated_metrics = self.evaluator.evaluate(trained_model, training_time=training_time)
+
+        reward = self.reward_strategy.compute_reward(evaluated_metrics)
+
+        self.tb_logger.log_evaluation(
+            reward=reward,
+            architecture=architecture,
+            current_config=self.current_network_config,
+            actions_taken=self.actions_taken,
+            metrics=evaluated_metrics,
+        )
+
+        return reward
+
+
+    def train_classifier(
         self,
-        dataloaders: Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader],
         model: torch.nn.Module,
-        loss_function: torch.nn.modules.loss._Loss,
-        optimizer: torch.optim.Optimizer,
     ):
         """Train and evaluate the given model, returning the evaluation metrics. Expects that all inputs are not already moved to device.
 
@@ -181,75 +230,22 @@ class CustomEnv(gym.Env):
         - Metrics | float: The evaluation metrics after training, or a penalty float if training failed.
         """
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        trainer = Trainer(
-            dataloaders=dataloaders,
-            model=model.to(device),
-            loss_function=loss_function.to(device),
-            optimizer=optimizer,
-            num_classes=self.data_importer.get_num_classes()[0],
-            dimensions=self.dimensions,
-        )
-        num_epochs = self.hyperparameters.training_epochs
-        start_time = time.time()
+        model.to(self.device)
+        optimizer = self.hyperparameters.get_optimizer(model.parameters())
 
+        num_epochs = self.hyperparameters.training_epochs
+
+        start_time = time.time()
         for epoch in range(num_epochs):
             progress = (epoch + 1) / num_epochs * 100
             with self.console.status(
                 f"[bold blue]Training model on evaluation number '{self.tb_logger.evaluation_count}': Progress {int(progress)}%[/bold blue]"
             ):
-                trainer.train()
+                self.trainer.train(model, optimizer)
 
         end_time = time.time()
         training_time = end_time - start_time
-        metrics = trainer.test()
-
-        metrics.runtime = training_time
-        metrics.training_time = training_time
-
-        self.newest_metrics = metrics
-
-        return metrics
-
-    def _evaluate_architecture(self, new_architecture: NetworkConfig) -> float | dict[str, float]:
-        """Evaluate the given architecture by training and testing it, returning the computed reward.
-
-        :Args:
-        - new_architecture: The CNN architecture to evaluate.
-
-        :Returns:
-        - float: The computed reward based on evaluation metrics.
-        """
-        reward: float | dict[str, float]
-
-        architecture = GraphCnn(
-            net_config=new_architecture,
-            num_classes=self.data_importer.get_num_classes()[0],
-            input_dimensions=self.dimensions,
-        )
-        optimizer = torch.optim.SGD(
-            architecture.parameters(),
-            lr=self.hyperparameters.learning_rate,
-            momentum=self.hyperparameters.momentum,
-        )
-        training_results = self._train_classifier(
-            dataloaders=self.loader_tuple,
-            model=architecture,
-            loss_function=CrossEntropyLoss(),
-            optimizer=optimizer,
-        )
-        reward = self.reward_strategy.compute_reward(training_results)
-
-        self.tb_logger.log_evaluation(
-            reward=reward,
-            accuracy=training_results.accuracy,
-            architecture=architecture,
-            current_config=self.current_network_config,
-            actions_taken=self.actions_taken,
-            metrics=training_results,
-        )
-
-        return reward
+        return model, training_time 
 
     def _should_terminate(self) -> bool:
         # Termination is now handled in step() method

@@ -3,8 +3,9 @@ import time
 from pydantic import BaseModel
 from torch import Tensor, nn
 from torchmetrics import Accuracy, Precision, Recall, F1Score
-from typing import Literal, List, Optional, Callable, Union, cast
+from typing import Literal, List, Optional, Callable, Tuple, Union, cast
 from fvcore.nn import FlopCountAnalysis
+from torch.utils.data import DataLoader
 
 
 class InvalidMetricError(Exception):
@@ -45,18 +46,31 @@ Metric_literal_no_test_loss = Literal[
 ]
 
 
-class MetrcicsEvaluator:
+class Evaluator:
     def __init__(
         self,
         num_classes: int,
+        dataloaders: Tuple[DataLoader, DataLoader],       
         dimensions: tuple[int, int, int],
+        loss_function:Callable[[Tensor, Tensor], Tensor],
         device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         average: Optional[Literal["micro", "macro", "weighted", "none"]] = "macro",
+        chosen_metrics: List[Metric_literal] = [
+            "accuracy",
+            "precision",
+            "recall",
+            "f1_score",
+            "test_loss",
+            "flops",
+            "runtime",
+            "architecture_size",
+        ],
     ):
         task: str = "multiclass"
         self.device = device
         self.image_dimensions = dimensions
-
+        self.train_loader, self.test_loader = dataloaders
+        self.loss_function = loss_function
         self.accuracy: Accuracy = cast(
             Accuracy, Accuracy(task=task, average=average, num_classes=num_classes).to(device)
         )
@@ -69,6 +83,44 @@ class MetrcicsEvaluator:
         self.f1_score: F1Score = cast(
             F1Score, F1Score(task=task, average=average, num_classes=num_classes).to(device)
         )
+    
+    def evaluate(
+        self,
+        model: nn.Module,
+        training_time: Optional[float] = None,
+    ) -> Metrics:
+        model = model.to(self.device)
+        model.eval()
+        test_loss: float = 0.0
+
+        all_preds: List[Tensor] = []
+        all_labels: List[Tensor] = []
+
+        with torch.no_grad():
+            for X, y in self.test_loader:
+                X, y = X.to(self.device), y.to(self.device)
+                outputs = model(X)
+                test_loss += self.loss_function(outputs, y).item()
+                predictions = outputs.argmax(1)
+                all_preds.append(predictions)
+                all_labels.append(y)
+
+        test_loss /= len(self.test_loader)
+
+        all_preds_flattened: Tensor = torch.cat(all_preds)
+        all_labels_flattened: Tensor = torch.cat(all_labels)
+
+        computed_metrics: Metrics = self.calculate_metrics(
+            model,
+            all_preds_flattened,
+            all_labels_flattened,
+            [m for m in Metric_literal_no_test_loss.__args__],
+        )
+
+        computed_metrics.training_time = training_time
+        computed_metrics.runtime = training_time
+
+        return computed_metrics
 
     def calculate_metrics(
         self,

@@ -111,12 +111,11 @@ class TensorboardLogger:
 
     def log_evaluation(
         self,
+        metrics: Metrics,
         reward: float | dict[str, float],
-        accuracy: float | None,
         architecture: torch.nn.Module | None,
         current_config: NetworkConfig | None,
         actions_taken: Optional[int] = None,
-        metrics: Optional[Metrics] = None,
     ):
         """Update state, print to console, and log to TensorBoard."""
 
@@ -144,8 +143,8 @@ class TensorboardLogger:
         )
 
         avg_accuracy = -1
-        if accuracy is not None:
-            self.sum_accuracy += accuracy
+        if metrics.accuracy is not None:
+            self.sum_accuracy += metrics.accuracy
             avg_accuracy = self.sum_accuracy / self.evaluation_count
 
         # Print to console
@@ -153,9 +152,9 @@ class TensorboardLogger:
             f"[bold green]Evaluation {self.evaluation_count} (actions {actions_taken})[/bold green]"
         )
         self.console.print(f"[bold blue]Reward: {reward}, Avg: {avg_reward}[/bold blue]")
-        if accuracy is not None:
+        if metrics.accuracy is not None:
             self.console.print(
-                f"[bold blue]Accuracy: {accuracy}, Avg: {avg_accuracy:.4f}[/bold blue]"
+                f"[bold blue]Accuracy: {metrics.accuracy}, Avg: {avg_accuracy:.4f}[/bold blue]"
             )
 
         self.print_layers(current_config.layers if current_config else [])
