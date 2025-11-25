@@ -1,7 +1,7 @@
 import time
-from src.data_module.dataset import DatasetOption
+from src.utils.data_importer.dataset import DatasetOption
 from src.environment.train import Trainer
-from src.data_module.importer import DataImporter
+from src.utils.data_importer.importer import DataImporter
 
 import torch
 from torch.nn import CrossEntropyLoss

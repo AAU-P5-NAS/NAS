@@ -1,7 +1,7 @@
 import torch
 from src.environment.train import Trainer
-from src.data_module.importer import DataImporter
-from src.data_module.dataset import DatasetOption
+from src.utils.data_importer.importer import DataImporter
+from src.utils.data_importer.dataset import DatasetOption
 
 
 def test_stop_when_trains_too_long():

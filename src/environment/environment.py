@@ -11,7 +11,7 @@ from src.utils.hyperparameters import SLHyperParameters
 from src.utils.logger import NoOpLogger, TensorboardLogger
 from src.environment.reward import RewardStrategy
 from src.environment.train import Trainer
-from src.data_module.importer import DataImporter, DatasetOption
+from src.utils.data_importer.importer import DataImporter, DatasetOption
 from src.utils.architecture import Architecture, flatten_cnn_config
 from src.utils.network_config import (
     NetworkConfig,

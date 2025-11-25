@@ -2,10 +2,10 @@ from typing import List, Optional, Tuple, TYPE_CHECKING
 import numpy as np
 from pydantic import BaseModel, field_validator
 
-if TYPE_CHECKING:
-    # Only imported for type checking to avoid circular imports at runtime.
-    from src.agent.action_masking.action_masking_utils import MaskContext
-    from src.utils.layer_config import LayerConfig, LayerType, OutChannels, KernelSize, Stride, LinearUnits, PoolMode, ActivationFunction
+""" if TYPE_CHECKING: """
+# Only imported for type checking to avoid circular imports at runtime.
+from src.agent.action_masking.action_masking_utils import MaskContext
+from src.utils.layer_config import LayerConfig, LayerType, OutChannels, KernelSize, Stride, LinearUnits, PoolMode, ActivationFunction
 
 
 class InvalidLayerConfigError(Exception):
@@ -132,7 +132,7 @@ def get_valid_strides(
 
 def get_observation_with_new_layer(observation, ctx: "MaskContext"):
     # Local import to avoid circular import at module import time.
-    from utils.architecture import flatten_cnn_config
+    from src.utils.architecture import flatten_cnn_config
 
     observation = observation.copy()
     new_layer = LayerConfig.from_decisions(ctx.decisions)

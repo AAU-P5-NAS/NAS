@@ -5,8 +5,8 @@ import pytest
 # Fixes import issues when running tests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.data_module.dataset import DatasetOption
-from src.data_module.importer import DataImporter
+from src.utils.data_importer.dataset import DatasetOption
+from src.utils.data_importer.importer import DataImporter
 
 
 def test_get_dataloaders():

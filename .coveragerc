@@ -2,4 +2,4 @@
 
 [run]
 omit =
-    src/data_module/emnist/*
+    src/utils/data_importer/emnist/*

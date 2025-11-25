@@ -17,7 +17,7 @@ from src.utils.network_config import (
     get_number_of_actions_from_observation,
 )
 from src.agent.action_masking.action_masking_utils import EMPTY_DECISIONS
-from src.data_module.cifar.cifar10 import DEFAULT_W, DEFAULT_H, NUM_CHANNELS
+from src.utils.data_importer.cifar.cifar10 import DEFAULT_W, DEFAULT_H, NUM_CHANNELS
 
 
 class CustomMaskablePolicy(MaskableActorCriticPolicy):

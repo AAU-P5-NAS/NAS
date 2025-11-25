@@ -89,15 +89,15 @@ def get_mapping_string(dataset_option: DatasetOption) -> str:
     """
     match dataset_option:
         case DatasetOption.EMNIST_MNIST:
-            return "src/data_module/emnist/emnist_mnist_mapping.txt"
+            return "src/utils/data_importer/emnist/emnist_mnist_mapping.txt"
         case DatasetOption.EMNIST_LETTERS:
-            return "src/data_module/emnist/emnist_letters_mapping.txt"
+            return "src/utils/data_importer/emnist/emnist_letters_mapping.txt"
         case DatasetOption.EMNIST_BALANCED:
-            return "src/data_module/emnist/emnist_balanced_mapping.txt"
+            return "src/utils/data_importer/emnist/emnist_balanced_mapping.txt"
         case DatasetOption.EMNIST_BYCLASS:
-            return "src/data_module/emnist/emnist_byclass_mapping.txt"
+            return "src/utils/data_importer/emnist/emnist_byclass_mapping.txt"
         case DatasetOption.EMNIST_BYMERGE:
-            return "src/data_module/emnist/emnist_bymerge_mapping.txt"
+            return "src/utils/data_importer/emnist/emnist_bymerge_mapping.txt"
         case _:
             raise ValueError(f"Unknown dataset option: {dataset_option}")
 

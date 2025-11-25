@@ -8,9 +8,7 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-if TYPE_CHECKING:
-    # Only imported for type checking to avoid circular imports at runtime.
-    from src.utils.layer_config import StandardAction, LayerType, OutChannels, KernelSize, Stride, LinearUnits, PoolMode, ActivationFunction
+from src.utils.layer_config import StandardAction, LayerType, OutChannels, KernelSize, Stride, LinearUnits, PoolMode, ActivationFunction
 
 
 
