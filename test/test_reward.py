@@ -1,5 +1,5 @@
 import pytest
-from src.classification_module.reward import WeightedSumRS, TchebycheffReward, Weights
+from src.environment.reward import WeightedSumRS, TchebycheffReward, Weights
 from src.environment.metrics import Metrics
 
 

@@ -7,7 +7,7 @@ from stable_baselines3.common.policies import BasePolicy
 
 from sb3_contrib.common.wrappers import ActionMasker
 
-from src.classification_module.reward import WeightedSumRS, Weights
+from src.environment.reward import WeightedSumRS, Weights
 import os
 
 from stable_baselines3.common.logger import Logger

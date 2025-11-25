@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Optional
 import torch
 from src.utils.hyperparameters import SLHyperParameters
 from src.utils.logger import NoOpLogger, TensorboardLogger
-from src.classification_module.reward import RewardStrategy
+from src.environment.reward import RewardStrategy
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
 from src.utils.graph_cnn import flatten_cnn_config
