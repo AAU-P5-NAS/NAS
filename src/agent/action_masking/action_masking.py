@@ -1,11 +1,8 @@
 import numpy as np
 import sys
 import os
-
-from src.utils.graph_cnn import flatten_cnn_config
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from src.action_masking.action_masking_utils import (
+from src.agent.action_masking.action_masking_utils import (
     NO_ACTION_DECISIONS,
     MaskContext,
     sample_action_for_slice,
@@ -13,9 +10,6 @@ from src.action_masking.action_masking_utils import (
 )
 from src.utils.network_utils import (
     SINGLE_LAYER_OBSERVATION_SIZE,
-    Decisions,
-    LayerConfig,
-    NetworkConfig,
     StandardAction,
     LayerType,
     OutChannels,

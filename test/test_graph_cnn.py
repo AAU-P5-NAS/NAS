@@ -13,7 +13,7 @@ from src.utils.network_utils import (
     ActivationFunction,
     PoolMode,
 )
-from src.utils.graph_cnn import GraphCnn
+from utils.architecture import Architecture
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def test_convnet_builds_correctly(input_tensor):
         make_layer(LayerType.LINEAR),
     ]
     net_config = NetworkConfig(layers=layers)
-    model = GraphCnn(net_config, num_classes=10, input_dimensions=input_tensor.shape[1:])
+    model = Architecture(net_config, num_classes=10, input_dimensions=input_tensor.shape[1:])
 
     out = model(input_tensor)
     assert isinstance(out, Tensor)
@@ -70,7 +70,7 @@ def test_flatten_added_when_no_linear(input_tensor):
     """Test: When no linear layers exist, final flatten + linear layer is appended automatically"""
     layers = [make_layer(LayerType.CONV), make_layer(LayerType.POOL)]
     net_config = NetworkConfig(layers=layers)
-    model = GraphCnn(net_config, num_classes=5, input_dimensions=(3, 32, 32))
+    model = Architecture(net_config, num_classes=5, input_dimensions=(3, 32, 32))
 
     out = model(input_tensor)
     assert out.shape == (4, 5)
@@ -102,7 +102,7 @@ def test_skip_connection_conv_to_conv(input_tensor):
         ),
     ]
     net_config = NetworkConfig(layers=layers)
-    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+    model = Architecture(net_config, num_classes=10, input_dimensions=(3, 32, 32))
 
     out = model(input_tensor)
     assert out.shape == (4, 10)
@@ -132,7 +132,7 @@ def test_skip_connection_conv_to_linear():
     ]
 
     net_config = NetworkConfig(layers=layers)
-    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 16, 16))
+    model = Architecture(net_config, num_classes=10, input_dimensions=(3, 16, 16))
 
     out = model(input_tensor)
 
@@ -145,7 +145,7 @@ def test_skip_connection_conv_to_linear():
 
 def test_infer_out_channels_linear_and_conv():
     """Ensure _infer_out_channels works for convs and linears"""
-    model = GraphCnn(NetworkConfig(layers=[]), num_classes=10, input_dimensions=(3, 32, 32))
+    model = Architecture(NetworkConfig(layers=[]), num_classes=10, input_dimensions=(3, 32, 32))
 
     conv = nn.Conv2d(3, 8, 3)
     linear = nn.Linear(16, 4)
@@ -159,7 +159,7 @@ def test_infer_out_channels_linear_and_conv():
 def test_forward_pass_runs_without_error(input_tensor):
     layers = [make_layer(LayerType.CONV), make_layer(LayerType.POOL), make_layer(LayerType.LINEAR)]
     net_config = NetworkConfig(layers=layers)
-    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+    model = Architecture(net_config, num_classes=10, input_dimensions=(3, 32, 32))
     with torch.no_grad():
         out = model(input_tensor)
     assert out.shape == (4, 10)
@@ -177,7 +177,7 @@ def test_batch_norm_not_added_for_small_nets(input_tensor):
         make_layer(LayerType.LINEAR),
     ]
     net_config = NetworkConfig(layers=layers)
-    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+    model = Architecture(net_config, num_classes=10, input_dimensions=(3, 32, 32))
 
     # Check that no BatchNorm layers are present
     assert not any(isinstance(m, nn.BatchNorm2d) for m in model.layers), (
@@ -195,7 +195,7 @@ def test_batch_norm_added_for_large_nets(input_tensor):
         make_layer(LayerType.LINEAR),
     ]
     net_config = NetworkConfig(layers=layers)
-    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+    model = Architecture(net_config, num_classes=10, input_dimensions=(3, 32, 32))
 
     print(model.layers)
 
@@ -217,7 +217,7 @@ def test_batch_norm_with_skip_connections(input_tensor):
         make_layer(LayerType.LINEAR),
     ]
     net_config = NetworkConfig(layers=layers)
-    model = GraphCnn(net_config, num_classes=10, input_dimensions=(3, 32, 32))
+    model = Architecture(net_config, num_classes=10, input_dimensions=(3, 32, 32))
 
     # Check that BatchNorm layers are present after Conv layers
     for seq in model.layers:
@@ -258,7 +258,7 @@ def test_dropout_after_flatten_when_linear_layer():
     # Build a NetworkConfig with a single LINEAR layer (should cause flatten+dropout inside sequential)
     net = NetworkConfig(layers=[make_layer(LayerType.LINEAR)])
 
-    model = GraphCnn(net, num_classes=LinearUnits.LU_64.to_units(), input_dimensions=(1, 28, 28))
+    model = Architecture(net, num_classes=LinearUnits.LU_64.to_units(), input_dimensions=(1, 28, 28))
 
     total_dropouts, flatten_followed = count_dropouts_and_find_flatten(model.layers)
 
@@ -270,7 +270,7 @@ def test_dropout_appended_when_no_linear_layers():
     # NetworkConfig with a CONV then POOL (no linear) -> flatten+Dropout should be appended at the end
     net = NetworkConfig(layers=[make_layer(LayerType.CONV), make_layer(LayerType.POOL)])
 
-    model = GraphCnn(net, num_classes=10, input_dimensions=(1, 28, 28))
+    model = Architecture(net, num_classes=10, input_dimensions=(1, 28, 28))
 
     total_dropouts, flatten_followed = count_dropouts_and_find_flatten(model.layers)
 

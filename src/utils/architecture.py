@@ -13,7 +13,11 @@ from src.utils.network_utils import (
 DROPOUT_PROBABILITY = 0.2
 
 
-class GraphCnn(nn.Module):
+class Architecture(nn.Module):
+    """
+    An instantiated neural network based on a NetworkConfig.
+    
+    """
     def __init__(
         self, net_config: NetworkConfig, num_classes: int, input_dimensions: tuple[int, int, int]
     ):

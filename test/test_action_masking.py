@@ -6,7 +6,7 @@ from src.agent.action_masking.action_masking_utils import (
     get_logit_slices,
     standard_stochastic_sampling,
 )
-from src.utils.graph_cnn import flatten_cnn_config
+from utils.architecture import flatten_cnn_config
 from src.utils.network_utils import (
     LayerConfig,
     NetworkConfig,

@@ -1,5 +1,5 @@
 import torch
-from src.classification_module.train import Trainer
+from src.environment.train import Trainer
 from src.data_module.importer import DataImporter
 from src.data_module.dataset import DatasetOption
 
@@ -26,8 +26,6 @@ def test_stop_when_trains_too_long():
     trainer = Trainer(
         dataloaders=dataloaders,
         loss_function=torch.nn.CrossEntropyLoss(),
-        num_classes=number_of_classes,
-        dimensions=(1, 28, 28),
     )
 
     stopped_while_trianing = trainer.train(model, optimizer, 1)

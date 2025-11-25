@@ -333,7 +333,7 @@ def get_valid_strides(
 
 def get_observation_with_new_layer(observation, ctx: "MaskContext"):
     # Local import to avoid circular import at module import time.
-    from src.utils.graph_cnn import flatten_cnn_config
+    from utils.architecture import flatten_cnn_config
 
     observation = observation.copy()
     new_layer = LayerConfig.from_decisions(ctx.decisions)

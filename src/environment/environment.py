@@ -10,9 +10,9 @@ from src.environment.metrics import Evaluator
 from src.utils.hyperparameters import SLHyperParameters
 from src.utils.logger import NoOpLogger, TensorboardLogger
 from src.environment.reward import RewardStrategy
-from src.classification_module.train import Trainer
+from src.environment.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
-from src.utils.graph_cnn import flatten_cnn_config
+from src.utils.architecture import Architecture, flatten_cnn_config
 from src.utils.network_utils import (
     LayerConfig,
     LayerType,
@@ -28,7 +28,6 @@ from src.utils.network_utils import (
 )
 from torch.nn import CrossEntropyLoss
 from rich.console import Console
-from src.utils.graph_cnn import GraphCnn
 
 from src.agent.action_masking.action_masking_utils import (
     get_logit_slices,
@@ -189,7 +188,7 @@ class CustomEnv(gym.Env):
         :Returns:
         - float: The computed reward based on evaluation metrics.
         """
-        architecture = GraphCnn(
+        architecture = Architecture(
             net_config=new_architecture,
             num_classes=self.data_importer.get_num_classes()[0],
             input_dimensions=self.dimensions,
