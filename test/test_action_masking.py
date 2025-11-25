@@ -602,7 +602,7 @@ def test_skip_masking_1():
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
-        input_dimensions=(3, 28, 28),
+        input_dimensions=(3, 32, 32),
         action_count=layer_count,
     )
 
@@ -647,7 +647,7 @@ def test_skip_masking_2():
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
-        input_dimensions=(3, 28, 28),
+        input_dimensions=(3, 32, 32),
         action_count=action_count,
     )
 
@@ -687,7 +687,7 @@ def test_skip_masking_3():
         sampling_strategy=standard_stochastic_sampling,
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
-        input_dimensions=(3, 28, 28),
+        input_dimensions=(3, 32, 32),
         action_count=action_count,
     )
 
