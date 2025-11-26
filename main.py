@@ -16,7 +16,7 @@ def main():
     parser.add_argument(
         "--optimize-hyperparameters",
         type=int,
-        default=5,
+        default=None,
         help="If set, runs hyperparameter optimization with given number of trials",
     )
     parser.add_argument("--clean-saved-models", action="store_true")
@@ -42,7 +42,9 @@ def main():
     if args.optuna_seed is not None:
         console.print(f"[yellow]Set optuna seed to '{args.optuna_seed}'[/yellow]")
 
-    if args.optimize_hyperparameters:
+    for arg in vars(args):
+        console.print(f"[blue]{arg}: {getattr(args, arg)}[/blue]")
+    if args.optimize_hyperparameters is not None:
         from src.utils.hyperparameter_tuning import (
             SLHyperparameterOptimizer,
             HyperparameterSearchSpace,

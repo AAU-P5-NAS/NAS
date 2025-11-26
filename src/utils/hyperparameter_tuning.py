@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 from rich.console import Console
 import torch
 
-from environment.metrics import Evaluator
+from src.environment.metrics import Evaluator
 from src.utils.data_importer.dataset import DatasetOption
 from src.utils.hyperparameters import HyperparameterSearchSpace
 from src.environment.reward import Weights, WeightedSumRS
