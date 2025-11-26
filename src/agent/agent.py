@@ -1,3 +1,4 @@
+from typing import Optional
 import torch
 from src.utils.logger import TensorboardLogger
 from src.utils.hyperparameters import SLHyperParameters
@@ -24,7 +25,7 @@ def mask_fn(env):
 hyperparameters = SLHyperParameters(
     training_epochs=15,
     learning_rate=0.00132,
-    momentum=0.9,   
+    momentum=0.9,
     batch_size=32,
     optimizer_type="Adam",
 )
@@ -45,6 +46,7 @@ logger = Logger(
 writer = SummaryWriter(log_dir=os.path.join(log_folder, run_name))
 tb_logger = TensorboardLogger(logger=logger, writer=writer, log_folder=log_folder)  # created once
 
+
 class RLAgent:
     TB_LOG_NAME: str = "RLAgent_run"
     TB_LOG_DIRECTORY: str = "tensorboard_logs/"
@@ -55,6 +57,7 @@ class RLAgent:
         self,
         policy_algorithm_class: type[BaseAlgorithm],
         policy: type[BasePolicy] | str = "MlpPolicy",
+        policy_seed: Optional[int] = None,
         rl_learning_rate: float = 0.001,
         hyperparameters: SLHyperParameters = hyperparameters,
         reward_weights: Weights | None = None,
@@ -77,6 +80,7 @@ class RLAgent:
             gamma=1,  # type: ignore # extremely important to have gamma=1 for maximum discount
             device="cpu",
             learning_rate=rl_learning_rate,
+            seed=policy_seed,
         )
         self.model.set_logger(tb_logger.logger)
         self.model_save_path = f"{self.MODEL_SAVE_DIRECTORY}{self.model.__class__.__name__}"
