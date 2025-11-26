@@ -180,6 +180,7 @@ class TensorboardLogger:
         Args:
             layers (list): List of layer objects.
         """
+        self.console.print("Skip connections:")
         for connection in self.skip_connections:
             self.console.print(f"Skip from: {connection[0]}, to {connection[1]}")
         
