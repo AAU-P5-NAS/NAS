@@ -1,5 +1,5 @@
 import enum
-from typing import TYPE_CHECKING, Callable, Optional, Tuple, Type, TypeVar
+from typing import Callable, Optional, Tuple, Type, TypeVar
 from pydantic import BaseModel, ConfigDict
 import numpy as np
 
@@ -8,8 +8,16 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.utils.layer_config import StandardAction, LayerType, OutChannels, KernelSize, Stride, LinearUnits, PoolMode, ActivationFunction
-
+from src.utils.layer_config import (
+    StandardAction,
+    LayerType,
+    OutChannels,
+    KernelSize,
+    Stride,
+    LinearUnits,
+    PoolMode,
+    ActivationFunction,
+)
 
 
 class Decisions(BaseModel):
@@ -37,12 +45,14 @@ EMPTY_DECISIONS = Decisions(
     activation_function_choice=ActivationFunction.NONE,
 )
 
-    
-def transform_action_indices_to_decisions(action_indices: np.ndarray, max_layers:int):
+
+def transform_action_indices_to_decisions(action_indices: np.ndarray, max_layers: int):
     actions_as_ints = [int(x) for x in np.array(action_indices).flatten()]
 
     if len(actions_as_ints) < 9:
-        raise ValueError(f"Expected action vector with >=9 entries, got {len(actions_as_ints)}: {action_indices}")
+        raise ValueError(
+            f"Expected action vector with >=9 entries, got {len(actions_as_ints)}: {action_indices}"
+        )
 
     return Decisions(
         action_choice=StandardAction(actions_as_ints[0]),
@@ -53,8 +63,9 @@ def transform_action_indices_to_decisions(action_indices: np.ndarray, max_layers
         linear_units_choice=LinearUnits(actions_as_ints[5]),
         pool_mode_choice=PoolMode(actions_as_ints[6]),
         activation_function_choice=ActivationFunction(actions_as_ints[7]),
-        skip_connection_choice=actions_as_ints[8] if actions_as_ints[8] != max_layers - 1 else None 
+        skip_connection_choice=actions_as_ints[8] if actions_as_ints[8] != max_layers - 1 else None,
     )
+
 
 class LogitSlice:
     def __init__(self, slc: slice):
@@ -152,7 +163,9 @@ NO_ACTION_DECISIONS = Decisions(
 E = TypeVar("E", bound=enum.Enum)
 
 
-def transform_decisions_to_action_indices(decisions: Decisions, slices: Slices, max_layers:int) -> np.ndarray:
+def transform_decisions_to_action_indices(
+    decisions: Decisions, slices: Slices, max_layers: int
+) -> np.ndarray:
     return np.array(
         [
             decisions.action_choice.value,
@@ -165,7 +178,7 @@ def transform_decisions_to_action_indices(decisions: Decisions, slices: Slices, 
             decisions.activation_function_choice.value,
             decisions.skip_connection_choice
             if decisions.skip_connection_choice is not None
-            else max_layers-1,
+            else max_layers - 1,
         ]
     )
 
@@ -208,26 +221,3 @@ def standard_stochastic_sampling(logits: np.ndarray) -> int:
 def max_sampling(logits: np.ndarray) -> int:
     """Selects the index with the highest logit value."""
     return int(np.argmax(logits))
-
-
-
-
-def get_valid_strides(
-    last_layer_output_dims: tuple[int, int], kernel_size: KernelSize, padding: int = 1
-) -> list[Stride]:
-    """Get valid stride values that won't make output dimensions too small. Assumes square kernels and no dilation."""
-    h, w = last_layer_output_dims
-    min_dim = min(h, w)
-    max_stride = min_dim + 2 * padding - kernel_size.to_kernel() + 1
-    valid_strides = []
-
-    if max_stride < 1:
-        return valid_strides
-
-    valid_strides.extend(
-        stride
-        for stride in Stride
-        if stride.to_stride() is not None and stride.to_stride() <= max_stride
-    )
-    return valid_strides
-
