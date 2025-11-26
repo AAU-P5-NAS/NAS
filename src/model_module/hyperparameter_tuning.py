@@ -6,25 +6,12 @@ import optuna
 from typing import Dict, Any, Optional
 from rich.console import Console
 import torch
-from stable_baselines3.common.base_class import BaseAlgorithm
 
 from data_module.dataset import DatasetOption
 from src.model_module.hyperparameters import HyperparameterSearchSpace
 from src.classification_module.reward import Weights, WeightedSumRS
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter
-from src.utils.network_utils import (
-    NetworkConfig,
-    LayerConfig,
-    LayerType,
-    OutChannels,
-    KernelSize,
-    Stride,
-    ActivationFunction,
-    PoolMode,
-    LinearUnits,
-)
-from src.utils.cnn_builder import CNNBuilder
 from torch.nn import CrossEntropyLoss
 
 console = Console()
@@ -245,108 +232,3 @@ class SLHyperparameterOptimizer:
                 self.console.print(f"  {param}: {value}")
 
         return self.best_params
-
-
-class RLHyperparameterOptimizer:
-    """Optimize RL hyperparameters using discrete choices only"""
-
-    def __init__(
-        self,
-        search_space: HyperparameterSearchSpace,
-        n_trials: int = 10,
-        timeout: Optional[int] = None,
-        seed: Optional[int] = None,
-    ):
-        self.search_space = search_space
-        self.n_trials = n_trials
-        self.timeout = timeout
-        self.seed = seed
-        self.console = Console()
-        self.best_params: Optional[Dict[str, Any]] = None
-        self.best_value: float = 0.0
-
-    def _objective(
-        self,
-        trial: optuna.Trial,
-        agent_class: type[BaseAlgorithm],
-        total_timesteps: int,
-        sl_hyperparams: Dict[str, Any],
-    ) -> float:
-        """Objective function for RL hyperparameter optimization"""
-
-        learning_rate_choice = trial.suggest_categorical(
-            "rl_lr",
-            [1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3],
-        )
-
-        try:
-            from src.model_module.sb_three import SBThreeAgent
-            
-            """THIS DOES NOT SUPPORT REPRODUCIBILITY YET"""
-            agent = SBThreeAgent(
-                policy_algorithm_class=agent_class,
-                rl_learning_rate=learning_rate_choice,
-            )
-
-            agent.train(total_timesteps=total_timesteps)
-            performance = agent.evaluate(num_episodes=5)
-
-            return float(performance)
-
-        except Exception as e:
-            self.console.print(f"[bold red]Trial failed: {e}[/bold red]")
-            return -10.0
-
-    def optimize(
-        self,
-        agent_class: type[BaseAlgorithm],
-        sl_hyperparams: Dict[str, Any],
-        total_timesteps: int = 10000,
-        study_name: str = "rl_hyperparameter_optimization",
-    ) -> Dict[str, Any]:
-        """Run discrete optimization for RL hyperparameters"""
-
-        self.console.print(
-            "[bold blue]Starting RL hyperparameter optimization (discrete choices only)...[/bold blue]"
-        )
-        self.console.print(
-            "[yellow]Warning: RL hyperparameter tuning is computationally expensive![/yellow]"
-        )
-
-        sampler = optuna.samplers.NSGAIIISampler(seed=self.seed)
-        study = optuna.create_study(direction="maximize", study_name=study_name, sampler=sampler)
-
-        study.optimize(
-            lambda trial: self._objective(trial, agent_class, total_timesteps, sl_hyperparams),
-            n_trials=self.n_trials,
-            timeout=self.timeout,
-        )
-
-        self.best_params = study.best_params
-        self.best_value = study.best_value
-
-        self.console.print("[bold green]Optimization complete![/bold green]")
-        self.console.print(f"[bold green]Best value: {self.best_value:.4f}[/bold green]")
-        self.console.print("[bold cyan]Best RL parameters:[/bold cyan]")
-        for param, value in self.best_params.items():
-            self.console.print(f"  {param}: {value}")
-
-        return self.best_params
-
-
-class HyperparameterOptimizer:
-    """Legacy optimizer"""
-
-    def __init__(self, *args, **kwargs):
-        self.console = Console()
-        self.console.print(
-            "[bold yellow]Warning: HyperparameterOptimizer is deprecated.[/bold yellow]"
-        )
-        self.console.print(
-            "[yellow]Use SLHyperparameterOptimizer and RLHyperparameterOptimizer separately.[/yellow]"
-        )
-
-    def optimize(self, *args, **kwargs):
-        raise NotImplementedError(
-            "Use SLHyperparameterOptimizer and RLHyperparameterOptimizer separately"
-        )
