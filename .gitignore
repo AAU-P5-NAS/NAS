@@ -211,15 +211,15 @@ __marimo__/
 # vscode settings
 #.vscode/
 tensorboard_logs
-src/data_module/cifar/data_batch_1
-src/data_module/cifar/data_batch_2
-src/data_module/cifar/data_batch_3
-src/data_module/cifar/data_batch_4
-src/data_module/cifar/data_batch_5
-src/data_module/cifar/test_batch
-src/data_module/emnist/emnist_balanced_mapping.txt
-src/data_module/emnist/emnist_balanced_test.csv
-src/data_module/emnist/emnist_balanced_train.csv
-src/data_module/emnist/emnist_letters_mapping.txt
-src/data_module/emnist/emnist_letters_test.csv
-src/data_module/emnist/emnist_letters_train.csv
+src/utils/data_importer/cifar/data_batch_1
+src/utils/data_importer/cifar/data_batch_2
+src/utils/data_importer/cifar/data_batch_3
+src/utils/data_importer/cifar/data_batch_4
+src/utils/data_importer/cifar/data_batch_5
+src/utils/data_importer/cifar/test_batch
+src/utils/data_importer/emnist/emnist_balanced_mapping.txt
+src/utils/data_importer/emnist/emnist_balanced_test.csv
+src/utils/data_importer/emnist/emnist_balanced_train.csv
+src/utils/data_importer/emnist/emnist_letters_mapping.txt
+src/utils/data_importer/emnist/emnist_letters_test.csv
+src/utils/data_importer/emnist/emnist_letters_train.csv

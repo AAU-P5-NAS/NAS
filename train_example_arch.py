@@ -1,7 +1,7 @@
 import time
-from src.data_module.dataset import DatasetOption
-from src.classification_module.train import Trainer
-from src.data_module.importer import DataImporter
+from src.utils.data_importer.dataset import DatasetOption
+from src.environment.train import Trainer
+from src.utils.data_importer.importer import DataImporter
 
 import torch
 from torch.nn import CrossEntropyLoss
@@ -65,11 +65,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     trainer = Trainer(
         dataloaders=dataloaders,
-        model=model.to(device),
         loss_function=CrossEntropyLoss().to(device),
-        optimizer=optimizer,
-        num_classes=importer.get_num_classes()[0],
-        dimensions=importer.get_dimensions(),
     )
     num_epochs = 10
     start_time = time.time()
@@ -79,17 +75,20 @@ def main():
         with console.status(
             f"[bold blue]Training model on epoch {epoch}/{num_epochs}: Progress {int(progress)}%[/bold blue]"
         ):
-            trainer.train()
+            trainer.train(model, optimizer)
 
     end_time = time.time()
     training_time = end_time - start_time
-    metrics = trainer.test()
+    print(f"Training completed in {training_time:.2f} seconds.")
 
+    # should import evaluator if u want to test something.
+
+""" 
     metrics.runtime = training_time
     metrics.training_time = training_time
     console.print("Metrics:", metrics)
     return metrics
-
+ """
 
 if __name__ == "__main__":
     main()
