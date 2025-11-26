@@ -1,9 +1,19 @@
 import numpy as np
 import sys
 import os
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.utils.layer_config import LayerType, StandardAction, OutChannels, KernelSize, Stride, LinearUnits, PoolMode, ActivationFunction
+from src.utils.layer_config import (
+    LayerType,
+    StandardAction,
+    OutChannels,
+    KernelSize,
+    Stride,
+    LinearUnits,
+    PoolMode,
+    ActivationFunction,
+)
 from src.agent.action_masking.action_masking_utils import (
     NO_ACTION_DECISIONS,
     MaskContext,
@@ -61,6 +71,12 @@ def mask_action_type_sequential(ctx: MaskContext):
         # Max layers reached, can only choose NONE
         new_logits[ctx.slices.standard_actions.all] = -np.inf
         new_logits[ctx.slices.standard_actions[StandardAction.NONE]] = 1
+        return new_logits
+
+    if ctx.action_count < 5:
+        # Must add layers until at least 5 layers
+        new_logits[ctx.slices.standard_actions.all] = -np.inf
+        new_logits[ctx.slices.standard_actions[StandardAction.ADD_LAYER]] = 1
         return new_logits
 
     if ctx.action_count == 0:
@@ -151,7 +167,6 @@ def mask_stride_sequential(ctx: MaskContext):
         new_logits[ctx.slices.stride[Stride.NONE]] = 1
         return new_logits
 
-
     latest_output_dims = get_output_dimensions(
         ctx.observation, ctx.input_dimensions[1:], ctx.max_layers
     )
@@ -193,7 +208,8 @@ def mask_pool_mode_sequential(ctx: MaskContext):
     new_logits[ctx.slices.pool_mode[PoolMode.NONE]] = -np.inf
     return new_logits
 
-def mask_skip_connection_sequential(ctx: MaskContext): 
+
+def mask_skip_connection_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
     if ctx.action_count < 2:
@@ -231,4 +247,3 @@ def mask_skip_connection_sequential(ctx: MaskContext):
     # Always keep "no skip" valid
     new_logits[ctx.slices.skip_connection[ctx.max_layers - 1]] = 1.0
     return new_logits
-
