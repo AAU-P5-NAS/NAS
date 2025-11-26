@@ -152,6 +152,9 @@ class CustomEnv(gym.Env):
             terminated = False
             truncated = False
 
+        if (decisions.skip_connection_choice is not None):
+            self.tb_logger.save_skip_connection(decisions.skip_connection_choice, len(self.current_network_config.layers)) # Add skip connection to current layer
+
         if not isinstance(reward, float):
             raise ValueError(
                 f"{CustomEnv.__name__} does not support reward of type '{type(reward)}'"

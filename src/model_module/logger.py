@@ -48,6 +48,8 @@ class TensorboardLogger:
         self.newest_architecture: Optional[torch.nn.Module] = None
         self.current_config: Optional[NetworkConfig] = None
 
+        self.skip_connections: list[tuple[int, int]] = []
+
     def attach_logger(self, logger: Logger, writer: SummaryWriter):
         self.logger = logger
         self.writer = writer
@@ -157,7 +159,7 @@ class TensorboardLogger:
             self.console.print(
                 f"[bold blue]Accuracy: {accuracy}, Avg: {avg_accuracy:.4f}[/bold blue]"
             )
-
+        
         self.print_layers(current_config.layers if current_config else [])
 
         PRINT_EVERY_N = 50
@@ -178,7 +180,9 @@ class TensorboardLogger:
         Args:
             layers (list): List of layer objects.
         """
-
+        for connection in self.skip_connections:
+            self.console.print(f"Skip from: {connection[0]}, to {connection[1]}")
+        
         self.console.print("[bold yellow]Architecture:[/bold yellow]")
         indent = "    "
         for i, layer in enumerate(layers):
@@ -194,7 +198,9 @@ class TensorboardLogger:
                 self.console.print(
                     f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
                 )
-
+    
+    def save_skip_connection(self, from_layer: int, to_layer: int):
+        self.skip_connections.append((from_layer, to_layer))
 
 class NoOpLogger:
     evaluation_count: int = 0
@@ -209,4 +215,7 @@ class NoOpLogger:
         pass
 
     def print_layers(self, *args, **kwargs):
+        pass
+
+    def save_skip_connection(self, *args, **kwargs):
         pass
