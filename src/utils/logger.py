@@ -6,8 +6,7 @@ import torch
 from rich.console import Console
 
 from src.environment.metrics import Metrics
-from src.utils.network_config import  NetworkConfig
-from src.utils.layer_config import LayerConfig
+from src.utils.network_config import LayerConfig, NetworkConfig
 
 
 class LogData(BaseModel):
@@ -64,7 +63,9 @@ class TensorboardLogger:
         current_config: NetworkConfig | None = None,
     ):
         """Update the logger's latest state."""
-
+        print(
+            "metrics received:",
+        )
         if reward is not None:
             self.newest_reward = reward
         if actions_taken is not None:
@@ -90,6 +91,7 @@ class TensorboardLogger:
 
         record_optional("Custom/Reward", self.newest_reward)
         record_optional("Custom/Actions Taken", self.newest_actions_taken)
+        print("self metrics: ", self.newest_metrics)
         if self.newest_metrics is not None:
             record_optional("Custom/Test Loss", self.newest_metrics.test_loss)
             record_optional("Custom/Accuracy", self.newest_metrics.accuracy)
@@ -156,7 +158,7 @@ class TensorboardLogger:
             self.console.print(
                 f"[bold blue]Accuracy: {metrics.accuracy}, Avg: {avg_accuracy:.4f}[/bold blue]"
             )
-        
+
         self.print_layers(current_config.layers if current_config else [])
 
         PRINT_EVERY_N = 50
