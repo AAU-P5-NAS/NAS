@@ -1,6 +1,6 @@
 import pytest
 
-import src.data_module.import_utils as import_utils
+import src.utils.data_importer.import_utils as import_utils
 
 
 def test_transform_google_drive_url_to_direct_download():

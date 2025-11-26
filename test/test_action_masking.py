@@ -1,26 +1,25 @@
 from typing import Optional
 import numpy as np
-from src.action_masking.action_masking import sample_actions, mask_skip_connection_sequential
-from src.action_masking.action_masking_utils import (
+from src.agent.action_masking.action_masking import sample_actions
+from src.agent.action_masking.action_masking_utils import (
+    EMPTY_DECISIONS,
     MaskContext,
     get_logit_slices,
     standard_stochastic_sampling,
 )
-from src.utils.graph_cnn import flatten_cnn_config
-from src.utils.network_utils import (
+from src.utils.architecture import flatten_cnn_config
+from src.utils.layer_config import (
     LayerConfig,
-    NetworkConfig,
-    EMPTY_DECISIONS,
-    StandardAction,
     LayerType,
+    StandardAction,
     OutChannels,
     KernelSize,
     Stride,
     LinearUnits,
     PoolMode,
     ActivationFunction,
-    calculate_output_dimensions
 )
+from src.utils.network_config import NetworkConfig
 
 
 def get_obs(network_config: NetworkConfig, max_layers: int) -> np.ndarray:
@@ -33,7 +32,7 @@ def get_logits(
     next_action: Optional[StandardAction] = None,
     next_layer: Optional[LayerType] = None,
     next_kernel_size: Optional[KernelSize] = None,
-    next_stride: Optional[Stride] = None
+    next_stride: Optional[Stride] = None,
 ):
     # Return logits initialized with standard random values (e.g., normal distribution)
     sum = (
@@ -199,7 +198,8 @@ def test_layertype_is_none_after_none_action():
                 kernel_size=KernelSize.KS_3,
                 stride=Stride.S_1,
                 activation=ActivationFunction.RELU,
-            ),
+            )
+            for _ in range(6)
         ]
     )
 
@@ -211,7 +211,7 @@ def test_layertype_is_none_after_none_action():
         max_layers=MAX_LAYERS,
         decisions=EMPTY_DECISIONS,
         input_dimensions=(3, 32, 32),
-        action_count=1,
+        action_count=6,
     )
 
     decisions, masked_logits = sample_actions(ctx)
@@ -566,7 +566,6 @@ def test_skip_none_allowed_when_action_count_lte_2():
 
 
 def test_skip_masking_1():
-    
     MAX_LAYERS = 20
     cfg = NetworkConfig(
         layers=[
@@ -576,27 +575,37 @@ def test_skip_masking_1():
                 kernel_size=KernelSize.KS_3,
                 stride=Stride.S_1,
                 activation=ActivationFunction.RELU,
-            ) for _ in range(5)]+[
+            )
+            for _ in range(5)
+        ]
+        + [
             LayerConfig(
                 layer_type=LayerType.CONV,
                 out_channels=OutChannels.CH_16,
                 kernel_size=KernelSize.KS_3,
                 stride=Stride.S_2,  # different stride -> different output dims
                 activation=ActivationFunction.RELU,
-            )] + [
+            )
+        ]
+        + [
             LayerConfig(
                 layer_type=LayerType.CONV,
                 out_channels=OutChannels.CH_16,
                 kernel_size=KernelSize.KS_3,
                 stride=Stride.S_1,
-                activation=ActivationFunction.RELU
-            ) for _ in range(5)
-            ]
-    
+                activation=ActivationFunction.RELU,
+            )
+            for _ in range(5)
+        ]
     )
     layer_count = len(cfg.layers)
     ctx = MaskContext(
-        logits=get_logits(next_action=StandardAction.ADD_LAYER, next_layer=LayerType.CONV , next_kernel_size=KernelSize.KS_3, next_stride=Stride.S_1),
+        logits=get_logits(
+            next_action=StandardAction.ADD_LAYER,
+            next_layer=LayerType.CONV,
+            next_kernel_size=KernelSize.KS_3,
+            next_stride=Stride.S_1,
+        ),
         observation=get_obs(cfg, max_layers=MAX_LAYERS),
         slices=get_logit_slices(max_layers=MAX_LAYERS),
         sampling_strategy=standard_stochastic_sampling,
@@ -612,18 +621,18 @@ def test_skip_masking_1():
     for i in range(5):
         assert np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
     # The skip option for the following 5 layers should be allowed since dims match that of the new layer being added.
-    for i in range(5,10):
+    for i in range(5, 10):
         assert not np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
-    
-    assert np.isneginf(masked_logits[ctx.slices.skip_connection[layer_count-1]])
-    
-    for i in range(layer_count, MAX_LAYERS-1):
+
+    assert np.isneginf(masked_logits[ctx.slices.skip_connection[layer_count - 1]])
+
+    for i in range(layer_count, MAX_LAYERS - 1):
         assert np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
 
-    assert not np.isneginf(masked_logits[ctx.slices.skip_connection[MAX_LAYERS-1]])
+    assert not np.isneginf(masked_logits[ctx.slices.skip_connection[MAX_LAYERS - 1]])
+
 
 def test_skip_masking_2():
-   
     cfg = NetworkConfig(
         layers=[
             LayerConfig(
@@ -653,17 +662,23 @@ def test_skip_masking_2():
 
     decisions, masked_logits = sample_actions(ctx)
 
-    
-    for i in range(MAX_LAYERS-1):
-        assert np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
+    if decisions.action_choice == StandardAction.NONE:
+        for i in range(MAX_LAYERS - 1):
+            assert np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
 
-    if decisions.action_choice == StandardAction.ADD_LAYER:
-        assert not np.isneginf(masked_logits[ctx.slices.skip_connection[MAX_LAYERS - 1]])
+    if decisions.layer_type_choice == LayerType.LINEAR:
+        for i in range(action_count - 1):
+            assert not np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
+        for i in range(action_count - 1, MAX_LAYERS - 1):
+            assert np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
     else:
-        assert np.isneginf(masked_logits[ctx.slices.skip_connection[MAX_LAYERS - 1]])
+        for i in range(MAX_LAYERS - 1):
+            assert np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
+
+    assert not np.isneginf(masked_logits[ctx.slices.skip_connection[MAX_LAYERS - 1]])
+
 
 def test_skip_masking_3():
-   
     cfg = NetworkConfig(
         layers=[
             LayerConfig(
@@ -674,7 +689,8 @@ def test_skip_masking_3():
                 activation=ActivationFunction.RELU,
             )
             for _ in range(5)
-        ] + [LayerConfig(layer_type=LayerType.LINEAR, linear_units=LinearUnits.LU_128)]
+        ]
+        + [LayerConfig(layer_type=LayerType.LINEAR, linear_units=LinearUnits.LU_128)]
     )
 
     MAX_LAYERS = 20
@@ -694,11 +710,10 @@ def test_skip_masking_3():
     decisions, masked_logits = sample_actions(ctx)
 
     if decisions.action_choice == StandardAction.ADD_LAYER:
-        for i in range(action_count-1):
+        for i in range(action_count - 1):
             assert not np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
-        for i in range(action_count-1, MAX_LAYERS - 1):
+        for i in range(action_count - 1, MAX_LAYERS - 1):
             assert np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
     else:
         for i in range(MAX_LAYERS):
             assert np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
-    
