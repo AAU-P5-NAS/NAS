@@ -63,9 +63,6 @@ class TensorboardLogger:
         current_config: NetworkConfig | None = None,
     ):
         """Update the logger's latest state."""
-        print(
-            "metrics received:",
-        )
         if reward is not None:
             self.newest_reward = reward
         if actions_taken is not None:
@@ -91,7 +88,6 @@ class TensorboardLogger:
 
         record_optional("Custom/Reward", self.newest_reward)
         record_optional("Custom/Actions Taken", self.newest_actions_taken)
-        print("self metrics: ", self.newest_metrics)
         if self.newest_metrics is not None:
             record_optional("Custom/Test Loss", self.newest_metrics.test_loss)
             record_optional("Custom/Accuracy", self.newest_metrics.accuracy)
@@ -180,8 +176,8 @@ class TensorboardLogger:
             layers (list): List of layer objects.
         """
 
-        indent = "    "        
         self.console.print("[bold yellow]Architecture:[/bold yellow]")
+        indent = "    "
         for i, layer in enumerate(layers):
             if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
                 self.console.print(
