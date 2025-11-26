@@ -180,12 +180,9 @@ class TensorboardLogger:
         Args:
             layers (list): List of layer objects.
         """
-        self.console.print("Skip connections:")
-        for connection in self.skip_connections:
-            self.console.print(f"Skip from: {connection[0]}, to {connection[1]}")
-        
+
+        indent = "    "        
         self.console.print("[bold yellow]Architecture:[/bold yellow]")
-        indent = "    "
         for i, layer in enumerate(layers):
             if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
                 self.console.print(
@@ -199,7 +196,12 @@ class TensorboardLogger:
                 self.console.print(
                     f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
                 )
-    
+
+        if len(self.skip_connections) > 0:
+            self.console.print("Skip connections:")
+            for connection in self.skip_connections:
+                self.console.print(f"{indent}[{connection[0]} => {connection[1]}]")
+
     def save_skip_connection(self, from_layer: int, to_layer: int):
         self.skip_connections.append((from_layer, to_layer))
 
