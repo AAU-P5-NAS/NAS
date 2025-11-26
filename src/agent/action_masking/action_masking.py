@@ -73,13 +73,7 @@ def mask_action_type_sequential(ctx: MaskContext):
         new_logits[ctx.slices.standard_actions[StandardAction.NONE]] = 1
         return new_logits
 
-    if ctx.action_count < 5:
-        # Must add layers until at least 5 layers
-        new_logits[ctx.slices.standard_actions.all] = -np.inf
-        new_logits[ctx.slices.standard_actions[StandardAction.ADD_LAYER]] = 1
-        return new_logits
-
-    if ctx.action_count == 0:
+    if ctx.action_count <= 5:
         # No layers yet, can only add
         new_logits[ctx.slices.standard_actions.all] = -np.inf
         new_logits[ctx.slices.standard_actions[StandardAction.ADD_LAYER]] = 1

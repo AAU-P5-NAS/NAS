@@ -5,6 +5,7 @@ import shutil
 from sb3_contrib.ppo_mask import MaskablePPO
 import torch
 
+from src.environment.reward import Weights
 from src.agent.agent import RLAgent
 from src.agent.action_masking.action_masking_policy import CustomMaskablePolicy
 
@@ -79,6 +80,7 @@ def main():
         policy_algorithm_class=MaskablePPO,
         policy=CustomMaskablePolicy,
         policy_seed=args.policy_seed,
+        reward_weights=Weights(accuracy=0.92, flops=0.08),
     )
 
     # Train the agent

@@ -35,7 +35,8 @@ from src.agent.action_masking.action_masking_utils import (
     transform_action_indices_to_decisions,
 )
 
-MAX_LAYERS = 16
+MAX_LAYERS = 12
+
 
 class CustomEnv(gym.Env):
     """Custom Environment that follows gymnasium interface."""
@@ -87,7 +88,6 @@ class CustomEnv(gym.Env):
             loss_function=CrossEntropyLoss(),
         )
 
-
     def _get_action_space(self) -> spaces.Space:
         return spaces.MultiDiscrete(
             [
@@ -102,7 +102,6 @@ class CustomEnv(gym.Env):
                 MAX_LAYERS,  # for skip connection option
             ]
         )
-
 
     def _get_observation_space(self) -> spaces.Space:
         observation_space_vector: List[int] = []
@@ -120,11 +119,9 @@ class CustomEnv(gym.Env):
 
         return spaces.MultiDiscrete(observation_space_vector)
 
-
     def _get_observation(self) -> np.ndarray:
         flattened_obs = flatten_cnn_config(self.current_network_config, MAX_LAYERS)
         return np.array(flattened_obs, dtype=np.float32)
-
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
         """Start a new episode.
@@ -145,7 +142,6 @@ class CustomEnv(gym.Env):
         observation = self._get_observation()
         return observation, self.info
 
-
     def step(self, decision_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         """Execute one timestep within the environment.
 
@@ -159,7 +155,7 @@ class CustomEnv(gym.Env):
         self.info = {}
 
         decisions = transform_action_indices_to_decisions(decision_logits, MAX_LAYERS)
-        if decisions.action_choice == StandardAction.NONE:# Stop and evaluate
+        if decisions.action_choice == StandardAction.NONE:  # Stop and evaluate
             reward = self.evaluate_architecture(self.current_network_config)
             terminated = True
             truncated = False
@@ -179,7 +175,6 @@ class CustomEnv(gym.Env):
         self.actions_taken += 1
 
         return obs, reward, terminated, truncated, self.info
-
 
     def evaluate_architecture(self, new_architecture: NetworkConfig) -> float | dict[str, float]:
         """Evaluate the given architecture by training and testing it, returning the computed reward.
@@ -212,7 +207,6 @@ class CustomEnv(gym.Env):
 
         return reward
 
-
     def train_classifier(
         self,
         model: torch.nn.Module,
@@ -244,7 +238,7 @@ class CustomEnv(gym.Env):
 
         end_time = time.time()
         training_time = end_time - start_time
-        return model, training_time 
+        return model, training_time
 
     def _should_terminate(self) -> bool:
         # Termination is now handled in step() method
