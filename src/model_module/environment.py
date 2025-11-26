@@ -11,8 +11,9 @@ from src.model_module.logger import NoOpLogger, TensorboardLogger
 from src.classification_module.reward import RewardStrategy
 from src.classification_module.train import Trainer
 from src.data_module.importer import DataImporter, DatasetOption
-from src.utils.cnn_builder import flatten_cnn_config
+from src.utils.graph_cnn import flatten_cnn_config
 from src.utils.network_utils import (
+    LayerConfig,
     LayerType,
     NetworkConfig,
     OutChannels,
@@ -138,13 +139,15 @@ class CustomEnv(gym.Env):
 
         self.info = {}
 
-        new_architecture, should_evaluate = self._get_new_architecture(decision_logits)
-        if should_evaluate:
-            reward = self._evaluate_architecture(new_architecture)
+        decisions = transform_action_indices_to_decisions(decision_logits, MAX_LAYERS)
+        if decisions.action_choice == StandardAction.NONE:# Stop and evaluate
+            self.evaluated_this_step = True
+            reward = self._evaluate_architecture(self.current_network_config)
             terminated = True
             truncated = False
             self.actions_taken = 0  # Reset for next episode
         else:
+            self.current_network_config += LayerConfig.from_decisions(decisions)
             reward = 0.05
             terminated = False
             truncated = False
@@ -158,24 +161,6 @@ class CustomEnv(gym.Env):
         self.actions_taken += 1
 
         return obs, reward, terminated, truncated, self.info
-
-    def _get_new_architecture(self, decision_logits: np.ndarray) -> tuple[NetworkConfig, bool]:
-        """Build a new architecture based on the agent's decision logits.
-
-        :Args:
-        - decision_logits: The logits produced by the agent's policy network after masking.
-
-        :Returns:
-        - tuple: (new_network_config, should_evaluate)
-        """
-        decisions = transform_action_indices_to_decisions(decision_logits)
-        if decisions.action_choice == StandardAction.NONE:
-            return self.current_network_config, True  # Stop and evaluate
-        else:
-            self.current_network_config = self.current_network_config.add_layer(
-                decisions, partial_arch=self.current_network_config
-            )
-            return self.current_network_config, False  # Do not evaluate yet
 
     def _train_classifier(
         self,
