@@ -262,21 +262,73 @@ class CustomEnv(gym.Env):
 
     def get_action_mask(self) -> np.ndarray:
         """
-        Returns a boolean mask for valid actions given the current environment state.
-        This mask is used by MaskablePPO to know which actions are allowed globally.
-
-        Its only purpose is to only allow ADD_LAYER if no layers exist yet.
-
-        It is just necessary for masking to work even if it dont do much.
+        Returns a global boolean mask of shape [total_action_dim].
+        Ensures every category has at least one valid action.
         """
-        slices = get_logit_slices(max_layers=MAX_LAYERS)
-        total_actions = slices.skip_connection.stop  # assuming this is the last slice
-
+        slices = get_logit_slices(MAX_LAYERS)
+        total_actions = slices.skip_connection.stop  # last index of all actions
         mask = np.zeros(total_actions, dtype=bool)
 
-        if self.current_network_config.layers == []:
+        action_count = len(self.current_network_config.layers)
+
+        # Standard actions
+        if action_count >= MAX_LAYERS:
+            # Max layers reached, can only choose NONE
+            mask[slices.standard_actions[StandardAction.NONE]] = True
+        elif action_count <= 5:
+            # First few layers, must add
             mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
         else:
-            mask[slices.standard_actions.start : slices.standard_actions.stop] = True
+            # Allow all standard actions as fallback
+            mask[slices.standard_actions.start:slices.standard_actions.stop] = True
+
+        # Layer type
+        # Default: allow CONV unless last layer was linear
+        mask[slices.layer_type.all] = True
+        if action_count > 0:
+            last_layer = self.current_network_config.layers[-1]
+            if last_layer.layer_type == LayerType.LINEAR:
+                mask[slices.layer_type[LayerType.LINEAR]] = True
+                mask[slices.layer_type.start:slices.layer_type.stop] = False
+            else:
+                mask[slices.layer_type[LayerType.NONE]] = True  # keep at least one
+
+        # Out channels
+        mask[slices.out_channels.all] = True
+        if action_count > 0 and mask[slices.layer_type[LayerType.LINEAR]]:
+            # For linear layers, only allow NONE
+            mask[slices.out_channels.all] = False
+            mask[slices.out_channels[OutChannels.NONE]] = True
+
+        # Kernel size
+        mask[slices.kernel_size.all] = True
+        # Stride
+        mask[slices.stride.all] = True
+        # Linear units
+        mask[slices.linear_units.all] = True
+        # Pool mode
+        mask[slices.pool_mode.all] = True
+        # Activation function
+        mask[slices.activation_function.all] = True
+        # Skip connection
+        mask[slices.skip_connection.all] = False
+        mask[slices.skip_connection[MAX_LAYERS - 1]] = True  # always allow "no skip"
+
+        # Final safety check: ensure every slice has at least one True
+        for cat in [
+            slices.standard_actions,
+            slices.layer_type,
+            slices.out_channels,
+            slices.kernel_size,
+            slices.stride,
+            slices.linear_units,
+            slices.pool_mode,
+            slices.activation_function,
+            slices.skip_connection,
+        ]:
+            if not mask[cat.all].any():
+                # fallback: enable first index
+                mask[cat.all][0] = True
 
         return mask
+
