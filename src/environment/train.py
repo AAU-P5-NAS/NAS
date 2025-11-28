@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 import torch
 from torch import nn
@@ -23,6 +24,7 @@ class Trainer:
 
     def train(self,model: nn.Module, optimizer: Optimizer, max_training_time: Optional[int] = 300):
         model = model.to(self.device)
+        print("number of visible gpus", os.environ.get("CUDA_VISIBLE_DEVICES", ""))
         print("Number of gpus available:", torch.cuda.device_count())
         if torch.cuda.device_count() > 1:
             print("Using DataParallel for multi-gpu training")
