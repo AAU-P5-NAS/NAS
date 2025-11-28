@@ -23,6 +23,11 @@ class Trainer:
 
     def train(self,model: nn.Module, optimizer: Optimizer, max_training_time: Optional[int] = 300):
         model = model.to(self.device)
+        print("Number of gpus available:", torch.cuda.device_count())
+        if torch.cuda.device_count() > 1:
+            print("Using DataParallel for multi-gpu training")
+            model = torch.nn.DataParallel(model)
+
         
         # Set up max training timer
         stop_event = Event()

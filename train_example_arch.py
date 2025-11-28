@@ -13,7 +13,7 @@ console = Console()
 
 def main():
     importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
-    dataloaders = importer.get_dataloaders(batch_size=32, shuffle=True)
+    dataloaders = importer.get_dataloaders(batch_size=256, shuffle=True)
     number_of_classes = 26
 
     number_of_classes = 10
