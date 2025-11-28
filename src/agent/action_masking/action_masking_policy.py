@@ -103,7 +103,7 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
             logits_slice = masked_logits[slices.__dict__[cat].all].copy()
 
             # Replace -inf with large negative number (torch dont like the -inf for categorical.)
-            logits_slice[np.isneginf(logits_slice)] = -1e8
+            logits_slice[np.isneginf(logits_slice)] = -10.0  # instead of -1e8
             logits_slice = torch.tensor(logits_slice, dtype=torch.float32)
             dist = torch.distributions.Categorical(logits=logits_slice)
             log_probs.append(dist.log_prob(torch.tensor(decision_values[idx], dtype=torch.long)))

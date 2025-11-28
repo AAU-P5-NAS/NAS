@@ -80,12 +80,12 @@ def main():
         policy_algorithm_class=MaskablePPO,
         policy=CustomMaskablePolicy,
         policy_seed=args.policy_seed,
-        reward_weights=Weights(accuracy=0.92, flops=0.08),
+        reward_weights=Weights(accuracy=0.90, flops=0.10),
     )
 
     # Train the agent
     console.print("[bold green]Starting training...[/bold green]")
-    agent.train(total_timesteps=30)
+    agent.train(total_timesteps=30000)
 
     # Save the trained model
     agent.save_model()

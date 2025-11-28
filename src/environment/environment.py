@@ -35,6 +35,7 @@ from src.agent.action_masking.action_masking_utils import (
     transform_action_indices_to_decisions,
 )
 
+
 MAX_LAYERS = 12
 
 
@@ -275,5 +276,13 @@ class CustomEnv(gym.Env):
             mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
         else:
             mask[slices.standard_actions.start : slices.standard_actions.stop] = True
+
+        if self.actions_taken == 0: 
+            mask[slices.standard_actions.all] = False
+            mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
+
+        if self.actions_taken >= MAX_LAYERS:
+            mask[slices.standard_actions.all] = False
+            mask[slices.standard_actions[StandardAction.NONE]] = True
 
         return mask

@@ -1,4 +1,5 @@
 import time
+from src.environment.metrics import Evaluator
 from src.utils.data_importer.dataset import DatasetOption
 from src.environment.train import Trainer
 from src.utils.data_importer.importer import DataImporter
@@ -15,8 +16,13 @@ def main():
     importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
     dataloaders = importer.get_dataloaders(batch_size=32, shuffle=True)
     number_of_classes = 26
-
+    print("is cuda available:", torch.cuda.is_available())
     number_of_classes = 10
+    evaluator = Evaluator(num_classes=number_of_classes, 
+                          dataloaders=dataloaders, 
+                          dimensions=importer.get_dimensions(), 
+                          device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), 
+                          loss_function=CrossEntropyLoss())
 
     model = nn.Sequential(
         # Block 1
@@ -80,6 +86,12 @@ def main():
     end_time = time.time()
     training_time = end_time - start_time
     print(f"Training completed in {training_time:.2f} seconds.")
+
+    metrics = evaluator.evaluate(model)
+    metrics.runtime = training_time
+    metrics.training_time = training_time
+    console.print("Metrics:", metrics)
+    return metrics
 
     # should import evaluator if u want to test something.
 
