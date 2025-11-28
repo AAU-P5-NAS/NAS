@@ -6,8 +6,18 @@ import torch
 from rich.console import Console
 
 from src.environment.metrics import Metrics
-from src.utils.network_config import  NetworkConfig
+from src.utils.network_config import NetworkConfig
 from src.utils.layer_config import LayerConfig
+
+
+def mem(tag=""):
+    import torch
+
+    a = torch.cuda.memory_allocated() / 1024**2
+    r = torch.cuda.memory_reserved() / 1024**2
+    f, t = torch.cuda.mem_get_info()
+    f /= 1024**2
+    print(f"[{tag}] allocated={a:.1f}MB reserved={r:.1f}MB free={f:.1f}MB")
 
 
 class LogData(BaseModel):

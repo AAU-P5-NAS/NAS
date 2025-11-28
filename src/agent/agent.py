@@ -23,10 +23,10 @@ def mask_fn(env):
 
 
 hyperparameters = SLHyperParameters(
-    training_epochs=15,
-    learning_rate=0.00132,
+    training_epochs=5,  # 15 before
+    learning_rate=0.0005,  # 0.00132
     momentum=0.9,
-    batch_size=32,
+    batch_size=64,  # 32 before
     optimizer_type="Adam",
 )
 
@@ -58,7 +58,7 @@ class RLAgent:
         policy_algorithm_class: type[BaseAlgorithm],
         policy: type[BasePolicy] | str = "MlpPolicy",
         policy_seed: Optional[int] = None,
-        rl_learning_rate: float = 0.001,
+        rl_learning_rate: float = 0.0005,
         hyperparameters: SLHyperParameters = hyperparameters,
         reward_weights: Weights | None = None,
     ):

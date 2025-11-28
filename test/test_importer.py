@@ -41,7 +41,7 @@ def generate_single_image_data():
     # Generate a single 28x28 grayscale image with a white square at a random location
     img_size = (28, 28)
     square_size = 8
-    img = torch.zeros(img_size, dtype=torch.float32)
+    img = torch.zeros(img_size, dtype=torch.float64)
     max_pos = img_size[0] - square_size
     top = random.randint(0, max_pos)
     left = random.randint(0, max_pos)

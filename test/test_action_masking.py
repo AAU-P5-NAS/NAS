@@ -24,7 +24,7 @@ from src.utils.network_config import NetworkConfig
 
 def get_obs(network_config: NetworkConfig, max_layers: int) -> np.ndarray:
     flattened_obs = flatten_cnn_config(network_config, max_layers)
-    return np.array(flattened_obs, dtype=np.float32)
+    return np.array(flattened_obs, dtype=np.float64)
 
 
 # Helper function
@@ -47,7 +47,7 @@ def get_logits(
         + 20  # assuming max_layers=20 for skip connections
     )
     print(sum)
-    logits = np.random.randn(sum).astype(np.float32)
+    logits = np.random.randn(sum).astype(np.float64)
 
     if next_action is not None:
         logits[0 : len(StandardAction)] = -np.inf

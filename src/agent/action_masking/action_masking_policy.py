@@ -35,7 +35,19 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
         )  # pi is policy network features and vf is value network features
 
         # 2. Get raw policy network logits from features
+        # Defensive: sanitize logits to avoid NaN/Inf creeping into downstream masking
+        # (unstable training can produce NaNs which will crash distribution creation)
         logits = self.action_net(latent_pi).squeeze(0)  # [total_action_dim]
+        # Convert any NaN/inf to large negative/positive numbers here so masking
+        # and later distribution creation do not explode with NaNs.
+        # If a NaN is present, we also log it so the training/debugger can pick it up.
+        if torch.isnan(logits).any() or torch.isinf(logits).any():
+            # Log a little warning. Keep this lightweight so it won't spam too much.
+            try:
+                print("[warning] Detected NaN/Inf in policy logits — sanitizing (clamped).")
+            except Exception:
+                pass
+        logits = torch.nan_to_num(logits, nan=-1e8, posinf=1e8, neginf=-1e8)
 
         sampling_strategy = standard_stochastic_sampling if not deterministic else max_sampling
         action_count = get_number_of_actions_from_observation(obs.squeeze(0).cpu().numpy())
@@ -57,7 +69,10 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
         # 5. Transform decisions to action indices tensor
         # Actions must be a tensor of a specific shape for SB3
         actions = torch.tensor(
-            np.array(transform_decisions_to_action_indices(decisions, ctx.slices, ctx.max_layers), dtype=np.int64),
+            np.array(
+                transform_decisions_to_action_indices(decisions, ctx.slices, ctx.max_layers),
+                dtype=np.int64,
+            ),
             device=obs.device,
             dtype=torch.long,
         ).unsqueeze(0)
@@ -101,12 +116,29 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
         log_probs = []
         for idx, cat in enumerate(category_names):
             logits_slice = masked_logits[slices.__dict__[cat].all].copy()
-
-            # Replace -inf with large negative number (torch dont like the -inf for categorical.)
-            logits_slice[np.isneginf(logits_slice)] = -1e8
-            logits_slice = torch.tensor(logits_slice, dtype=torch.float32)
+            # Replace NaN and -inf with large negative numbers — PyTorch distributions
+            # don't tolerate NaN values and behave poorly with -inf only.
+            logits_slice = np.nan_to_num(logits_slice, nan=-1e8, posinf=1e8, neginf=-1e8)
+            logits_slice = torch.tensor(logits_slice, dtype=torch.float64)
             dist = torch.distributions.Categorical(logits=logits_slice)
             log_probs.append(dist.log_prob(torch.tensor(decision_values[idx], dtype=torch.long)))
 
         total_log_prob = torch.sum(torch.stack(log_probs))
         return total_log_prob
+
+    # NOTE: Stable-baselines training flow sometimes calls `_get_action_dist_from_latent`
+    # (from MaskableActorCriticPolicy) which builds a MaskableDistribution directly
+    # from action logits. That path bypasses our `forward(...)` sanitization. To make
+    # training safe we override that construction point and sanitize there as well.
+    def _get_action_dist_from_latent(self, latent_pi):
+        # call action_net like the base class does and ensure logits are safe
+        action_logits = self.action_net(latent_pi)
+        if torch.isnan(action_logits).any() or torch.isinf(action_logits).any():
+            try:
+                print(
+                    "[warning] Detected NaN/Inf in action_logits inside _get_action_dist_from_latent — sanitizing."
+                )
+            except Exception:
+                pass
+        action_logits = torch.nan_to_num(action_logits, nan=-1e8, posinf=1e8, neginf=-1e8)
+        return self.action_dist.proba_distribution(action_logits=action_logits)

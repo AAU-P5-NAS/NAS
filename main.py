@@ -12,7 +12,29 @@ from src.agent.action_masking.action_masking_policy import CustomMaskablePolicy
 console = Console()
 
 
+def log_cuda_mem(tag=""):
+    if not torch.cuda.is_available():
+        print("CUDA not available.")
+        return
+
+    device = torch.cuda.current_device()
+
+    allocated = torch.cuda.memory_allocated(device) / 1024**2
+    reserved = torch.cuda.memory_reserved(device) / 1024**2
+    free, total = torch.cuda.mem_get_info()  # free/total *actual* device memory
+    free /= 1024**2
+    total /= 1024**2
+
+    print(f"\n=== {tag} ===")
+    print(f"Allocated by PyTorch: {allocated:.2f} MiB")
+    print(f"Reserved by PyTorch:  {reserved:.2f} MiB")
+    print(f"GPU Free:             {free:.2f} MiB")
+    print(f"GPU Total:            {total:.2f} MiB")
+
+
 def main():
+    log_cuda_mem()
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--optimize-hyperparameters",
@@ -80,7 +102,7 @@ def main():
         policy_algorithm_class=MaskablePPO,
         policy=CustomMaskablePolicy,
         policy_seed=args.policy_seed,
-        reward_weights=Weights(accuracy=0.92, flops=0.08),
+        reward_weights=Weights(accuracy=0.9, flops=0.1),
     )
 
     # Train the agent

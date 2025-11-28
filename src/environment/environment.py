@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Optional
 import torch
 from src.environment.metrics import Evaluator
 from src.utils.hyperparameters import SLHyperParameters
-from src.utils.logger import NoOpLogger, TensorboardLogger
+from src.utils.logger import NoOpLogger, TensorboardLogger, mem
 from src.environment.reward import RewardStrategy
 from src.environment.train import Trainer
 from src.utils.data_importer.importer import DataImporter, DatasetOption
@@ -153,7 +153,7 @@ class CustomEnv(gym.Env):
         """
 
         self.info = {}
-
+        mem("After making decision")
         decisions = transform_action_indices_to_decisions(decision_logits, MAX_LAYERS)
         if decisions.action_choice == StandardAction.NONE:  # Stop and evaluate
             reward = self.evaluate_architecture(self.current_network_config)
@@ -185,6 +185,9 @@ class CustomEnv(gym.Env):
         :Returns:
         - float: The computed reward based on evaluation metrics.
         """
+
+        torch.cuda.empty_cache()
+
         architecture = Architecture(
             net_config=new_architecture,
             num_classes=self.data_importer.get_num_classes()[0],

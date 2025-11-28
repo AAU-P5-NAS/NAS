@@ -67,8 +67,8 @@ def import_emnist_byclass(max_per_class: int | None = None):
                 f"The provided filepath for data importer could not be found: {EMNIST_BYCLASS_TRAIN_PATH} or {EMNIST_BYCLASS_TEST_PATH}"
             ) from None
 
-        train_data = train_file.values.astype("float32")
-        test_data = test_file.values.astype("float32")
+        train_data = train_file.values.astype("float64")
+        test_data = test_file.values.astype("float64")
 
         train_labels = torch.tensor(train_data[:, 0], dtype=torch.long)
         test_labels = torch.tensor(test_data[:, 0], dtype=torch.long)

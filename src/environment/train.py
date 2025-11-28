@@ -21,9 +21,9 @@ class Trainer:
 
         self.loss_function: _Loss = loss_function.to(self.device)
 
-    def train(self,model: nn.Module, optimizer: Optimizer, max_training_time: Optional[int] = 300):
+    def train(self, model: nn.Module, optimizer: Optimizer, max_training_time: Optional[int] = 300):
         model = model.to(self.device)
-        
+
         # Set up max training timer
         stop_event = Event()
         timer = None
@@ -42,16 +42,53 @@ class Trainer:
                 stopped_by_timeout = True
                 break
 
-            X = X.to(self.device, non_blocking=True)
+            # Ensure input tensors are float32 when feeding the model. Some
+            # test fixtures or dataloaders may yield float64 which causes
+            # mismatches with model parameters (float32) on some devices.
+            X = X.to(self.device, non_blocking=True).float()
             Y = Y.to(self.device, non_blocking=True)
 
             # Compute prediction error
             predictions = model(X)
             loss = self.loss_function(predictions, Y)
-
+            # Defensive checks: detect NaN/Inf loss and stop early so training of
+            # this candidate architecture doesn't silently corrupt downstream RL.
+            if not torch.isfinite(loss):
+                try:
+                    print(
+                        "[warning] Trainer detected non-finite loss (NaN or Inf). Aborting this training run."
+                    )
+                except Exception:
+                    pass
+                stopped_by_timeout = True
+                break
             # Backpropagation
             optimizer.zero_grad()
             loss.backward()
+
+            # Check for NaNs in gradients before update
+            grads_nan = False
+            for p in model.parameters():
+                if p.grad is not None:
+                    if torch.isnan(p.grad).any() or torch.isinf(p.grad).any():
+                        grads_nan = True
+                        break
+            if grads_nan:
+                try:
+                    print("[warning] Trainer detected NaN/Inf in gradients — aborting update.")
+                except Exception:
+                    pass
+                stopped_by_timeout = True
+                break
+
+            # Clip large gradients to prevent explosion
+            try:
+                from torch.nn.utils import clip_grad_norm_
+
+                clip_grad_norm_(model.parameters(), max_norm=1.0)
+            except Exception:
+                # If clipping fails, ignore to avoid blocking minimal environment runs
+                pass
             optimizer.step()
         # Clear timer
         if timer is not None:
@@ -59,6 +96,8 @@ class Trainer:
 
         # Return if stopped prematurely
         return stopped_by_timeout
+
+
 """ 
     def test(self) -> Metrics:
         self.model.eval()

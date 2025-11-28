@@ -15,7 +15,7 @@ def import_kaggle_csv(max_per_class: int | None = None):
         except FileNotFoundError:
             raise ValueError(f"Provided filepath not found: {KAGGLE_DEFAULT_PATH}") from None
 
-        data = data_file.values.astype("float32")
+        data = data_file.values.astype("float64")
         labels = torch.tensor(data[:, 0], dtype=torch.long)
         values = torch.tensor(data[:, 1:] / 255.0)
         values = values.view(-1, GRAYSCALE_NUM_CHANNELS, DEFAULT_H, DEFAULT_W)

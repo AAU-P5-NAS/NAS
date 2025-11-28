@@ -83,7 +83,7 @@ def test_get_new_architecture():
     action_logits += [0] * environment.max_layers  # add skip logits
 
     architecture, should_evaluate = environment._get_new_architecture(
-        action_logits=np.array(action_logits, dtype=np.float32)
+        action_logits=np.array(action_logits, dtype=np.float64)
     )
     assert isinstance(architecture, environment_module.NetworkConfig)
     assert isinstance(should_evaluate, bool)
@@ -139,7 +139,7 @@ def test_get_new_architecture():
     action_logits += [0] * environment.max_layers  # add skip logits
 
     architecture, should_evaluate = environment._get_new_architecture(
-        action_logits=np.array(action_logits, dtype=np.float32)
+        action_logits=np.array(action_logits, dtype=np.float64)
     )
     assert isinstance(architecture, environment_module.NetworkConfig)
     assert isinstance(should_evaluate, bool)
@@ -193,7 +193,7 @@ def test_get_new_architecture():
     action_logits += [0] * environment.max_layers  # add skip logits
 
     architecture, should_evaluate = environment._get_new_architecture(
-        action_logits=np.array(action_logits, dtype=np.float32)
+        action_logits=np.array(action_logits, dtype=np.float64)
     )
     assert isinstance(architecture, environment_module.NetworkConfig)
     assert isinstance(should_evaluate, bool)
