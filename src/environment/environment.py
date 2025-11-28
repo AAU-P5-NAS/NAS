@@ -163,7 +163,7 @@ class CustomEnv(gym.Env):
             self.actions_taken = 0  # Reset for next episode
         else:
             self.current_network_config += LayerConfig.from_decisions(decisions)
-            reward = 0.05
+            reward = 0.01
             terminated = False
             truncated = False
 
