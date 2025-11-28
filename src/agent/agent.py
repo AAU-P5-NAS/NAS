@@ -18,6 +18,7 @@ from stable_baselines3.common.logger import TensorBoardOutputFormat
 
 from stable_baselines3.common.callbacks import BaseCallback
 
+
 class EpisodeLimitCallback(BaseCallback):
     def __init__(self, max_episodes: int, verbose=0):
         super().__init__(verbose)
@@ -25,10 +26,10 @@ class EpisodeLimitCallback(BaseCallback):
         self.episode_count = 0
 
     def _on_step(self) -> bool:
-        infos = self.locals.get('infos', [])
+        infos = self.locals.get("infos", [])
         for info in infos:
             # SB3 injects 'episode' key into infos at the end of each episode
-            if 'episode' in info:
+            if "episode" in info:
                 self.episode_count += 1
                 print(f"Episode {self.episode_count} completed")
                 if self.episode_count >= self.max_episodes:
@@ -103,7 +104,7 @@ class RLAgent:
             device="cpu",
             learning_rate=rl_learning_rate,
             seed=policy_seed,
-            n_steps=30, # type: ignore
+            n_steps=10,  # type: ignore
             normalize_advantage=False,  # type: ignore
         )
         self.model.set_logger(tb_logger.logger)
@@ -154,8 +155,6 @@ class RLAgent:
         avg_reward = sum(total_rewards) / len(total_rewards)
         print(f"Average reward over {num_episodes} episodes: {avg_reward:.2f}")
         return avg_reward
-
-
 
     def check_directories(self):
         """Check and create necessary directories"""

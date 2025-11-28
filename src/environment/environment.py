@@ -36,7 +36,7 @@ from src.agent.action_masking.action_masking_utils import (
 )
 
 
-MAX_LAYERS = 12
+MAX_LAYERS = 10
 
 
 class CustomEnv(gym.Env):
@@ -277,7 +277,7 @@ class CustomEnv(gym.Env):
         else:
             mask[slices.standard_actions.start : slices.standard_actions.stop] = True
 
-        if self.actions_taken == 0: 
+        if self.actions_taken == 0:
             mask[slices.standard_actions.all] = False
             mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
 
