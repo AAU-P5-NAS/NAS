@@ -26,6 +26,8 @@ class EpisodeLimitCallback(BaseCallback):
         self.episode_count = 0
 
     def _on_step(self) -> bool:
+        print("number of steps:", self.num_timesteps)
+        print("number of episodes:", self.episode_count)
         infos = self.locals.get("infos", [])
         for info in infos:
             # SB3 injects 'episode' key into infos at the end of each episode
@@ -148,7 +150,7 @@ class RLAgent:
                 actions = actions.cpu().numpy().squeeze(0)
                 obs, reward, terminated, truncated, _ = self.env.step(actions)
                 done = terminated or truncated
-                episode_reward += reward - 0.05 if not done else reward  # type: ignore
+                episode_reward += reward  # type: ignore
 
             total_rewards.append(episode_reward)
 
