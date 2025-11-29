@@ -15,7 +15,6 @@ from src.utils.layer_config import (
     ActivationFunction,
 )
 from src.agent.action_masking.action_masking_utils import (
-    NO_ACTION_DECISIONS,
     MaskContext,
     sample_action_for_slice,
     sample_skip_connection,
@@ -36,11 +35,11 @@ def sample_actions(ctx: MaskContext):
     ctx.observation = ctx.observation.flatten()
     ctx.logits = mask_action_type_sequential(ctx)
     ctx.decisions.action_choice = sample_action_for_slice(ctx, StandardAction, "standard_actions")
-    if ctx.decisions.action_choice == StandardAction.NONE:
+    """     if ctx.decisions.action_choice == StandardAction.NONE:
         masked_logits = ctx.logits.copy()
         masked_logits[:] = -np.inf
         masked_logits[ctx.slices.standard_actions[StandardAction.NONE]] = 1
-        return NO_ACTION_DECISIONS, masked_logits
+        return NO_ACTION_DECISIONS, masked_logits """
 
     ctx.logits = mask_layer_type_sequential(ctx)
     ctx.decisions.layer_type_choice = sample_action_for_slice(ctx, LayerType, "layer_type")
@@ -84,6 +83,10 @@ def mask_action_type_sequential(ctx: MaskContext):
 
 def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
+    if ctx.decisions.action_choice == StandardAction.NONE:
+        new_logits[ctx.slices.layer_type.all] = -np.inf
+        new_logits[ctx.slices.layer_type[LayerType.NONE]] = 1
+        return new_logits
 
     linear_layer_exists = any(
         ctx.observation[i] == LayerType.LINEAR.value

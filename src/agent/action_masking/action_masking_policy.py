@@ -1,6 +1,6 @@
 import numpy as np
-from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 import torch
+from stable_baselines3.common.policies import ActorCriticPolicy
 
 from src.agent.action_masking.action_masking_utils import (
     MaskContext,
@@ -20,7 +20,7 @@ from src.agent.action_masking.action_masking_utils import EMPTY_DECISIONS
 from src.utils.data_importer.cifar.cifar10 import DEFAULT_W, DEFAULT_H, NUM_CHANNELS
 
 
-class CustomMaskablePolicy(MaskableActorCriticPolicy):
+class CustomMaskablePolicy(ActorCriticPolicy):
     """
     Custom Maskable Policy for PPO that integrates sequential action masking
     based on the current environment state. Supports single-observation forward pass.
@@ -57,7 +57,10 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
         # 5. Transform decisions to action indices tensor
         # Actions must be a tensor of a specific shape for SB3
         actions = torch.tensor(
-            np.array(transform_decisions_to_action_indices(decisions, ctx.slices, ctx.max_layers), dtype=np.int64),
+            np.array(
+                transform_decisions_to_action_indices(decisions, ctx.slices, ctx.max_layers),
+                dtype=np.int64,
+            ),
             device=obs.device,
             dtype=torch.long,
         ).unsqueeze(0)
@@ -104,7 +107,12 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
 
             # Replace -inf with large negative number (torch dont like the -inf for categorical.)
             logits_slice[np.isneginf(logits_slice)] = -10.0  # instead of -1e8
+
+            if np.all(logits_slice == -10.0):
+                raise ValueError(f"All actions masked for category '{cat}'. This is invalid.")
+
             logits_slice = torch.tensor(logits_slice, dtype=torch.float32)
+
             dist = torch.distributions.Categorical(logits=logits_slice)
             log_probs.append(dist.log_prob(torch.tensor(decision_values[idx], dtype=torch.long)))
 

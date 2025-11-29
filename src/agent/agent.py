@@ -7,7 +7,6 @@ from src.environment.environment import CustomEnv
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy
 
-from sb3_contrib.common.wrappers import ActionMasker
 
 from src.environment.reward import WeightedSumRS, Weights
 import os
@@ -87,16 +86,13 @@ class RLAgent:
         hyperparameters: SLHyperParameters = hyperparameters,
         reward_weights: Weights | None = None,
     ):
-        self.env = ActionMasker(
-            CustomEnv(
-                device=device,
-                hyperparameters=hyperparameters,
-                tb_logger=tb_logger,
-                reward_strategy=WeightedSumRS(weights=reward_weights)
-                if reward_weights
-                else WeightedSumRS(Weights(accuracy=0.5, flops=0.5)),
-            ),
-            action_mask_fn=mask_fn,
+        self.env = CustomEnv(
+            device=device,
+            hyperparameters=hyperparameters,
+            tb_logger=tb_logger,
+            reward_strategy=WeightedSumRS(weights=reward_weights)
+            if reward_weights
+            else WeightedSumRS(Weights(accuracy=0.5, flops=0.5)),
         )
         self.model = policy_algorithm_class(
             policy=policy,

@@ -2,7 +2,7 @@ import argparse
 import os
 from rich.console import Console  # Add this import
 import shutil
-from sb3_contrib.ppo_mask import MaskablePPO
+from stable_baselines3 import PPO
 import torch
 
 from src.environment.reward import Weights
@@ -77,7 +77,7 @@ def main():
 
     # Initialize agent with PPO algorithm
     agent = RLAgent(
-        policy_algorithm_class=MaskablePPO,
+        policy_algorithm_class=PPO,
         policy=CustomMaskablePolicy,
         policy_seed=args.policy_seed,
         reward_weights=Weights(accuracy=0.90, flops=0.10),
