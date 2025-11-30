@@ -5,7 +5,7 @@ import shutil
 from stable_baselines3 import PPO
 import torch
 
-from src.environment.reward import Weights
+from src.environment.reward.reward import Weights
 from src.agent.agent import RLAgent
 from src.agent.action_masking.action_masking_policy import CustomMaskablePolicy
 

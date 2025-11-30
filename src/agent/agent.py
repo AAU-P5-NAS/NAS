@@ -1,21 +1,22 @@
 from typing import Optional
+import os
 import numpy as np
 import torch
+
+from torch.utils.tensorboard import SummaryWriter
 from src.utils.logger import TensorboardLogger
 from src.utils.hyperparameters import SLHyperParameters
-from src.environment.environment import CustomEnv
+
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy
-
-
-from src.environment.reward import WeightedSumRS, Weights
-import os
-
 from stable_baselines3.common.logger import Logger
-from torch.utils.tensorboard import SummaryWriter
 from stable_baselines3.common.logger import TensorBoardOutputFormat
-
 from stable_baselines3.common.callbacks import BaseCallback
+
+from src.environment.environment import CustomEnv
+from src.environment.reward.reward import Weights
+from src.environment.reward.weighted_sum import WeightedSumRS
+
 
 
 class EpisodeLimitCallback(BaseCallback):

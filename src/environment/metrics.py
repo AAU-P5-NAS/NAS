@@ -23,6 +23,12 @@ class Metrics(BaseModel):
     architecture_size: Optional[int] = None
     training_time: Optional[float] = None
 
+class TrainingFreeMetrics(BaseModel):
+    synflow: Optional[float] = None
+    jacov: Optional[float] = None
+    snip: Optional[float] = None
+    complexity: Optional[float] = None
+
 
 Metric_literal = Literal[
     "accuracy",

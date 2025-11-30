@@ -9,7 +9,7 @@ import torch
 from src.environment.metrics import Evaluator
 from src.utils.hyperparameters import SLHyperParameters
 from src.utils.logger import NoOpLogger, TensorboardLogger
-from src.environment.reward import RewardStrategy
+from src.environment.reward.reward import RewardStrategy
 from src.environment.train import Trainer
 from src.utils.data_importer.importer import DataImporter, DatasetOption
 from src.utils.architecture import Architecture, flatten_cnn_config

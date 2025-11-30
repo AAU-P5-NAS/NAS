@@ -1,5 +1,7 @@
 import pytest
-from src.environment.reward import WeightedSumRS, TchebycheffReward, Weights
+from src.environment.reward.tchebycheff import TchebycheffRS
+from src.environment.reward.weighted_sum import WeightedSumRS
+from src.environment.reward.reward import Weights
 from src.environment.metrics import Metrics
 
 
@@ -46,7 +48,7 @@ def test_reward_ignores_none_values(default_metrics: Metrics):
     assert reward is not None and reward == reward  # Check for NaN
 
     w = Weights.dynamicWeightsSampler()
-    calc = TchebycheffReward(w)
+    calc = TchebycheffRS(w)
     reward = calc.compute_reward(metrics)
     assert isinstance(reward, float)
     assert reward is not None and reward == reward  # Check for NaN
@@ -132,7 +134,7 @@ def test_dynamic_weights_randomness():
 def test_TchebycheffReward_compute(default_metrics: Metrics):
     """Test that weights are normalized to sum to 1."""
     w = Weights.dynamicWeightsSampler()
-    calc = TchebycheffReward(w)
+    calc = TchebycheffRS(w)
     reward = calc.compute_reward(default_metrics)
 
     assert 0.0 <= reward <= 1.0
