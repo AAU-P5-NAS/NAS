@@ -35,7 +35,8 @@ from src.agent.action_masking.action_masking_utils import (
     transform_action_indices_to_decisions,
 )
 
-MAX_LAYERS = 12
+
+MAX_LAYERS = 10
 
 
 class CustomEnv(gym.Env):
@@ -164,7 +165,7 @@ class CustomEnv(gym.Env):
             self.actions_taken = 0  # Reset for next episode
         else:
             self.current_network_config += LayerConfig.from_decisions(decisions)
-            reward = 0.05
+            reward = 0.00
             terminated = False
             truncated = False
 
@@ -277,5 +278,13 @@ class CustomEnv(gym.Env):
             mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
         else:
             mask[slices.standard_actions.start : slices.standard_actions.stop] = True
+
+        if self.actions_taken == 0:
+            mask[slices.standard_actions.all] = False
+            mask[slices.standard_actions[StandardAction.ADD_LAYER]] = True
+
+        if self.actions_taken >= MAX_LAYERS:
+            mask[slices.standard_actions.all] = False
+            mask[slices.standard_actions[StandardAction.NONE]] = True
 
         return mask

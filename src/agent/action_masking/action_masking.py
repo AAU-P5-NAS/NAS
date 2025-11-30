@@ -15,7 +15,6 @@ from src.utils.layer_config import (
     ActivationFunction,
 )
 from src.agent.action_masking.action_masking_utils import (
-    NO_ACTION_DECISIONS,
     MaskContext,
     sample_action_for_slice,
     sample_skip_connection,
@@ -36,11 +35,11 @@ def sample_actions(ctx: MaskContext):
     ctx.observation = ctx.observation.flatten()
     ctx.logits = mask_action_type_sequential(ctx)
     ctx.decisions.action_choice = sample_action_for_slice(ctx, StandardAction, "standard_actions")
-    if ctx.decisions.action_choice == StandardAction.NONE:
+    """     if ctx.decisions.action_choice == StandardAction.NONE:
         masked_logits = ctx.logits.copy()
         masked_logits[:] = -np.inf
         masked_logits[ctx.slices.standard_actions[StandardAction.NONE]] = 1
-        return NO_ACTION_DECISIONS, masked_logits
+        return NO_ACTION_DECISIONS, masked_logits """
 
     ctx.logits = mask_layer_type_sequential(ctx)
     ctx.decisions.layer_type_choice = sample_action_for_slice(ctx, LayerType, "layer_type")
@@ -84,6 +83,10 @@ def mask_action_type_sequential(ctx: MaskContext):
 
 def mask_layer_type_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
+    if ctx.decisions.action_choice == StandardAction.NONE:
+        new_logits[ctx.slices.layer_type.all] = -np.inf
+        new_logits[ctx.slices.layer_type[LayerType.NONE]] = 1
+        return new_logits
 
     linear_layer_exists = any(
         ctx.observation[i] == LayerType.LINEAR.value
@@ -95,7 +98,12 @@ def mask_layer_type_sequential(ctx: MaskContext):
         return new_logits
 
     previous_layer = get_latest_layer(ctx.observation, ctx.action_count, ctx.max_layers)
-    if previous_layer is None or previous_layer.layer_type != LayerType.CONV:
+
+    if previous_layer is None:
+        new_logits[ctx.slices.layer_type[LayerType.POOL]] = -np.inf
+        new_logits[ctx.slices.layer_type[LayerType.LINEAR]] = -np.inf
+
+    if previous_layer is not None and previous_layer.layer_type != LayerType.CONV:
         # if no previous layer or previous layer is not conv, cannot add pool (typically pool follows conv)
         new_logits[ctx.slices.layer_type[LayerType.POOL]] = -np.inf
 
@@ -206,6 +214,12 @@ def mask_pool_mode_sequential(ctx: MaskContext):
 def mask_skip_connection_sequential(ctx: MaskContext):
     new_logits = ctx.logits.copy()
 
+    new_logits[ctx.slices.skip_connection.all] = -np.inf
+    new_logits[ctx.slices.skip_connection[ctx.max_layers - 1]] = (
+        1  # no skip connection -> last layer index
+    )
+    return new_logits
+
     if ctx.action_count < 2:
         # first two layers are not allowed to have skip connections from previous layers.
         new_logits[ctx.slices.skip_connection.all] = -np.inf
@@ -222,7 +236,7 @@ def mask_skip_connection_sequential(ctx: MaskContext):
     input_dim = ctx.input_dimensions[1:]
     observation_with_new_layer = get_observation_with_new_layer(ctx.observation, ctx)
     last_layer_output_dims = get_output_dimensions(
-        np.array(observation_with_new_layer, dtype=np.float32), input_dim, ctx.max_layers
+        np.array(observation_with_new_layer, dtype=np.float64), input_dim, ctx.max_layers
     )
 
     for i in range(0, ctx.action_count - 1):

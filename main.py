@@ -2,7 +2,7 @@ import argparse
 import os
 from rich.console import Console  # Add this import
 import shutil
-from sb3_contrib.ppo_mask import MaskablePPO
+from stable_baselines3 import PPO
 import torch
 
 from src.environment.reward import Weights
@@ -91,12 +91,30 @@ def main():
         console.print("[bold green]Starting training...[/bold green]")
         agent.train(total_timesteps=30)
 
+        # Clean up old models
+        if args.clean_saved_models and os.path.exists("saved_models"):
+            shutil.rmtree("saved_models")
+            console.print("[yellow]Deleted old saved models[/yellow]")
+
+        # Initialize agent with PPO algorithm
+        agent = RLAgent(
+            policy_algorithm_class=PPO,
+            policy=CustomMaskablePolicy,
+            policy_seed=args.policy_seed,
+            reward_weights=Weights(accuracy=0.90, flops=0.10),
+        )
+
+        # Train the agent
+        console.print("[bold green]Starting training...[/bold green]")
+        agent.train(total_timesteps=50000)
+
         # Save the trained model
         agent.save_model()
 
         # Evaluate the trained agent
         console.print("[bold yellow]Evaluating trained agent...[/bold yellow]")
         agent.evaluate(num_episodes=5)
+        
     except Exception as e:
         if args.report_exception:
             email.ReportException(exception=e)
