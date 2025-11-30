@@ -81,23 +81,6 @@ def main():
 
         # Initialize agent with PPO algorithm
         agent = RLAgent(
-            policy_algorithm_class=MaskablePPO,
-            policy=CustomMaskablePolicy,
-            policy_seed=args.policy_seed,
-            reward_weights=Weights(accuracy=0.92, flops=0.08),
-        )
-
-        # Train the agent
-        console.print("[bold green]Starting training...[/bold green]")
-        agent.train(total_timesteps=30)
-
-        # Clean up old models
-        if args.clean_saved_models and os.path.exists("saved_models"):
-            shutil.rmtree("saved_models")
-            console.print("[yellow]Deleted old saved models[/yellow]")
-
-        # Initialize agent with PPO algorithm
-        agent = RLAgent(
             policy_algorithm_class=PPO,
             policy=CustomMaskablePolicy,
             policy_seed=args.policy_seed,
