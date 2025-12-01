@@ -7,8 +7,9 @@ import torch
 from rich.console import Console
 
 from src.environment.metrics import Metrics
-from src.utils.network_config import  NetworkConfig
+from src.utils.network_config import NetworkConfig
 from src.utils.layer_config import LayerConfig
+
 
 @dataclass
 class ArchitectureCacheEntry:
@@ -21,7 +22,13 @@ class BestFiftyArchitecturesCache:
     # Sorted list of best fifty architectures based on accuracy
     cache: list[ArchitectureCacheEntry] = []
 
-    def add_entry_if_needed(self, architecture: list[LayerConfig], metrics: Metrics, reward: float, tensorboard_logger: TensorboardLogger):
+    def add_entry_if_needed(
+        self,
+        architecture: list[LayerConfig],
+        metrics: Metrics,
+        reward: float,
+        tensorboard_logger: TensorboardLogger,
+    ):
         entry = ArchitectureCacheEntry(architecture=architecture, metrics=metrics, reward=reward)
 
         # If cache has less than 50 entries, add directly
@@ -48,6 +55,7 @@ class BestFiftyArchitecturesCache:
                 )
                 f.write("\n" + "=" * 80 + "\n\n")
 
+
 class TensorboardLogger:
     best_fifty_cache = BestFiftyArchitecturesCache()
 
@@ -59,7 +67,6 @@ class TensorboardLogger:
         log_folder: str = "tensorboard_logs/",
     ):
         self.writer = writer
-        self.graph_written = False
         self.logger = (
             logger
             if logger is not None
@@ -132,13 +139,13 @@ class TensorboardLogger:
 
         self.logger.dump(step=self.evaluation_count)
 
-        if self.newest_architecture is not None and not self.graph_written:
+        """if self.newest_architecture is not None:
             channels, h, w = self.dimensions
             self.writer.add_graph(
                 self.newest_architecture,
                 torch.zeros(1, channels, h, w).to(device=self.device),
             )
-            self.graph_written = True
+        """
 
     def log_evaluation(
         self,
@@ -229,25 +236,26 @@ class TensorboardLogger:
             for i, layer in enumerate(layers):
                 if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
                     layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
-                    
+
                 elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
                     layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
-                    
+
                 elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
                     layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
-                    
+
         else:
             for i, layer in enumerate(layers):
                 if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
                     layers_str += f"\nLayer {i}: {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
-                    
+
                 elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
                     layers_str += f"\nLayer {i}: {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}\n"
-                    
+
                 elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
                     layers_str += f"\nLayer {i}: {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
 
         return layers_str
+
 
 class NoOpLogger:
     evaluation_count: int = 0
@@ -263,6 +271,3 @@ class NoOpLogger:
 
     def print_layers(self, *args, **kwargs):
         pass
-
-        
-    

@@ -23,10 +23,10 @@ def create_standard_architecture(
     number_of_classes: int, dropout_rate_linear_layer: float
 ) -> torch.nn.Sequential:
     """Create a standard architecture for SL hyperparameter tuning"""
-    
+
     model = nn.Sequential(
         nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(64),
+        nn.BatchNorm2d(32),
         nn.ReLU(),
         nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
         nn.BatchNorm2d(64),
@@ -36,16 +36,16 @@ def create_standard_architecture(
         nn.ReLU(),
         nn.MaxPool2d(kernel_size=3),
         nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(64),
+        nn.BatchNorm2d(128),
         nn.ReLU(),
         nn.MaxPool2d(kernel_size=3),
         nn.Flatten(),
         nn.Dropout(0.5),
-        nn.Linear(512, 128),
+        nn.Linear(128, 128),
         nn.ReLU(),
-        nn.Linear(128, number_of_classes)
+        nn.Linear(128, number_of_classes),
     )
-    
+    print(model)
     """model = torch.nn.Sequential(
         # Block 1
         torch.nn.Conv2d(3, 64, kernel_size=3, padding=1),
