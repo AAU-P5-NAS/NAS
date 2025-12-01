@@ -104,6 +104,7 @@ class Evaluator:
         model: nn.Module,
     ) -> TrainingFreeMetrics:
         model.to(self.device)
+        print("complexity: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
         return TrainingFreeMetrics(
             jacov=self.compute_jacov_proxy(model),
             synflow=self.compute_synflow_proxy(model),
