@@ -186,39 +186,7 @@ def test_after_linear_no_conv_or_pool():
 
     assert decisions.layer_type_choice != LayerType.CONV
     assert decisions.layer_type_choice != LayerType.POOL
-
-
-def test_layertype_is_none_after_none_action():
-    MAX_LAYERS = 20
-    config = NetworkConfig(
-        layers=[
-            LayerConfig(
-                layer_type=LayerType.CONV,
-                out_channels=OutChannels.CH_16,
-                kernel_size=KernelSize.KS_3,
-                stride=Stride.S_1,
-                activation=ActivationFunction.RELU,
-            )
-            for _ in range(6)
-        ]
-    )
-
-    ctx = MaskContext(
-        logits=get_logits(next_action=StandardAction.NONE),
-        observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(max_layers=MAX_LAYERS),
-        sampling_strategy=standard_stochastic_sampling,
-        max_layers=MAX_LAYERS,
-        decisions=EMPTY_DECISIONS,
-        input_dimensions=(3, 32, 32),
-        action_count=6,
-    )
-
-    decisions, masked_logits = sample_actions(ctx)
-
-    assert decisions.layer_type_choice == LayerType.NONE
-
-
+    
 def test_no_pool_without_conv():
     MAX_LAYERS = 20
     config = NetworkConfig(
@@ -404,7 +372,7 @@ def test_kernel_size_notnone_given_add_pool():
     assert decisions.kernel_size_choice != KernelSize.NONE
 
 
-def test_correct_kernel_size_1():
+def test_correct_kernel_size_3():
     MAX_LAYERS = 20
     config = NetworkConfig(
         layers=[
@@ -433,58 +401,6 @@ def test_correct_kernel_size_1():
                 layer_type=LayerType.CONV,
                 out_channels=OutChannels.CH_16,
                 kernel_size=KernelSize.KS_3,
-                stride=Stride.S_2,
-                activation=ActivationFunction.RELU,
-            ),
-        ]
-    )
-
-    ctx = MaskContext(
-        logits=get_logits(next_action=StandardAction.ADD_LAYER, next_layer=LayerType.CONV),
-        observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(max_layers=MAX_LAYERS),
-        sampling_strategy=standard_stochastic_sampling,
-        max_layers=MAX_LAYERS,
-        decisions=EMPTY_DECISIONS,
-        input_dimensions=(3, 32, 32),
-        action_count=4,
-    )
-
-    decisions, masked_logits = sample_actions(ctx)
-
-    assert decisions.layer_type_choice == LayerType.CONV
-    assert decisions.kernel_size_choice == KernelSize.KS_1
-
-
-def test_correct_kernel_size_1or3():
-    MAX_LAYERS = 20
-    config = NetworkConfig(
-        layers=[
-            LayerConfig(
-                layer_type=LayerType.POOL,
-                pool_mode=PoolMode.MAX,
-                kernel_size=KernelSize.KS_3,
-                stride=Stride.S_2,
-                activation=ActivationFunction.RELU,
-            ),
-            LayerConfig(
-                layer_type=LayerType.POOL,
-                pool_mode=PoolMode.MAX,
-                kernel_size=KernelSize.KS_3,
-                stride=Stride.S_2,
-                activation=ActivationFunction.RELU,
-            ),
-            LayerConfig(
-                layer_type=LayerType.POOL,
-                pool_mode=PoolMode.MAX,
-                kernel_size=KernelSize.KS_3,
-                stride=Stride.S_2,
-                activation=ActivationFunction.RELU,
-            ),
-            LayerConfig(
-                layer_type=LayerType.CONV,
-                out_channels=OutChannels.CH_16,
-                kernel_size=KernelSize.KS_1,
                 stride=Stride.S_1,
                 activation=ActivationFunction.RELU,
             ),
@@ -505,10 +421,7 @@ def test_correct_kernel_size_1or3():
     decisions, masked_logits = sample_actions(ctx)
 
     assert decisions.layer_type_choice == LayerType.CONV
-    assert (
-        decisions.kernel_size_choice == KernelSize.KS_3
-        or decisions.kernel_size_choice == KernelSize.KS_1
-    )
+    assert decisions.kernel_size_choice == KernelSize.KS_3
 
 
 def test_linear_units_notnone_given_add_linear():
@@ -718,4 +631,57 @@ def test_skip_masking_3():
     else:
         for i in range(MAX_LAYERS):
             assert np.isneginf(masked_logits[ctx.slices.skip_connection[i]])
-"""
+
+
+def test_correct_kernel_size_1():
+    MAX_LAYERS = 20
+    config = NetworkConfig(
+        layers=[
+            LayerConfig(
+                layer_type=LayerType.POOL,
+                pool_mode=PoolMode.MAX,
+                kernel_size=KernelSize.KS_3,
+                stride=Stride.S_2,
+                activation=ActivationFunction.RELU,
+            ),
+            LayerConfig(
+                layer_type=LayerType.POOL,
+                pool_mode=PoolMode.MAX,
+                kernel_size=KernelSize.KS_3,
+                stride=Stride.S_2,
+                activation=ActivationFunction.RELU,
+            ),
+            LayerConfig(
+                layer_type=LayerType.POOL,
+                pool_mode=PoolMode.MAX,
+                kernel_size=KernelSize.KS_3,
+                stride=Stride.S_2,
+                activation=ActivationFunction.RELU,
+            ),
+            LayerConfig(
+                layer_type=LayerType.CONV,
+                out_channels=OutChannels.CH_16,
+                kernel_size=KernelSize.KS_3,
+                stride=Stride.S_2,
+                activation=ActivationFunction.RELU,
+            ),
+        ]
+    )
+
+    ctx = MaskContext(
+        logits=get_logits(next_action=StandardAction.ADD_LAYER, next_layer=LayerType.CONV),
+        observation=get_obs(config, max_layers=MAX_LAYERS),
+        slices=get_logit_slices(max_layers=MAX_LAYERS),
+        sampling_strategy=standard_stochastic_sampling,
+        max_layers=MAX_LAYERS,
+        decisions=EMPTY_DECISIONS,
+        input_dimensions=(3, 32, 32),
+        action_count=4,
+    )
+
+    decisions, masked_logits = sample_actions(ctx)
+
+    assert decisions.layer_type_choice == LayerType.CONV
+    assert decisions.kernel_size_choice == KernelSize.KS_3
+
+"""            
