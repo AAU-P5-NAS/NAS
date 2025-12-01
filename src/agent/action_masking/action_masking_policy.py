@@ -28,13 +28,13 @@ class CustomMaskablePolicy(ActorCriticPolicy):
 
     # argument action_masks needs to be included to fulfill interface requirements.
     def forward(self, obs, deterministic: bool = False, action_masks=None):
-        # 1. Feature extraction
+        # 1olicy network features and vf is value network features
+
+        # 2. Get raw pol. Feature extraction
         features = self.extract_features(obs)
         latent_pi, latent_vf = self.mlp_extractor(
             features
-        )  # pi is policy network features and vf is value network features
-
-        # 2. Get raw policy network logits from features
+        )  # pi is picy network logits from features
         logits = self.action_net(latent_pi).squeeze(0)  # [total_action_dim]
 
         sampling_strategy = standard_stochastic_sampling if not deterministic else max_sampling
