@@ -120,8 +120,9 @@ class RLAgent:
         self.model.save(self.model_save_path)
         print(f"Model saved to '{self.model_save_path}'")
 
-    def load_model(self):
+    def load_model(self, model_name: str):
         """Load a previously trained model"""
+        self.model_save_path = f"{self.MODEL_SAVE_DIRECTORY}{model_name}"
         if os.path.exists(f"{self.model_save_path}.zip"):
             self.model = self.model.load(self.model_save_path, env=self.env)
             print(f"Model loaded from '{self.model_save_path}'")
