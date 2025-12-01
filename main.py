@@ -1,3 +1,4 @@
+import argparse
 import os
 from rich.console import Console  # Add this import
 import shutil
@@ -12,6 +13,22 @@ from src.utils.arguments import ParseArguments
 
 console = Console()
 
+def get_agent(args: argparse.Namespace) -> RLAgent:
+
+    # Initialize the RL agent
+    agent = RLAgent(
+        policy_algorithm_class=PPO,
+        policy=CustomMaskablePolicy,
+        policy_seed=args.policy_seed,
+        reward_weights=Weights(accuracy=0.90, flops=0.10),
+    )
+
+    if args.load_model is not None:
+        # Load an existing model into the agent
+        console.print(f"[bold green]Loading model '{args.load_model}'[/bold green]")
+        agent.load_model(args.load_model)
+
+    return agent
 
 def main():
 
@@ -61,12 +78,7 @@ def main():
             console.print("[yellow]Deleted old saved models[/yellow]")
 
         # Initialize agent with PPO algorithm
-        agent = RLAgent(
-            policy_algorithm_class=PPO,
-            policy=CustomMaskablePolicy,
-            policy_seed=args.policy_seed,
-            reward_weights=Weights(accuracy=0.90, flops=0.10),
-        )
+        agent = get_agent(args)
 
         # Train the agent
         console.print("[bold green]Starting training...[/bold green]")
