@@ -49,11 +49,11 @@ class OutChannels(enum.IntEnum):
     CH_16 = 1  # 16
     CH_32 = 2  # 32
     CH_64 = 3  # 64
-    # CH_128 = 4  # 128
+    CH_128 = 4  # 128
     # CH_256 = 5  # 256
 
     def to_channels(self):
-        mapping = [None, 16, 32, 64]
+        mapping = [None, 16, 32, 64, 128]
         return mapping[self.value]
 
 
