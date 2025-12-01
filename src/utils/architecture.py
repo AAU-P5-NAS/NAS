@@ -100,7 +100,8 @@ class Architecture(nn.Module):
             if layer_config.pool_mode is PoolMode.MAX:
                 pool = nn.MaxPool2d(kernel, stride)
             else:
-                pool = nn.AvgPool2d(kernel, stride)
+                # pool = nn.AvgPool2d(kernel, stride)
+                raise ValueError("avg pool mode cannot be added anymore")
 
             module.append(pool)
 
