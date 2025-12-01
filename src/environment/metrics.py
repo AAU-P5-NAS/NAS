@@ -103,6 +103,7 @@ class Evaluator:
         self,
         model: nn.Module,
     ) -> TrainingFreeMetrics:
+        model.to(self.device)
         return TrainingFreeMetrics(
             jacov=self.compute_jacov_proxy(model),
             synflow=self.compute_synflow_proxy(model),
