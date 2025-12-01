@@ -106,12 +106,12 @@ class TensorboardLogger:
 
         self.logger.dump(step=self.evaluation_count)
 
-        if self.newest_architecture is not None:
+        """ if self.newest_architecture is not None:
             channels, h, w = self.dimensions
             self.writer.add_graph(
                 self.newest_architecture,
                 torch.zeros(1, channels, h, w).to(device=self.device),
-            )
+            ) """
 
     def log_evaluation(
         self,
