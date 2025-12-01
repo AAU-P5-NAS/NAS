@@ -3,11 +3,10 @@ import numpy as np
 import torch
 from src.utils.logger import TensorboardLogger
 from src.utils.hyperparameters import SLHyperParameters
-from src.environment.environment import CustomEnv
+from src.environment.environment import CustomEnv, MAX_LAYERS
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy
 
-from sb3_contrib.common.wrappers import ActionMasker
 
 from src.environment.reward import WeightedSumRS, Weights
 import os
@@ -48,7 +47,7 @@ def mask_fn(env):
 
 
 hyperparameters = SLHyperParameters(
-    training_epochs=8,
+    training_epochs=10,
     learning_rate=0.00132,
     momentum=0.9,
     batch_size=32,
@@ -87,16 +86,13 @@ class RLAgent:
         hyperparameters: SLHyperParameters = hyperparameters,
         reward_weights: Weights | None = None,
     ):
-        self.env = ActionMasker(
-            CustomEnv(
-                device=device,
-                hyperparameters=hyperparameters,
-                tb_logger=tb_logger,
-                reward_strategy=WeightedSumRS(weights=reward_weights)
-                if reward_weights
-                else WeightedSumRS(Weights(accuracy=0.5, flops=0.5)),
-            ),
-            action_mask_fn=mask_fn,
+        self.env = CustomEnv(
+            device=device,
+            hyperparameters=hyperparameters,
+            tb_logger=tb_logger,
+            reward_strategy=WeightedSumRS(weights=reward_weights)
+            if reward_weights
+            else WeightedSumRS(Weights(accuracy=0.5, flops=0.5)),
         )
         self.model = policy_algorithm_class(
             policy=policy,
@@ -106,8 +102,8 @@ class RLAgent:
             device="cpu",
             learning_rate=rl_learning_rate,
             seed=policy_seed,
-            n_steps=10,  # type: ignore
-            normalize_advantage=False,  # type: ignore
+            n_steps=(MAX_LAYERS + 1) * 8,  # type: ignore
+            normalize_advantage=True,  # type: ignore
         )
         self.model.set_logger(tb_logger.logger)
         self.model_save_path = f"{self.MODEL_SAVE_DIRECTORY}{self.model.__class__.__name__}"
