@@ -70,7 +70,7 @@ def update_spatial_dims(
     return h_new, w_new
 
 
-def get_layer_from_index(observation: np.ndarray, index: int, max_layers: int) -> LayerConfig:
+def get_layer_from_index(observation: np.ndarray, index: int) -> LayerConfig:
     """Retrieve the LayerConfig corresponding to a given layer index in the observation."""
     start = index * SINGLE_LAYER_OBSERVATION_SIZE
     if start >= len(observation) or observation[start] == -1:
@@ -85,7 +85,7 @@ def get_valid_kernel_sizes(
 ) -> list[KernelSize]:
     h, w = last_layer_output_dims
     min_dim = min(h, w)
-    max_kernel_size = min_dim  # ignore padding entirely
+    max_kernel_size = min_dim + padding
     valid_kernels = [
         kernel
         for kernel in KernelSize
@@ -129,14 +129,12 @@ def calculate_output_dimensions(input_dims: tuple[int, int], layer: LayerConfig)
     return h, w
 
 
-def get_output_dimensions(
-    observation: np.ndarray, input_dims: tuple[int, int], max_layers: int
-) -> tuple[int, int]:
+def get_output_dimensions(observation: np.ndarray, input_dims: tuple[int, int]) -> tuple[int, int]:
     """Calculate the output dimensions after applying all layers in the observation."""
     for i in range(0, len(observation), SINGLE_LAYER_OBSERVATION_SIZE):
         if observation[i] == 0:
             break  # No more layers defined
-        layer = get_layer_from_index(observation, i // SINGLE_LAYER_OBSERVATION_SIZE, max_layers)
+        layer = get_layer_from_index(observation, i // SINGLE_LAYER_OBSERVATION_SIZE)
         input_dims = calculate_output_dimensions(input_dims, layer)
     return input_dims
 

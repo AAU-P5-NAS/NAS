@@ -93,9 +93,9 @@ class Architecture(nn.Module):
         elif layer_config.layer_type == LayerType.POOL:
             kernel = layer_config.kernel_size.to_kernel()
             stride = layer_config.stride.to_stride()
+            padding = 0
 
             if layer_config.pool_mode is PoolMode.MAX:
-                padding = 0
                 if w < kernel:
                     padding = kernel // 2
                 pool = nn.MaxPool2d(kernel, stride, padding)
@@ -108,7 +108,7 @@ class Architecture(nn.Module):
             if layer_config.activation is not None:
                 module.append(layer_config.activation.to_module())
 
-            h, w = update_spatial_dims(h, w, kernel, stride)
+            h, w = update_spatial_dims(h, w, kernel, stride, padding)
             return module, in_channels, h, w
 
         elif layer_config.layer_type == LayerType.LINEAR:
