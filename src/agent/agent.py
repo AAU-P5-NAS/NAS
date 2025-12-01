@@ -47,7 +47,7 @@ def mask_fn(env):
 
 
 hyperparameters = SLHyperParameters(
-    training_epochs=8,
+    training_epochs=2,
     learning_rate=0.00132,
     momentum=0.9,
     batch_size=32,
