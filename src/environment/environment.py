@@ -229,7 +229,7 @@ class CustomEnv(gym.Env):
         for epoch in range(num_epochs):
             progress = (epoch + 1) / num_epochs * 100
             with self.console.status(
-                f"[bold blue]Training model on evaluation number '{self.tb_logger.evaluation_count}': Progress {int(progress)}%[/bold blue]"
+                f"[bold blue]Training model on evaluation number '{self.tb_logger.evaluation_count}': Progress {int(progress)}% ({time.time() - start_time:.2f}s)[/bold blue]"
             ):
                 self.trainer.train(model, optimizer)
 
