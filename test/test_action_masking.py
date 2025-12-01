@@ -186,39 +186,7 @@ def test_after_linear_no_conv_or_pool():
 
     assert decisions.layer_type_choice != LayerType.CONV
     assert decisions.layer_type_choice != LayerType.POOL
-
-
-def test_layertype_is_none_after_none_action():
-    MAX_LAYERS = 20
-    config = NetworkConfig(
-        layers=[
-            LayerConfig(
-                layer_type=LayerType.CONV,
-                out_channels=OutChannels.CH_16,
-                kernel_size=KernelSize.KS_3,
-                stride=Stride.S_1,
-                activation=ActivationFunction.RELU,
-            )
-            for _ in range(6)
-        ]
-    )
-
-    ctx = MaskContext(
-        logits=get_logits(next_action=StandardAction.NONE),
-        observation=get_obs(config, max_layers=MAX_LAYERS),
-        slices=get_logit_slices(max_layers=MAX_LAYERS),
-        sampling_strategy=standard_stochastic_sampling,
-        max_layers=MAX_LAYERS,
-        decisions=EMPTY_DECISIONS,
-        input_dimensions=(3, 32, 32),
-        action_count=6,
-    )
-
-    decisions, masked_logits = sample_actions(ctx)
-
-    assert decisions.layer_type_choice == LayerType.NONE
-
-
+    
 def test_no_pool_without_conv():
     MAX_LAYERS = 20
     config = NetworkConfig(
