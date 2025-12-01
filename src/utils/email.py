@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-RECIPIENT = "thomas.bowman.2003@gmail.com"
+RECIPIENT = "cs-25-dat-5-02@student.aau.dk"
 SUBJECT = "AI training error encountered"
 
 def ReportException(exception: Exception):
