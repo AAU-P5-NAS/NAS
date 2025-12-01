@@ -161,7 +161,7 @@ class TensorboardLogger:
                 f"[bold blue]Accuracy: {metrics.accuracy}, Avg: {avg_accuracy:.4f}[/bold blue]"
             )
 
-        self.print_layers(current_config.layers if current_config else [])
+        # self.print_layers(current_config.layers if current_config else [])
 
         PRINT_EVERY_N = 50
         if self.evaluation_count % PRINT_EVERY_N == 0:

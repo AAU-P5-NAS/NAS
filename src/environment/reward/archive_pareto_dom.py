@@ -114,29 +114,6 @@ class ElitistArchive:
                 for elite in self.elites
             )
 
-    def rank_aggregate_sort(self):
-        """
-        Rank entries by jacov, synflow, snip, complexity.
-        Combined rank = sum of ranks across metrics.
-        Lower score = better.
-        """
-
-        def safe(v):
-            return float("inf") if v is None else v
-
-        metrics = ["jacov", "synflow", "snip", "complexity"]
-
-        # Use id(entry) to avoid unhashable pydantic model errors
-        scores = {id(entry): 0 for entry in self.elites}
-
-        for metric in metrics:
-            sorted_list = sorted(self.elites, key=lambda e: safe(getattr(e.metrics, metric)))
-
-            for rank, entry in enumerate(sorted_list):
-                scores[id(entry)] += rank
-
-        self.elites = sorted(self.elites, key=lambda e: scores[id(e)])
-
 
 class DominanceNoveltyRS(RewardStrategy):
     """
@@ -182,9 +159,9 @@ class DominanceNoveltyRS(RewardStrategy):
         dominance_score = self.compute_dominance(proxy_metrics=metrics, arch=arch)
         novelty_score = self.compute_novelty(proxy_metrics=metrics, arch=arch)
 
-        print("Dominance Score:", dominance_score)
+        """ print("Dominance Score:", dominance_score)
         print("Novelty Score:", novelty_score)
-        print("self.elite_archive size:", self.elite_archive.size())
+        print("self.elite_archive size:", self.elite_archive.size()) """
 
         total_reward = (
             self.dn_weights.dominance * dominance_score + self.dn_weights.novelty * novelty_score
@@ -195,8 +172,9 @@ class DominanceNoveltyRS(RewardStrategy):
     def get_size_of_archive(self) -> int:
         return self.elite_archive.size()
 
-    def get_highest_value_arch(self) -> NetworkConfig:
+"""     def get_highest_value_arch(self) -> NetworkConfig:
         self.elite_archive.rank_aggregate_sort()
         best = self.elite_archive.elites[0]
         arch = unflatten_cnn_config(best.arch, max_layers=10)
         return arch
+ """

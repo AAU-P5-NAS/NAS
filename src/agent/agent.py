@@ -37,11 +37,21 @@ class EpisodeLimitCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         infos = self.locals.get("infos", [])
+
+        if self.episode_count % 25 == 0 and self.episode_count > 0:
+            allocated = torch.cuda.memory_allocated() / 1024**2
+            reserved = torch.cuda.memory_reserved() / 1024**2
+
+            print(f"Allocated: {allocated:.2f} MB")
+            print(f"Reserved: {reserved:.2f} MB")
+            torch.cuda.empty_cache()
+            print("Cleared CUDA cache")
+
         for info in infos:
             # SB3 injects 'episode' key into infos at the end of each episode
             if "episode" in info:
                 self.episode_count += 1
-                print(f"Episode {self.episode_count} completed")
+                # print(f"Episode {self.episode_count} completed")
                 if self.episode_count >= self.max_episodes:
                     print(f"Reached maximum of {self.max_episodes} episodes. Stopping training.")
                     return False  # stops learning
@@ -151,33 +161,6 @@ class RLAgent:
         )
         if self.use_proxy:
             if isinstance(self.env.reward_strategy, DominanceNoveltyRS):
-                archive_size = self.env.reward_strategy.get_size_of_archive()
-                print(f"Size of elite archive during evaluation: {archive_size}")
-
-                arch = self.env.reward_strategy.get_highest_value_arch()
-                architecture = Architecture(arch, 10, (3, 32, 32))
-                architecture.to(device)
-                optimizer = hyperparameters.get_optimizer(architecture.parameters())
-                num_epochs = hyperparameters.training_epochs
-                print("network config: ", arch)
-
-                start_time = time.time()
-                for epoch in range(num_epochs):
-                    progress = (epoch + 1) / num_epochs * 100
-                    with console.status(
-                        f"[bold blue]Training model - Progress {int(progress)}%[/bold blue]"
-                    ):
-                        trainer.train(architecture, optimizer)
-
-                end_time = time.time()
-                training_time = end_time - start_time
-                print(f"Training time for elite architecture: {training_time:.2f} seconds")
-                metrics = evaluator.evaluate(architecture)
-                console.print(
-                    f"[bold green]Metrics: Accuracy: {metrics.accuracy:.4f}, FLOPS: {metrics.flops:.2f}[/bold green]"
-                )
-
-                return
                 for entry in self.env.reward_strategy.elite_archive.elites:
                     print(f"Elite architecture in archive: {entry.arch}")
                     network_config = unflatten_cnn_config(entry.arch, max_layers=10)
