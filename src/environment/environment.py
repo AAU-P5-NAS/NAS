@@ -155,8 +155,6 @@ class CustomEnv(gym.Env):
 
         self.info = {}
 
-        raise Exception("Test")
-
         decisions = transform_action_indices_to_decisions(decision_logits, MAX_LAYERS)
         if decisions.action_choice == StandardAction.NONE:  # Stop and evaluate
             reward = self.evaluate_architecture(self.current_network_config)
