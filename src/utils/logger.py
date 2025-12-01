@@ -59,6 +59,7 @@ class TensorboardLogger:
         log_folder: str = "tensorboard_logs/",
     ):
         self.writer = writer
+        self.graph_written = False
         self.logger = (
             logger
             if logger is not None
@@ -131,12 +132,13 @@ class TensorboardLogger:
 
         self.logger.dump(step=self.evaluation_count)
 
-        if self.newest_architecture is not None:
+        if self.newest_architecture is not None and not self.graph_written:
             channels, h, w = self.dimensions
             self.writer.add_graph(
                 self.newest_architecture,
                 torch.zeros(1, channels, h, w).to(device=self.device),
             )
+            self.graph_written = True
 
     def log_evaluation(
         self,
