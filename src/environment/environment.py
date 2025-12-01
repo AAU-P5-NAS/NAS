@@ -137,7 +137,6 @@ class CustomEnv(gym.Env):
         self.actions_taken = 0
         self.current_network_config = NetworkConfig(layers=[])
         observation = self._get_observation()
-        print("RESET OBS SHAPE:", observation.shape)
         return observation, self.info
 
     def step(self, decision_logits: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
