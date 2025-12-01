@@ -27,7 +27,7 @@ class BestFiftyArchitecturesCache:
         # If cache has less than 50 entries, add directly
         if len(self.cache) < 50:
             self.cache.append(entry)
-            self.cache.sort(key=lambda x: x.metrics.accuracy or 0, reverse=True)
+            self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
 
         else:
             # Check if new entry is better than the worst in cache
