@@ -1,6 +1,13 @@
 from typing import Dict, cast
 from torch import Tensor
-from src.utils.layer_config import LayerConfig
+from src.utils.layer_config import (
+    ActivationFunction,
+    KernelSize,
+    LayerConfig,
+    LinearUnits,
+    OutChannels,
+    Stride,
+)
 import torch.nn as nn
 from src.utils.network_config import (
     SINGLE_LAYER_OBSERVATION_SIZE,
@@ -238,21 +245,30 @@ def flatten_cnn_config(
 
 def unflatten_cnn_config(flat_config: list[int], max_layers: int) -> NetworkConfig:
     layers = []
-    for i in range(max_layers):
-        start_idx = i * SINGLE_LAYER_OBSERVATION_SIZE
+    for layer_idx in range(max_layers):
+        start_idx = layer_idx * SINGLE_LAYER_OBSERVATION_SIZE
         end_idx = start_idx + SINGLE_LAYER_OBSERVATION_SIZE
         layer_data = flat_config[start_idx:end_idx]
 
-        if all(value == 0 for value in layer_data):
-            continue  # Skip unused layers
+        layer_type = LayerType(layer_data[0])
+        out_channels = OutChannels(layer_data[1])
+        kernel_size = KernelSize(layer_data[2])
+        stride = Stride(layer_data[3])
+        pool_mode = PoolMode(layer_data[4])
+        activation = ActivationFunction(layer_data[5])
+        linear_units = LinearUnits(layer_data[6])
+        skip_connection = layer_data[7] if layer_data[7] != max_layers - 1 else None
 
-        layer_dict = {}
-        for key, value in zip(LayerConfig.__annotations__.keys(), layer_data):
-            if key == "skip_connection":
-                layer_dict[key] = None if value == max_layers - 1 else value
-            else:
-                layer_dict[key] = LayerConfig.__annotations__[key].__args__[value]
-
-        layers.append(LayerConfig(**layer_dict))
+        layer_config = LayerConfig(
+            layer_type=layer_type,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            pool_mode=pool_mode,
+            activation=activation,
+            linear_units=linear_units,
+            skip_connection=skip_connection,
+        )
+        layers.append(layer_config)
 
     return NetworkConfig(layers=layers)
