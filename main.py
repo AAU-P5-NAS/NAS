@@ -84,6 +84,10 @@ def main():
             email.ReportException(exception=e)
         agent.save_model()
 
+    except KeyboardInterrupt:
+        console.print("[bold red]Training interrupted by user.[/bold red]")
+        agent.save_model()
+
 
         
 
