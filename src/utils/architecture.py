@@ -17,8 +17,9 @@ DROPOUT_PROBABILITY = 0.2
 class Architecture(nn.Module):
     """
     An instantiated neural network based on a NetworkConfig.
-    
+
     """
+
     def __init__(
         self, net_config: NetworkConfig, num_classes: int, input_dimensions: tuple[int, int, int]
     ):
@@ -28,20 +29,18 @@ class Architecture(nn.Module):
         self.input_dimensions = input_dimensions
         self.apply_batch = (
             sum(1 for layer in self.net_config.layers if layer.layer_type == LayerType.CONV) >= 4
-        ) 
+        )
         self.flattened = False
         self.model = self.build()
 
     def build(self) -> nn.Sequential:
         layers = []
         in_channels, h, w = self.input_dimensions
-    
+
         for layer_config in self.net_config.layers:
             if layer_config.layer_type is LayerType.NONE:
                 continue
-            module, in_channels, h, w = self.build_single_layer(
-                layer_config, in_channels, h, w
-            )
+            module, in_channels, h, w = self.build_single_layer(layer_config, in_channels, h, w)
             layers.extend(module)
 
         if not self.flattened:
@@ -53,19 +52,17 @@ class Architecture(nn.Module):
             layers.append(nn.Linear(in_channels, self.num_classes))
 
         return nn.Sequential(*layers)
-    
+
     def forward(self, x: Tensor) -> Tensor:
         return self.model(x)
 
-    def build_single_layer(
-        self, layer_config: LayerConfig, in_channels: int, h: int, w: int
-    ):
+    def build_single_layer(self, layer_config: LayerConfig, in_channels: int, h: int, w: int):
         """Builds one layer from LayerConfig and returns:
         - pytorch sequential (nn.sequential)
         - updated (in_channels, h, w)
         """
         module = []
-        
+
         if layer_config.layer_type == LayerType.CONV:
             stride = layer_config.stride.to_stride()
             kernel = layer_config.kernel_size.to_kernel()
@@ -98,7 +95,10 @@ class Architecture(nn.Module):
             stride = layer_config.stride.to_stride()
 
             if layer_config.pool_mode is PoolMode.MAX:
-                pool = nn.MaxPool2d(kernel, stride)
+                padding = 0
+                if w < kernel:
+                    padding = kernel // 2
+                pool = nn.MaxPool2d(kernel, stride, padding)
             else:
                 # pool = nn.AvgPool2d(kernel, stride)
                 raise ValueError("avg pool mode cannot be added anymore")
@@ -110,7 +110,7 @@ class Architecture(nn.Module):
 
             h, w = update_spatial_dims(h, w, kernel, stride)
             return module, in_channels, h, w
-        
+
         elif layer_config.layer_type == LayerType.LINEAR:
             if not self.flattened:
                 module.append(nn.Flatten())
@@ -134,7 +134,10 @@ class Architecture(nn.Module):
         else:
             raise ValueError("layer type not supported")
 
-def flatten_cnn_config(rlconfig: NetworkConfig, max_layers: int, padded_with_zeros:bool=True) -> list[int]:
+
+def flatten_cnn_config(
+    rlconfig: NetworkConfig, max_layers: int, padded_with_zeros: bool = True
+) -> list[int]:
     # each layer has 8 slots, 0 for unused slots (none values for enums)
     flat_config = []
     for index, layer in enumerate(rlconfig.layers):

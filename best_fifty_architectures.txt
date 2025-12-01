@@ -1,11 +1,30 @@
 Architecture Rank 1:
-Metrics: accuracy=0.7000000476837158 precision=0.7056424021720886 recall=0.7000000476837158 f1_score=0.698896050453186 flops=12554880 runtime=21.285361289978027 test_loss=None architecture_size=1687498 training_time=21.285361289978027
+Metrics: accuracy=0.7062000036239624 precision=0.7058559656143188 recall=0.7062000036239624 f1_score=0.7046924829483032 flops=14386432 runtime=21.454999685287476 test_loss=None architecture_size=890346 training_time=21.454999685287476
+
+Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_32, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 2: POOL - Pool Mode: MAX, Kernel Size: KS_3, Stride: S_1 , Pool Mode: MAX, Activation: NONE
+
+Layer 3: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 4: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 5: LINEAR - LinearUnits: LU_64, Activation: RELU
+
+Layer 6: LINEAR - LinearUnits: LU_128, Activation: NONE
+
+================================================================================
+
+Architecture Rank 2:
+Metrics: accuracy=0.6966000199317932 precision=0.704699695110321 recall=0.6966000199317932 f1_score=0.6965659260749817 flops=6132352 runtime=21.94338822364807 test_loss=None architecture_size=1654730 training_time=21.94338822364807
 
 Layer 0: CONV - OutChannels: CH_32, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 Layer 1: POOL - Pool Mode: MAX, Kernel Size: KS_5, Stride: S_2 , Pool Mode: MAX, Activation: NONE
 
-Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 Layer 3: LINEAR - LinearUnits: LU_128, Activation: RELU
 
@@ -17,12 +36,50 @@ Layer 6: LINEAR - LinearUnits: LU_64, Activation: RELU
 
 ================================================================================
 
-Architecture Rank 2:
-Metrics: accuracy=0.6769999861717224 precision=0.6838274598121643 recall=0.6769999861717224 f1_score=0.6747164130210876 flops=1467008 runtime=20.649670124053955 test_loss=None architecture_size=239882 training_time=20.649670124053955
+Architecture Rank 3:
+Metrics: accuracy=0.663100004196167 precision=0.6650022864341736 recall=0.663100004196167 f1_score=0.6590360403060913 flops=2606336 runtime=20.605320930480957 test_loss=None architecture_size=839114 training_time=20.605320930480957
+
+Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: POOL - Pool Mode: MAX, Kernel Size: KS_5, Stride: S_2 , Pool Mode: MAX, Activation: NONE
+
+Layer 2: LINEAR - LinearUnits: LU_64, Activation: NONE
+
+Layer 3: LINEAR - LinearUnits: LU_64, Activation: NONE
+
+Layer 4: LINEAR - LinearUnits: LU_64, Activation: NONE
+
+Layer 5: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 6: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+================================================================================
+
+Architecture Rank 4:
+Metrics: accuracy=0.6618000268936157 precision=0.6731821298599243 recall=0.6618000268936157 f1_score=0.6644042730331421 flops=2077312 runtime=22.188997745513916 test_loss=None architecture_size=1637194 training_time=22.188997745513916
+
+Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+
+Layer 1: POOL - Pool Mode: MAX, Kernel Size: KS_3, Stride: S_1 , Pool Mode: MAX, Activation: RELU
+
+Layer 2: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 3: LINEAR - LinearUnits: LU_64, Activation: RELU
+
+Layer 4: LINEAR - LinearUnits: LU_64, Activation: RELU
+
+Layer 5: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 6: LINEAR - LinearUnits: LU_64, Activation: NONE
+
+================================================================================
+
+Architecture Rank 5:
+Metrics: accuracy=0.6505999565124512 precision=0.6486778259277344 recall=0.6505999565124512 f1_score=0.6411175727844238 flops=1496704 runtime=19.904669046401978 test_loss=None architecture_size=269578 training_time=19.904669046401978
 
 Layer 0: CONV - OutChannels: CH_16, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 1: POOL - Pool Mode: MAX, Kernel Size: KS_5, Stride: S_2 , Pool Mode: MAX, Activation: NONE
+Layer 1: POOL - Pool Mode: MAX, Kernel Size: KS_3, Stride: S_2 , Pool Mode: MAX, Activation: NONE
 
 Layer 2: LINEAR - LinearUnits: LU_64, Activation: RELU
 
@@ -36,20 +93,115 @@ Layer 6: LINEAR - LinearUnits: LU_64, Activation: RELU
 
 ================================================================================
 
-Architecture Rank 3:
-Metrics: accuracy=0.6527999639511108 precision=0.6792284250259399 recall=0.6527999639511108 f1_score=0.6532379388809204 flops=5752064 runtime=20.503196001052856 test_loss=None architecture_size=842186 training_time=20.503196001052856
+Architecture Rank 6:
+Metrics: accuracy=0.6231000423431396 precision=0.6432137489318848 recall=0.6231000423431396 f1_score=0.622997522354126 flops=1299968 runtime=27.290457248687744 test_loss=None architecture_size=115194 training_time=27.290457248687744
 
-Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 0: CONV - OutChannels: CH_32, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
 
-Layer 1: POOL - Pool Mode: MAX, Kernel Size: KS_5, Stride: S_2 , Pool Mode: MAX, Activation: NONE
+Layer 1: CONV - OutChannels: CH_16, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: NONE
+
+Layer 3: POOL - Pool Mode: MAX, Kernel Size: KS_3, Stride: S_2 , Pool Mode: MAX, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: LINEAR - LinearUnits: LU_64, Activation: NONE
+
+Layer 6: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+================================================================================
+
+Architecture Rank 7:
+Metrics: accuracy=0.6119999885559082 precision=0.6132141947746277 recall=0.6119999885559082 f1_score=0.6107349395751953 flops=419072 runtime=20.415043354034424 test_loss=None architecture_size=199370 training_time=20.415043354034424
+
+Layer 0: CONV - OutChannels: CH_32, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: NONE
+
+Layer 1: POOL - Pool Mode: MAX, Kernel Size: KS_5, Stride: S_2 , Pool Mode: MAX, Activation: RELU
+
+Layer 2: LINEAR - LinearUnits: LU_128, Activation: NONE
+
+Layer 3: LINEAR - LinearUnits: LU_128, Activation: NONE
+
+Layer 4: LINEAR - LinearUnits: LU_128, Activation: NONE
+
+Layer 5: LINEAR - LinearUnits: LU_64, Activation: RELU
+
+Layer 6: LINEAR - LinearUnits: LU_128, Activation: NONE
+
+================================================================================
+
+Architecture Rank 8:
+Metrics: accuracy=0.6241999864578247 precision=0.6239275932312012 recall=0.6241999864578247 f1_score=0.6197774410247803 flops=6668928 runtime=21.287145137786865 test_loss=None architecture_size=1071450 training_time=21.287145137786865
+
+Layer 0: CONV - OutChannels: CH_32, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 1: CONV - OutChannels: CH_16, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 2: LINEAR - LinearUnits: LU_64, Activation: NONE
 
 Layer 3: LINEAR - LinearUnits: LU_64, Activation: NONE
 
-Layer 4: LINEAR - LinearUnits: LU_64, Activation: NONE
+Layer 4: LINEAR - LinearUnits: LU_64, Activation: RELU
 
-Layer 5: LINEAR - LinearUnits: LU_128, Activation: RELU
+Layer 5: LINEAR - LinearUnits: LU_64, Activation: NONE
+
+Layer 6: LINEAR - LinearUnits: LU_64, Activation: RELU
+
+================================================================================
+
+Architecture Rank 9:
+Metrics: accuracy=0.5728000402450562 precision=0.5798603892326355 recall=0.5728000402450562 f1_score=0.5701023936271667 flops=2585216 runtime=21.879395484924316 test_loss=None architecture_size=2143882 training_time=21.879395484924316
+
+Layer 0: CONV - OutChannels: CH_16, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: LINEAR - LinearUnits: LU_128, Activation: NONE
+
+Layer 2: LINEAR - LinearUnits: LU_128, Activation: NONE
+
+Layer 3: LINEAR - LinearUnits: LU_64, Activation: RELU
+
+Layer 4: LINEAR - LinearUnits: LU_64, Activation: RELU
+
+Layer 5: LINEAR - LinearUnits: LU_128, Activation: NONE
+
+Layer 6: LINEAR - LinearUnits: LU_64, Activation: RELU
+
+================================================================================
+
+Architecture Rank 10:
+Metrics: accuracy=0.5123000144958496 precision=0.509230375289917 recall=0.5123000144958496 f1_score=0.5057620406150818 flops=1549568 runtime=21.005974054336548 test_loss=None architecture_size=1108298 training_time=21.005974054336548
+
+Layer 0: CONV - OutChannels: CH_16, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 1: LINEAR - LinearUnits: LU_64, Activation: NONE
+
+Layer 2: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 3: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 4: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 5: LINEAR - LinearUnits: LU_64, Activation: RELU
+
+Layer 6: LINEAR - LinearUnits: LU_128, Activation: NONE
+
+================================================================================
+
+Architecture Rank 11:
+Metrics: accuracy=0.4936999976634979 precision=0.5097434520721436 recall=0.4936999976634979 f1_score=0.49201536178588867 flops=20382976 runtime=52.14088416099548 test_loss=None architecture_size=16848330 training_time=52.14088416099548
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 1: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 2: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 3: LINEAR - LinearUnits: LU_128, Activation: RELU
+
+Layer 4: LINEAR - LinearUnits: LU_128, Activation: NONE
+
+Layer 5: LINEAR - LinearUnits: LU_64, Activation: NONE
 
 Layer 6: LINEAR - LinearUnits: LU_128, Activation: RELU
 
