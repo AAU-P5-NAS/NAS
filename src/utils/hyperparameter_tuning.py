@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional
 from rich.console import Console
 import torch
 
+from torch import nn
 from src.environment.metrics import Evaluator
 from src.utils.data_importer.dataset import DatasetOption
 from src.utils.hyperparameters import HyperparameterSearchSpace
@@ -22,7 +23,30 @@ def create_standard_architecture(
     number_of_classes: int, dropout_rate_linear_layer: float
 ) -> torch.nn.Sequential:
     """Create a standard architecture for SL hyperparameter tuning"""
-    model = torch.nn.Sequential(
+    
+    model = nn.Sequential(
+        nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.MaxPool2d(kernel_size=3),
+        nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.MaxPool2d(kernel_size=3),
+        nn.Flatten(),
+        nn.Dropout(0.5),
+        nn.Linear(512, 128),
+        nn.ReLU(),
+        nn.Linear(128, number_of_classes)
+    )
+    
+    """model = torch.nn.Sequential(
         # Block 1
         torch.nn.Conv2d(3, 64, kernel_size=3, padding=1),
         torch.nn.BatchNorm2d(64),
@@ -53,7 +77,7 @@ def create_standard_architecture(
         torch.nn.Linear(256 * 4 * 4, 512),  # Adjusted input size after removing Block 4
         torch.nn.ReLU(),
         torch.nn.Linear(512, number_of_classes),
-    )
+    )"""
 
     for layer in model:
         if isinstance(layer, torch.nn.Conv2d) or isinstance(layer, torch.nn.Linear):
