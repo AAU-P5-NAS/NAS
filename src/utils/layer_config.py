@@ -1,5 +1,5 @@
 import enum
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 import numpy as np
 from pydantic import BaseModel, model_validator
 import torch.nn as nn
@@ -107,7 +107,6 @@ class LayerConfig(BaseModel):
     pool_mode: PoolMode = PoolMode.NONE
     activation: ActivationFunction = ActivationFunction.NONE
     linear_units: LinearUnits = LinearUnits.NONE
-    skip_connection: Optional[int] = None  # index of the layer to skip from
 
     @classmethod
     def from_latest_observation(cls, observation: np.ndarray):
@@ -118,7 +117,6 @@ class LayerConfig(BaseModel):
         pool_mode = PoolMode(int(observation[4])) if observation[4] != 0 else PoolMode.NONE
         activation = ActivationFunction(int(observation[5])) if observation[5] != 0 else ActivationFunction.NONE
         linear_units = LinearUnits(int(observation[6])) if observation[6] != 0 else LinearUnits.NONE
-        skip_connection = int(observation[7]) if observation[7] != 0 else None
 
         return cls(
             layer_type=layer_type,
@@ -128,7 +126,6 @@ class LayerConfig(BaseModel):
             pool_mode=pool_mode,
             activation=activation,
             linear_units=linear_units,
-            skip_connection=skip_connection,
         )
     
     @classmethod
@@ -140,7 +137,6 @@ class LayerConfig(BaseModel):
         linear_units = LinearUnits(actions.linear_units_choice)
         pool_mode = PoolMode(actions.pool_mode_choice)
         activation = ActivationFunction(actions.activation_function_choice)
-        skip_connection = actions.skip_connection_choice
 
         return cls(
             layer_type=layer_type,
@@ -150,7 +146,6 @@ class LayerConfig(BaseModel):
             pool_mode=pool_mode,
             activation=activation,
             linear_units=linear_units,
-            skip_connection=skip_connection,
         )
 
     @model_validator(mode="after")
