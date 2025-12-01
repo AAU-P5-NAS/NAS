@@ -121,7 +121,7 @@ class RLAgent:
 
     def train(self, total_timesteps: int = 30000):
         self.model.learn(
-            total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=500)
+            total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=2000)
         )
 
     def save_model(self):
