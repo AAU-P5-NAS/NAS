@@ -101,11 +101,11 @@ def get_valid_strides(
     h, w = last_layer_output_dims
     min_dim = min(h, w)
     max_stride = min_dim + 2 * padding - kernel_size.to_kernel() + 1
-    valid_strides = []
 
     if max_stride < 1:
-        return valid_strides
+        return [Stride.S_1]
 
+    valid_strides = []
     valid_strides.extend(
         stride
         for stride in Stride
