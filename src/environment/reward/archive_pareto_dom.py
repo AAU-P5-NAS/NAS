@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from src.environment.metrics import TrainingFreeMetrics
 from src.environment.reward.reward import Baselines, RewardStrategy, Weights
 from src.utils.network_config import NetworkConfig
-from src.utils.architecture import flatten_cnn_config
+from src.utils.architecture import flatten_cnn_config, unflatten_cnn_config
 
 MAX_LAYERS = 10
 
@@ -114,6 +114,36 @@ class ElitistArchive:
                 for elite in self.elites
             )
 
+    def rank_aggregate_sort(self):
+        """
+        Rank entries by jacov, synflow, snip, complexity.
+        For each metric:
+            - sort by metric
+            - assign ranks (0,1,2,...)
+            - add to aggregated rank score
+        Final order = ascending aggregated score.
+        """
+
+        def safe(v):
+            return float("inf") if v is None else v
+
+        # Metric order (highest priority first)
+        metrics = ["jacov", "synflow", "snip", "complexity"]
+
+        # reset score dict
+        scores = {entry: 0 for entry in self.elites}
+
+        for metric in metrics:
+            # 1. sort by this metric
+            sorted_list = sorted(self.elites, key=lambda e: safe(getattr(e.metrics, metric)))
+
+            # 2. assign rank = index in sorted list
+            for rank, entry in enumerate(sorted_list):
+                scores[entry] += rank
+
+        # 3. reorder elites by total score
+        self.elites = sorted(self.elites, key=lambda e: scores[e])
+
 
 class DominanceNoveltyRS(RewardStrategy):
     """
@@ -171,3 +201,9 @@ class DominanceNoveltyRS(RewardStrategy):
 
     def get_size_of_archive(self) -> int:
         return self.elite_archive.size()
+
+    def get_highest_value_arch(self) -> NetworkConfig:
+        self.elite_archive.rank_aggregate_sort()
+        best = self.elite_archive.elites[0]
+        arch = unflatten_cnn_config(best.arch, max_layers=10)
+        return arch

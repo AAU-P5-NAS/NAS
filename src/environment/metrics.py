@@ -108,6 +108,7 @@ class Evaluator:
             jacov=self.compute_jacov_proxy(model),
             synflow=self.compute_synflow_proxy(model),
             snip=self.compute_snip_proxy(model),
+            complexity=sum(p.numel() for p in model.parameters() if p.requires_grad),
         )
 
     def evaluate(

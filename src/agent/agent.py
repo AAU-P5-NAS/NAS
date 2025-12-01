@@ -121,7 +121,7 @@ class RLAgent:
 
     def train(self, total_timesteps: int = 30000):
         self.model.learn(
-            total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=40)
+            total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=500)
         )
 
     def save_model(self):
@@ -153,6 +153,31 @@ class RLAgent:
             if isinstance(self.env.reward_strategy, DominanceNoveltyRS):
                 archive_size = self.env.reward_strategy.get_size_of_archive()
                 print(f"Size of elite archive during evaluation: {archive_size}")
+
+                arch = self.env.reward_strategy.get_highest_value_arch()
+                architecture = Architecture(arch, 10, (3, 32, 32))
+                architecture.to(device)
+                optimizer = hyperparameters.get_optimizer(architecture.parameters())
+                num_epochs = hyperparameters.training_epochs
+                print("network config: ", arch)
+
+                start_time = time.time()
+                for epoch in range(num_epochs):
+                    progress = (epoch + 1) / num_epochs * 100
+                    with console.status(
+                        f"[bold blue]Training model - Progress {int(progress)}%[/bold blue]"
+                    ):
+                        trainer.train(architecture, optimizer)
+
+                end_time = time.time()
+                training_time = end_time - start_time
+                print(f"Training time for elite architecture: {training_time:.2f} seconds")
+                metrics = evaluator.evaluate(architecture)
+                console.print(
+                    f"[bold green]Metrics: Accuracy: {metrics.accuracy:.4f}, FLOPS: {metrics.flops:.2f}[/bold green]"
+                )
+
+                return
                 for entry in self.env.reward_strategy.elite_archive.elites:
                     print(f"Elite architecture in archive: {entry.arch}")
                     network_config = unflatten_cnn_config(entry.arch, max_layers=10)
