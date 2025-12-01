@@ -18,9 +18,9 @@ class ArchitectureCacheEntry:
 
 class BestFiftyArchitecturesCache:
     # Sorted list of best fifty architectures based on accuracy
-    cache: list[ArchitectureCacheEntry]
+    cache: list[ArchitectureCacheEntry] = []
 
-    def add_entry_if_needed(self, architecture: list[LayerConfig], metrics: Metrics):
+    def add_entry_if_needed(self, architecture: list[LayerConfig], metrics: Metrics, tensorboard_logger: TensorboardLogger):
         entry = ArchitectureCacheEntry(architecture=architecture, metrics=metrics)
 
         # If cache has less than 50 entries, add directly
@@ -35,7 +35,9 @@ class BestFiftyArchitecturesCache:
             self.cache[-1] = entry
             self.cache.sort(key=lambda x: x.metrics.accuracy or 0, reverse=True)
 
-    def write_to_file(self, tensorboard_logger: TensorboardLogger):
+        self._write_to_file(tensorboard_logger)
+
+    def _write_to_file(self, tensorboard_logger: TensorboardLogger):
         with open("best_fifty_architectures.txt", "w") as f:
             for i, entry in enumerate(self.cache):
                 f.write(f"Architecture Rank {i + 1}:\n")
@@ -189,8 +191,9 @@ class TensorboardLogger:
             self.best_fifty_cache.add_entry_if_needed(
                 architecture=current_config.layers,
                 metrics=metrics,
+                tensorboard_logger=self,
             )
-            
+
         PRINT_EVERY_N = 50
         if self.evaluation_count % PRINT_EVERY_N == 0:
             self.console.print(
