@@ -36,7 +36,7 @@ from src.agent.action_masking.action_masking_utils import (
 )
 
 
-MAX_LAYERS = 10
+MAX_LAYERS = 7
 
 
 class CustomEnv(gym.Env):
