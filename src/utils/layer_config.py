@@ -36,11 +36,11 @@ class LinearUnits(enum.IntEnum):
     NONE = 0
     LU_64 = 1  # 64
     LU_128 = 2  # 128
-    LU_256 = 3  # 256
-    LU_512 = 4  # 512
+    # LU_256 = 3  # 256
+    # LU_512 = 4  # 512
 
     def to_units(self):
-        mapping = [None, 64, 128, 256, 512]
+        mapping = [None, 64, 128]
         return mapping[self.value]
 
 
@@ -49,11 +49,11 @@ class OutChannels(enum.IntEnum):
     CH_16 = 1  # 16
     CH_32 = 2  # 32
     CH_64 = 3  # 64
-    CH_128 = 4  # 128
-    CH_256 = 5  # 256
+    # CH_128 = 4  # 128
+    # CH_256 = 5  # 256
 
     def to_channels(self):
-        mapping = [None, 16, 32, 64, 128, 256]
+        mapping = [None, 16, 32, 64]
         return mapping[self.value]
 
 
@@ -81,10 +81,10 @@ class Stride(enum.IntEnum):
 class PoolMode(enum.Enum):
     NONE = 0
     MAX = 1  # "max"
-    AVG = 2  # "avg"
+    # AVG = 2  # "avg"
 
     def to_pmode(self):
-        mapping = [None, "max", "avg"]
+        mapping = [None, "max"]
         return mapping[self.value]
 
 
