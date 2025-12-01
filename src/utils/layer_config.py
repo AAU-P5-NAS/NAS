@@ -59,12 +59,12 @@ class OutChannels(enum.IntEnum):
 
 class KernelSize(enum.IntEnum):
     NONE = 0
-    KS_1 = 1  # 1
-    KS_3 = 2  # 3
-    KS_5 = 3  # 5
+    # KS_1 = 1  # 1
+    KS_3 = 1  # 3
+    # KS_5 = 3  # 5
 
     def to_kernel(self):
-        mapping = [None, 1, 3, 5]
+        mapping = [None, 3]
         return mapping[self.value]
 
 
