@@ -24,6 +24,7 @@ dependencies = [
     "pytest-cov>=7.0.0",
     "sb3-contrib>=2.7.0",
     "torch",
+    "python-dotenv>=1.2.1",
 ]
 
 [dependency-groups]
