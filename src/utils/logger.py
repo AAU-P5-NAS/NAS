@@ -14,26 +14,27 @@ from src.utils.layer_config import LayerConfig
 class ArchitectureCacheEntry:
     architecture: list[LayerConfig]
     metrics: Metrics
+    reward: float
 
 
 class BestFiftyArchitecturesCache:
     # Sorted list of best fifty architectures based on accuracy
     cache: list[ArchitectureCacheEntry] = []
 
-    def add_entry_if_needed(self, architecture: list[LayerConfig], metrics: Metrics, tensorboard_logger: TensorboardLogger):
-        entry = ArchitectureCacheEntry(architecture=architecture, metrics=metrics)
+    def add_entry_if_needed(self, architecture: list[LayerConfig], metrics: Metrics, reward: float, tensorboard_logger: TensorboardLogger):
+        entry = ArchitectureCacheEntry(architecture=architecture, metrics=metrics, reward=reward)
 
         # If cache has less than 50 entries, add directly
         if len(self.cache) < 50:
             self.cache.append(entry)
-            self.cache.sort(key=lambda x: x.metrics.accuracy or 0, reverse=True)
+            self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
 
         else:
             # Check if new entry is better than the worst in cache
             worst_entry = self.cache[-1]
             if (metrics.accuracy or 0) > (worst_entry.metrics.accuracy or 0):
                 self.cache[-1] = entry
-                self.cache.sort(key=lambda x: x.metrics.accuracy or 0, reverse=True)
+                self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
 
         self._write_to_file(tensorboard_logger)
 
@@ -187,10 +188,11 @@ class TensorboardLogger:
 
         self.print_layers(current_config.layers if current_config else [])
 
-        if current_config:
+        if current_config and self.newest_reward:
             self.best_fifty_cache.add_entry_if_needed(
                 architecture=current_config.layers,
                 metrics=metrics,
+                reward=self.newest_reward,
                 tensorboard_logger=self,
             )
 
