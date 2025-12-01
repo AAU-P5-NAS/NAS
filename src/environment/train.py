@@ -59,38 +59,3 @@ class Trainer:
 
         # Return if stopped prematurely
         return stopped_by_timeout
-""" 
-    def test(self) -> Metrics:
-        self.model.eval()
-        test_loss: float = 0
-
-        all_preds: list[Tensor] = []
-        all_labels: list[Tensor] = []
-
-        with torch.no_grad():
-            for X, y in self.test_loader:
-                X, y = X.to(self.device), y.to(self.device)
-                outputs = self.model(X)
-                test_loss += self.loss_function(outputs, y).item()
-                predictions = outputs.argmax(1)
-                # Keep predictions on same device for metrics calculation
-                all_preds.append(predictions)
-                all_labels.append(y)
-
-        test_loss /= len(self.test_loader)
-
-        all_preds_flattened: Tensor = torch.cat(all_preds)
-        all_labels_flattened: Tensor = torch.cat(all_labels)
-
-        # Predictions and labels are now on the same device as the metrics
-        metrics: Metrics = self.evaluator.calculate_metrics(
-            self.model,
-            all_preds_flattened,
-            all_labels_flattened,
-            [m for m in self.chosen_metrics if m != "test_loss"],
-        )
-        if "test_loss" in self.chosen_metrics:
-            metrics.__setattr__("test_loss", test_loss)
-
-        return metrics
- """

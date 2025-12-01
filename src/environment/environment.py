@@ -100,7 +100,6 @@ class CustomEnv(gym.Env):
                 len(LinearUnits),
                 len(PoolMode),
                 len(ActivationFunction),
-                MAX_LAYERS,  # for skip connection option
             ]
         )
 
@@ -113,9 +112,6 @@ class CustomEnv(gym.Env):
         observation_space_vector.append(len(PoolMode))
         observation_space_vector.append(len(ActivationFunction))
         observation_space_vector.append(len(LinearUnits))
-        observation_space_vector.append(
-            MAX_LAYERS
-        )  # to denote a skip connection from a previous layer
         observation_space_vector *= MAX_LAYERS  # repeat for each layer
 
         return spaces.MultiDiscrete(observation_space_vector)
@@ -155,7 +151,7 @@ class CustomEnv(gym.Env):
 
         self.info = {}
 
-        decisions = transform_action_indices_to_decisions(decision_logits, MAX_LAYERS)
+        decisions = transform_action_indices_to_decisions(decision_logits)
         if decisions.action_choice == StandardAction.NONE:  # Stop and evaluate
             reward = self.evaluate_architecture(self.current_network_config)
             terminated = True
@@ -268,7 +264,7 @@ class CustomEnv(gym.Env):
         It is just necessary for masking to work even if it dont do much.
         """
         slices = get_logit_slices(max_layers=MAX_LAYERS)
-        total_actions = slices.skip_connection.stop  # assuming this is the last slice
+        total_actions = slices.activation_function.stop  # assuming this is the last slice
 
         mask = np.zeros(total_actions, dtype=bool)
 

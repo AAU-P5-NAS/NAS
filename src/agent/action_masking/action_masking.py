@@ -17,14 +17,10 @@ from src.utils.layer_config import (
 from src.agent.action_masking.action_masking_utils import (
     MaskContext,
     sample_action_for_slice,
-    sample_skip_connection,
 )
 from src.utils.network_config import (
     SINGLE_LAYER_OBSERVATION_SIZE,
-    calculate_output_dimensions,
     get_latest_layer,
-    get_layer_from_index,
-    get_observation_with_new_layer,
     get_output_dimensions,
     get_valid_kernel_sizes,
     get_valid_strides,
@@ -35,12 +31,6 @@ def sample_actions(ctx: MaskContext):
     ctx.observation = ctx.observation.flatten()
     ctx.logits = mask_action_type_sequential(ctx)
     ctx.decisions.action_choice = sample_action_for_slice(ctx, StandardAction, "standard_actions")
-    """     if ctx.decisions.action_choice == StandardAction.NONE:
-        masked_logits = ctx.logits.copy()
-        masked_logits[:] = -np.inf
-        masked_logits[ctx.slices.standard_actions[StandardAction.NONE]] = 1
-        return NO_ACTION_DECISIONS, masked_logits """
-
     ctx.logits = mask_layer_type_sequential(ctx)
     ctx.decisions.layer_type_choice = sample_action_for_slice(ctx, LayerType, "layer_type")
     ctx.logits = mask_out_channels_sequential(ctx)
@@ -56,8 +46,6 @@ def sample_actions(ctx: MaskContext):
     ctx.decisions.activation_function_choice = sample_action_for_slice(
         ctx, ActivationFunction, "activation_function"
     )
-    ctx.logits = mask_skip_connection_sequential(ctx)
-    ctx.decisions.skip_connection_choice = sample_skip_connection(ctx)
 
     return ctx.decisions, ctx.logits
 
@@ -210,48 +198,3 @@ def mask_pool_mode_sequential(ctx: MaskContext):
     new_logits[ctx.slices.pool_mode[PoolMode.NONE]] = -np.inf
     return new_logits
 
-
-def mask_skip_connection_sequential(ctx: MaskContext):
-    new_logits = ctx.logits.copy()
-
-    new_logits[ctx.slices.skip_connection.all] = -np.inf
-    new_logits[ctx.slices.skip_connection[ctx.max_layers - 1]] = (
-        1  # no skip connection -> last layer index
-    )
-    return new_logits
-
-    if ctx.action_count < 2:
-        # first two layers are not allowed to have skip connections from previous layers.
-        new_logits[ctx.slices.skip_connection.all] = -np.inf
-        new_logits[ctx.slices.skip_connection[ctx.max_layers - 1]] = (
-            1  # no skip connection -> last layer index
-        )
-        return new_logits
-
-    if ctx.decisions.layer_type_choice == LayerType.LINEAR:
-        for i in range(ctx.action_count - 1, ctx.max_layers - 1):
-            new_logits[ctx.slices.skip_connection[i]] = -np.inf
-        return new_logits
-
-    input_dim = ctx.input_dimensions[1:]
-    observation_with_new_layer = get_observation_with_new_layer(ctx.observation, ctx)
-    last_layer_output_dims = get_output_dimensions(
-        np.array(observation_with_new_layer, dtype=np.float64), input_dim, ctx.max_layers
-    )
-
-    for i in range(0, ctx.action_count - 1):
-        currentLayerConfig = get_layer_from_index(ctx.observation, i, ctx.max_layers)
-        output_dim = calculate_output_dimensions(input_dim, currentLayerConfig)
-
-        if output_dim != last_layer_output_dims:
-            # incompatible dimensions for skip connection
-            new_logits[ctx.slices.skip_connection[i]] = -np.inf
-        input_dim = output_dim
-
-    # mask previous layer, current layer and future layers
-    for i in range(ctx.action_count - 1, ctx.max_layers - 1):
-        new_logits[ctx.slices.skip_connection[i]] = -np.inf
-
-    # Always keep "no skip" valid
-    new_logits[ctx.slices.skip_connection[ctx.max_layers - 1]] = 1.0
-    return new_logits
