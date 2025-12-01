@@ -5,8 +5,8 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 from rich.console import Console
 
-from src.environment.metrics import Metrics
-from src.utils.network_config import  NetworkConfig
+from src.environment.metrics import Metrics, TrainingFreeMetrics
+from src.utils.network_config import NetworkConfig
 from src.utils.layer_config import LayerConfig
 
 
@@ -45,7 +45,7 @@ class TensorboardLogger:
 
         self.newest_reward: Optional[float] = None
         self.newest_actions_taken: Optional[int] = None
-        self.newest_metrics: Optional[Metrics] = None
+        self.newest_metrics: Optional[Metrics | TrainingFreeMetrics] = None
         self.newest_architecture: Optional[torch.nn.Module] = None
         self.current_config: Optional[NetworkConfig] = None
 
@@ -57,7 +57,7 @@ class TensorboardLogger:
         self,
         reward: Optional[float] = None,
         actions_taken: Optional[int] = None,
-        metrics: Optional[Metrics] = None,
+        metrics: Optional[Metrics | TrainingFreeMetrics] = None,
         architecture: torch.nn.Module | None = None,
         current_config: NetworkConfig | None = None,
     ):
@@ -89,14 +89,20 @@ class TensorboardLogger:
         record_optional("Custom/Reward", self.newest_reward)
         record_optional("Custom/Actions Taken", self.newest_actions_taken)
         if self.newest_metrics is not None:
-            record_optional("Custom/Test Loss", self.newest_metrics.test_loss)
-            record_optional("Custom/Accuracy", self.newest_metrics.accuracy)
-            record_optional("Custom/Precision", self.newest_metrics.precision)
-            record_optional("Custom/Recall", self.newest_metrics.recall)
-            record_optional("Custom/F1 Score", self.newest_metrics.f1_score)
-            record_optional("Custom/FLOPs", self.newest_metrics.flops)
-            record_optional("Custom/Runtime", self.newest_metrics.runtime)
-            record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
+            if isinstance(self.newest_metrics, Metrics):
+                record_optional("Custom/Test Loss", self.newest_metrics.test_loss)
+                record_optional("Custom/Accuracy", self.newest_metrics.accuracy)
+                record_optional("Custom/Precision", self.newest_metrics.precision)
+                record_optional("Custom/Recall", self.newest_metrics.recall)
+                record_optional("Custom/F1 Score", self.newest_metrics.f1_score)
+                record_optional("Custom/FLOPs", self.newest_metrics.flops)
+                record_optional("Custom/Runtime", self.newest_metrics.runtime)
+                record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
+            elif isinstance(self.newest_metrics, TrainingFreeMetrics):
+                record_optional("Custom/SynFlow", self.newest_metrics.synflow)
+                record_optional("Custom/Jacov", self.newest_metrics.jacov)
+                record_optional("Custom/SNIP", self.newest_metrics.snip)
+                record_optional("Custom/Complexity", self.newest_metrics.complexity)
 
         self.logger.dump(step=self.evaluation_count)
 
@@ -109,7 +115,7 @@ class TensorboardLogger:
 
     def log_evaluation(
         self,
-        metrics: Metrics,
+        metrics: Metrics | TrainingFreeMetrics,
         reward: float | dict[str, float],
         architecture: torch.nn.Module | None,
         current_config: NetworkConfig | None,
@@ -162,9 +168,10 @@ class TensorboardLogger:
             self.console.print(
                 f"[bold cyan]Average reward over last {PRINT_EVERY_N} evals: {avg_reward}[/bold cyan]"
             )
-            self.console.print(
-                f"[bold cyan]Average accuracy over last {PRINT_EVERY_N} evals: {avg_accuracy:.4f}[/bold cyan]"
-            )
+            if isinstance(metrics, Metrics) and metrics.accuracy is not None:
+                self.console.print(
+                    f"[bold cyan]Average accuracy over last {PRINT_EVERY_N} evals: {avg_accuracy:.4f}[/bold cyan]"
+                )
             self.sum_reward_float = 0.0
             self.sum_reward_dict = {}
             self.sum_accuracy = 0.0

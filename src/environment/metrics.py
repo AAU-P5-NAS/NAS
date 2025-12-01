@@ -23,11 +23,30 @@ class Metrics(BaseModel):
     architecture_size: Optional[int] = None
     training_time: Optional[float] = None
 
-class TrainingFreeMetrics(BaseModel):
+
+class TrainingFreeMetrics(Metrics):
     synflow: Optional[float] = None
     jacov: Optional[float] = None
     snip: Optional[float] = None
     complexity: Optional[float] = None
+
+    def normalized(self):
+        normalized_metrics = TrainingFreeMetrics()
+        for field_name, value in self.model_dump().items():
+            if value is not None:
+                normalized_value = (value - proxy_baselines[field_name][0]) / (
+                    proxy_baselines[field_name][1] - proxy_baselines[field_name][0]
+                )
+                normalized_metrics.__setattr__(field_name, normalized_value)
+        return normalized_metrics
+
+
+proxy_baselines = {
+    "synflow": (1.0, 1e6),
+    "jacov": (0.0, 1.0),
+    "snip": (0.0, 500.0),
+    "complexity": (1e3, 1e7),
+}
 
 
 Metric_literal = Literal[
@@ -56,9 +75,9 @@ class Evaluator:
     def __init__(
         self,
         num_classes: int,
-        dataloaders: Tuple[DataLoader, DataLoader],       
+        dataloaders: Tuple[DataLoader, DataLoader],
         dimensions: tuple[int, int, int],
-        loss_function:Callable[[Tensor, Tensor], Tensor],
+        loss_function: Callable[[Tensor, Tensor], Tensor],
         device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         average: Optional[Literal["micro", "macro", "weighted", "none"]] = "macro",
     ):
@@ -79,7 +98,17 @@ class Evaluator:
         self.f1_score: F1Score = cast(
             F1Score, F1Score(task=task, average=average, num_classes=num_classes).to(device)
         )
-    
+
+    def evaluate_by_proxy(
+        self,
+        model: nn.Module,
+    ) -> TrainingFreeMetrics:
+        return TrainingFreeMetrics(
+            jacov=self.compute_jacov_proxy(model),
+            synflow=self.compute_synflow_proxy(model),
+            snip=self.compute_snip_proxy(model),
+        )
+
     def evaluate(
         self,
         model: nn.Module,
@@ -205,3 +234,85 @@ class Evaluator:
 
     def compute_f1_score(self, predictions: Tensor, targets: Tensor) -> float:
         return self.f1_score(predictions, targets).item()
+
+    def compute_jacov_proxy(self, model: nn.Module, input_shape=(128, 3, 32, 32)):
+        model.eval()
+        device = next(model.parameters()).device
+
+        x = torch.randn(input_shape, device=device)
+
+        with torch.no_grad():
+            output = model(x)
+
+        output_flat = output.view(output.size(0), -1)
+        mean = output_flat.mean(dim=0, keepdim=True)
+        centered = output_flat - mean
+        cov = (centered.T @ centered) / (output_flat.size(0) - 1)
+
+        # Normalize by output dimension for comparability
+        score = torch.norm(cov, p="fro") / output_flat.size(1)
+
+        print(f"Jacov Score: {score.item():.6f}")
+        return score.item()
+
+    def compute_synflow_proxy(self, model: nn.Module, input_shape=(1, 3, 32, 32)):
+        model.eval()
+        device = next(model.parameters()).device
+
+        # Save original weights
+        original_weights = {name: param.data.clone() for name, param in model.named_parameters()}
+
+        # Make all weights positive
+        for param in model.parameters():
+            param.data = param.data.abs()
+
+        x = torch.ones(input_shape, device=device)
+        model.zero_grad()
+
+        output = model(x)
+        score = output.sum()
+        score.backward()
+
+        total = torch.tensor(0.0, device=device)
+        for param in model.parameters():
+            if param.grad is not None:
+                total += torch.sum(torch.abs(param.data * param.grad))
+
+        # Restore original weights
+        for name, param in model.named_parameters():
+            param.data = original_weights[name]
+
+        # Normalize by total number of parameters
+        num_params = sum(p.numel() for p in model.parameters())
+        total = total / num_params
+
+        print(f"SynFlow Score: {total.item():.6e}")
+        return total.item()
+
+    def compute_snip_proxy(self, model: nn.Module, input_shape=(64, 3, 32, 32)):
+        model.eval()
+        device = next(model.parameters()).device
+
+        x = torch.randn(input_shape, device=device)
+        criterion = nn.CrossEntropyLoss()
+
+        num_classes = 10
+        y = torch.randint(0, num_classes, (x.size(0),), device=device)
+
+        model.zero_grad()
+
+        output = model(x)
+        loss = criterion(output, y)
+        loss.backward()
+
+        score = torch.tensor(0.0, device=device)
+        for param in model.parameters():
+            if param.grad is not None:
+                score += torch.sum(torch.abs(param.grad * param.data))
+
+        # Normalize by total number of parameters
+        num_params = sum(p.numel() for p in model.parameters())
+        score = score / num_params
+
+        print(f"SNIP Score: {score.item():.6e}")
+        return score.item()

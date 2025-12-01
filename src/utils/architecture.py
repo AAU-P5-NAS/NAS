@@ -1,5 +1,6 @@
 from typing import Dict, cast
 from torch import Tensor
+from src.utils.layer_config import LayerConfig
 import torch.nn as nn
 from src.utils.network_config import (
     SINGLE_LAYER_OBSERVATION_SIZE,
@@ -7,7 +8,6 @@ from src.utils.network_config import (
     update_spatial_dims,
 )
 from src.utils.layer_config import (
-    LayerConfig,
     LayerType,
     PoolMode,
 )
@@ -18,8 +18,9 @@ DROPOUT_PROBABILITY = 0.2
 class Architecture(nn.Module):
     """
     An instantiated neural network based on a NetworkConfig.
-    
+
     """
+
     def __init__(
         self, net_config: NetworkConfig, num_classes: int, input_dimensions: tuple[int, int, int]
     ):
@@ -203,7 +204,9 @@ class Architecture(nn.Module):
             raise ValueError("layer type not supported")
 
 
-def flatten_cnn_config(rlconfig: NetworkConfig, max_layers: int, padded_with_zeros:bool=True) -> list[int]:
+def flatten_cnn_config(
+    rlconfig: NetworkConfig, max_layers: int, padded_with_zeros: bool = True
+) -> list[int]:
     # each layer has 8 slots, 0 for unused slots (none values for enums)
     flat_config = []
     for index, layer in enumerate(rlconfig.layers):
@@ -231,3 +234,25 @@ def flatten_cnn_config(rlconfig: NetworkConfig, max_layers: int, padded_with_zer
         flat_config.extend((max_layers * SINGLE_LAYER_OBSERVATION_SIZE - len(flat_config)) * [0])
 
     return flat_config
+
+
+def unflatten_cnn_config(flat_config: list[int], max_layers: int) -> NetworkConfig:
+    layers = []
+    for i in range(max_layers):
+        start_idx = i * SINGLE_LAYER_OBSERVATION_SIZE
+        end_idx = start_idx + SINGLE_LAYER_OBSERVATION_SIZE
+        layer_data = flat_config[start_idx:end_idx]
+
+        if all(value == 0 for value in layer_data):
+            continue  # Skip unused layers
+
+        layer_dict = {}
+        for key, value in zip(LayerConfig.__annotations__.keys(), layer_data):
+            if key == "skip_connection":
+                layer_dict[key] = None if value == max_layers - 1 else value
+            else:
+                layer_dict[key] = LayerConfig.__annotations__[key].__args__[value]
+
+        layers.append(LayerConfig(**layer_dict))
+
+    return NetworkConfig(layers=layers)
