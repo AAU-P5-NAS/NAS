@@ -19,6 +19,7 @@ def ParseArguments() -> argparse.Namespace:
     parser.add_argument(
         "--optuna-seed", type=int, default=None, help="Random seed for hyperparameter optimization"
     )
+    parser.add_argument("--load-model", type=str, default=None, help="Name of the model to load")
 
     args = parser.parse_args()
     return args
