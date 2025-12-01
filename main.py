@@ -1,4 +1,3 @@
-import argparse
 import os
 from rich.console import Console  # Add this import
 import shutil
@@ -9,34 +8,16 @@ from src.environment.reward import Weights
 from src.agent.agent import RLAgent
 from src.agent.action_masking.action_masking_policy import CustomMaskablePolicy
 from src.utils import email
+from src.utils.arguments import ParseArguments
 
 console = Console()
 
 
 def main():
 
-    try:
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "--optimize-hyperparameters",
-            type=int,
-            default=None,
-            help="If set, runs hyperparameter optimization with given number of trials",
-        )
-        parser.add_argument("--clean-saved-models", action="store_true")
-        parser.add_argument("--report-exception", action="store_true")
-        parser.add_argument(
-            "--policy-seed", type=int, default=None, help="Random seed for reproducibility"
-        )
-        parser.add_argument(
-            "--torch-seed", type=int, default=None, help="Random seed for classifier initialization"
-        )
-        parser.add_argument(
-            "--optuna-seed", type=int, default=None, help="Random seed for hyperparameter optimization"
-        )
+    args = ParseArguments()
 
-        args = parser.parse_args()
-
+    try:   
         if args.torch_seed is not None:
             torch.manual_seed(args.torch_seed)
             console.print(f"[yellow]Set torch seed to '{args.torch_seed}'[/yellow]")
@@ -102,6 +83,8 @@ def main():
         if args.report_exception:
             email.ReportException(exception=e)
         agent.save_model()
+
+
         
 
 if __name__ == "__main__":
