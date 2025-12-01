@@ -46,6 +46,7 @@ class Architecture(nn.Module):
 
         if not self.flattened:
             layers.append(nn.Flatten())
+            layers.append(nn.Dropout(DROPOUT_PROBABILITY))
             in_channels = in_channels * h * w
 
         if in_channels != self.num_classes:
@@ -102,6 +103,10 @@ class Architecture(nn.Module):
                 pool = nn.AvgPool2d(kernel, stride)
 
             module.append(pool)
+
+            if layer_config.activation is not None:
+                module.append(layer_config.activation.to_module())
+
             h, w = update_spatial_dims(h, w, kernel, stride)
             return module, in_channels, h, w
         
