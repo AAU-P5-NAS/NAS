@@ -26,8 +26,8 @@ class InvalidLayerOrderError(Exception):
     pass
 
 
-# format [layer_type, out_channels, kernel_size, stride, pool_mode, activation, linear_units, skip_connection]
-SINGLE_LAYER_OBSERVATION_SIZE = 8
+# format [layer_type, out_channels, kernel_size, stride, pool_mode, activation, linear_units]
+SINGLE_LAYER_OBSERVATION_SIZE = 7
 
 
 class NetworkConfig(BaseModel):
@@ -189,7 +189,6 @@ def get_latest_layer(
     linear_units = (
         LinearUnits(int(observation[idx + 6])) if observation[idx + 6] != 0 else LinearUnits.NONE
     )
-    skip_connection = int(observation[idx + 7]) if observation[idx + 7] != max_layers - 1 else None
 
     return LayerConfig(
         layer_type=layer_type,
@@ -199,5 +198,4 @@ def get_latest_layer(
         pool_mode=pool_mode,
         activation=activation,
         linear_units=linear_units,
-        skip_connection=skip_connection,
     )

@@ -79,7 +79,7 @@ class Weights(BaseModel):
 class Baselines(BaseModel):
     """Expected ranges for normalization"""
 
-    max_flops: float = 1e9  # 1 billion FLOPs
+    max_flops: float = 5.9e9
     max_runtime: float = 300.0  # 5 minutes
     max_params: float = 1e7  # 10M parameters
     max_test_loss: float = 3.0  # Clip losses above this

@@ -1,5 +1,5 @@
 import enum
-from typing import Callable, Optional, Tuple, Type, TypeVar
+from typing import Callable, Tuple, Type, TypeVar
 from pydantic import BaseModel, ConfigDict
 import numpy as np
 
@@ -29,7 +29,6 @@ class Decisions(BaseModel):
     linear_units_choice: LinearUnits
     pool_mode_choice: PoolMode
     activation_function_choice: ActivationFunction
-    skip_connection_choice: Optional[int]
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
@@ -41,15 +40,14 @@ EMPTY_DECISIONS = Decisions(
     stride_choice=Stride.NONE,
     linear_units_choice=LinearUnits.NONE,
     pool_mode_choice=PoolMode.NONE,
-    skip_connection_choice=None,
     activation_function_choice=ActivationFunction.NONE,
 )
 
 
-def transform_action_indices_to_decisions(action_indices: np.ndarray, max_layers: int):
+def transform_action_indices_to_decisions(action_indices: np.ndarray):
     actions_as_ints = [int(x) for x in np.array(action_indices).flatten()]
 
-    if len(actions_as_ints) < 9:
+    if len(actions_as_ints) < 8:
         raise ValueError(
             f"Expected action vector with >=9 entries, got {len(actions_as_ints)}: {action_indices}"
         )
@@ -63,7 +61,6 @@ def transform_action_indices_to_decisions(action_indices: np.ndarray, max_layers
         linear_units_choice=LinearUnits(actions_as_ints[5]),
         pool_mode_choice=PoolMode(actions_as_ints[6]),
         activation_function_choice=ActivationFunction(actions_as_ints[7]),
-        skip_connection_choice=actions_as_ints[8] if actions_as_ints[8] != max_layers - 1 else None,
     )
 
 
@@ -106,7 +103,6 @@ class Slices(BaseModel):
     linear_units: LogitSlice
     pool_mode: LogitSlice
     activation_function: LogitSlice
-    skip_connection: LogitSlice
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def idx(self, enum_name: str, enum_value: enum.Enum) -> int:
@@ -124,7 +120,6 @@ def get_logit_slices(max_layers: int):
         "linear_units": len(LinearUnits),
         "pool_mode": len(PoolMode),
         "activation_function": len(ActivationFunction),
-        "skip_connection": max_layers,
     }
     idx = 0
     logit_slices = {}
@@ -156,7 +151,6 @@ NO_ACTION_DECISIONS = Decisions(
     linear_units_choice=LinearUnits.NONE,
     pool_mode_choice=PoolMode.NONE,
     activation_function_choice=ActivationFunction.NONE,
-    skip_connection_choice=None,
 )
 
 
@@ -164,7 +158,7 @@ E = TypeVar("E", bound=enum.Enum)
 
 
 def transform_decisions_to_action_indices(
-    decisions: Decisions, slices: Slices, max_layers: int
+    decisions: Decisions
 ) -> np.ndarray:
     return np.array(
         [
@@ -176,12 +170,8 @@ def transform_decisions_to_action_indices(
             decisions.linear_units_choice.value,
             decisions.pool_mode_choice.value,
             decisions.activation_function_choice.value,
-            decisions.skip_connection_choice
-            if decisions.skip_connection_choice is not None
-            else max_layers - 1,
         ]
     )
-
 
 def sample_action_for_slice(ctx: MaskContext, enum_class_type: Type[E], slice_name: str) -> E:
     logits = ctx.logits[getattr(ctx.slices, slice_name).all]
@@ -194,29 +184,11 @@ def sample_action_for_slice(ctx: MaskContext, enum_class_type: Type[E], slice_na
 
     return enum_class
 
-
-def sample_skip_connection(ctx: MaskContext):
-    logits = ctx.logits[ctx.slices.skip_connection.all]
-    valid_indices = np.where(logits > -np.inf)[0]
-
-    length = len(valid_indices)
-
-    if length <= 1:
-        return None
-
-    sampled_index = ctx.sampling_strategy(logits)
-    if sampled_index == ctx.max_layers - 1:
-        return None  # no skip connection
-
-    return sampled_index
-
-
 def standard_stochastic_sampling(logits: np.ndarray) -> int:
     """Samples an index from the logits using a softmax distribution."""
     exp_logits = np.exp(logits - np.max(logits))  # ensure positive numbers
     probs = exp_logits / exp_logits.sum()  # compute probabilities
     return np.random.choice(len(logits), p=probs)  # sample index based on probs and return idx
-
 
 def max_sampling(logits: np.ndarray) -> int:
     """Selects the index with the highest logit value."""

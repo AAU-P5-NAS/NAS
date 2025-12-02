@@ -28,13 +28,13 @@ class CustomMaskablePolicy(ActorCriticPolicy):
 
     # argument action_masks needs to be included to fulfill interface requirements.
     def forward(self, obs, deterministic: bool = False, action_masks=None):
-        # 1. Feature extraction
+        # 1olicy network features and vf is value network features
+
+        # 2. Get raw pol. Feature extraction
         features = self.extract_features(obs)
         latent_pi, latent_vf = self.mlp_extractor(
             features
-        )  # pi is policy network features and vf is value network features
-
-        # 2. Get raw policy network logits from features
+        )  # pi is picy network logits from features
         logits = self.action_net(latent_pi).squeeze(0)  # [total_action_dim]
 
         sampling_strategy = standard_stochastic_sampling if not deterministic else max_sampling
@@ -58,7 +58,7 @@ class CustomMaskablePolicy(ActorCriticPolicy):
         # Actions must be a tensor of a specific shape for SB3
         actions = torch.tensor(
             np.array(
-                transform_decisions_to_action_indices(decisions, ctx.slices, ctx.max_layers),
+                transform_decisions_to_action_indices(decisions),
                 dtype=np.int64,
             ),
             device=obs.device,
@@ -86,7 +86,6 @@ class CustomMaskablePolicy(ActorCriticPolicy):
             "linear_units",
             "pool_mode",
             "activation_function",
-            "skip_connection",
         ]
 
         decision_values = [
@@ -98,7 +97,6 @@ class CustomMaskablePolicy(ActorCriticPolicy):
             decisions.linear_units_choice.value,
             decisions.pool_mode_choice.value,
             decisions.activation_function_choice.value,
-            decisions.skip_connection_choice if decisions.skip_connection_choice is not None else 0,
         ]
 
         log_probs = []

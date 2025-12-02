@@ -1,5 +1,5 @@
 import enum
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 import numpy as np
 from pydantic import BaseModel, model_validator
 import torch.nn as nn
@@ -36,11 +36,11 @@ class LinearUnits(enum.IntEnum):
     NONE = 0
     LU_64 = 1  # 64
     LU_128 = 2  # 128
-    LU_256 = 3  # 256
-    LU_512 = 4  # 512
+    # LU_256 = 3  # 256
+    # LU_512 = 4  # 512
 
     def to_units(self):
-        mapping = [None, 64, 128, 256, 512]
+        mapping = [None, 64, 128]
         return mapping[self.value]
 
 
@@ -50,21 +50,21 @@ class OutChannels(enum.IntEnum):
     CH_32 = 2  # 32
     CH_64 = 3  # 64
     CH_128 = 4  # 128
-    CH_256 = 5  # 256
+    # CH_256 = 5  # 256
 
     def to_channels(self):
-        mapping = [None, 16, 32, 64, 128, 256]
+        mapping = [None, 16, 32, 64, 128]
         return mapping[self.value]
 
 
 class KernelSize(enum.IntEnum):
     NONE = 0
-    KS_1 = 1  # 1
-    KS_3 = 2  # 3
-    KS_5 = 3  # 5
+    # KS_1 = 1  # 1
+    KS_3 = 1  # 3
+    KS_5 = 2  # 5
 
     def to_kernel(self):
-        mapping = [None, 1, 3, 5]
+        mapping = [None, 3, 5]
         return mapping[self.value]
 
 
@@ -81,10 +81,10 @@ class Stride(enum.IntEnum):
 class PoolMode(enum.Enum):
     NONE = 0
     MAX = 1  # "max"
-    AVG = 2  # "avg"
+    # AVG = 2  # "avg"
 
     def to_pmode(self):
-        mapping = [None, "max", "avg"]
+        mapping = [None, "max"]
         return mapping[self.value]
 
 
@@ -107,7 +107,6 @@ class LayerConfig(BaseModel):
     pool_mode: PoolMode = PoolMode.NONE
     activation: ActivationFunction = ActivationFunction.NONE
     linear_units: LinearUnits = LinearUnits.NONE
-    skip_connection: Optional[int] = None  # index of the layer to skip from
 
     @classmethod
     def from_latest_observation(cls, observation: np.ndarray):
@@ -118,7 +117,6 @@ class LayerConfig(BaseModel):
         pool_mode = PoolMode(int(observation[4])) if observation[4] != 0 else PoolMode.NONE
         activation = ActivationFunction(int(observation[5])) if observation[5] != 0 else ActivationFunction.NONE
         linear_units = LinearUnits(int(observation[6])) if observation[6] != 0 else LinearUnits.NONE
-        skip_connection = int(observation[7]) if observation[7] != 0 else None
 
         return cls(
             layer_type=layer_type,
@@ -128,7 +126,6 @@ class LayerConfig(BaseModel):
             pool_mode=pool_mode,
             activation=activation,
             linear_units=linear_units,
-            skip_connection=skip_connection,
         )
     
     @classmethod
@@ -140,7 +137,6 @@ class LayerConfig(BaseModel):
         linear_units = LinearUnits(actions.linear_units_choice)
         pool_mode = PoolMode(actions.pool_mode_choice)
         activation = ActivationFunction(actions.activation_function_choice)
-        skip_connection = actions.skip_connection_choice
 
         return cls(
             layer_type=layer_type,
@@ -150,7 +146,6 @@ class LayerConfig(BaseModel):
             pool_mode=pool_mode,
             activation=activation,
             linear_units=linear_units,
-            skip_connection=skip_connection,
         )
 
     @model_validator(mode="after")
