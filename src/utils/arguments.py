@@ -1,5 +1,6 @@
 import argparse
 
+
 def ParseArguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -11,13 +12,13 @@ def ParseArguments() -> argparse.Namespace:
     parser.add_argument("--clean-saved-models", action="store_true")
     parser.add_argument("--report-exception", action="store_true")
     parser.add_argument(
-        "--policy-seed", type=int, default=None, help="Random seed for reproducibility"
+        "--policy-seed", type=int, default=42, help="Random seed for reproducibility"
     )
     parser.add_argument(
-        "--torch-seed", type=int, default=None, help="Random seed for classifier initialization"
+        "--torch-seed", type=int, default=42, help="Random seed for classifier initialization"
     )
     parser.add_argument(
-        "--optuna-seed", type=int, default=None, help="Random seed for hyperparameter optimization"
+        "--optuna-seed", type=int, default=42, help="Random seed for hyperparameter optimization"
     )
     parser.add_argument("--load-model", type=str, default=None, help="Name of the model to load")
 
