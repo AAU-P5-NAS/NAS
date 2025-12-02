@@ -163,7 +163,6 @@ class RLAgent:
                     architecture.to(device)
                     optimizer = hyperparameters.get_optimizer(architecture.parameters())
                     num_epochs = hyperparameters.training_epochs
-                    print("network config: ", network_config)
 
                     start_time = time.time()
                     for epoch in range(num_epochs):
@@ -180,6 +179,8 @@ class RLAgent:
                     console.print(
                         f"[bold green]Metrics: Accuracy: {metrics.accuracy:.4f}, FLOPS: {metrics.flops:.2f}[/bold green]"
                     )
+                    self.env.tb_logger.print_layers(network_config.layers)
+
 
         total_rewards = []
 
