@@ -115,17 +115,17 @@ class RLAgent:
             device="cpu",
             learning_rate=rl_learning_rate,
             seed=policy_seed,
-            n_steps=(MAX_LAYERS + 1) * 8,  # type: ignore
+            n_steps=(MAX_LAYERS + 1) * 16,  # type: ignore
             normalize_advantage=True,  # type: ignore
         )
         self.model.set_logger(tb_logger.logger)
         self.model_save_path = f"{self.MODEL_SAVE_DIRECTORY}{self.model.__class__.__name__}"
         self.check_directories()
 
-    def train(self, total_timesteps: int = 30000):
+    def train(self, total_timesteps: int = 1000000):
         with console.status("[bold green]Training RL Agent... [/bold green]"):
             self.model.learn(
-                total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=5000)
+                total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=10000)
             )
 
     def save_model(self):
@@ -158,7 +158,7 @@ class RLAgent:
             if isinstance(self.env.reward_strategy, DominanceNoveltyRS):
                 for entry in self.env.reward_strategy.elite_archive.elites:
                     print(f"Elite architecture in archive: {entry.arch}")
-                    network_config = unflatten_cnn_config(entry.arch, max_layers=10)
+                    network_config = unflatten_cnn_config(entry.arch, max_layers=MAX_LAYERS)
                     architecture = Architecture(network_config, 10, (3, 32, 32))
                     architecture.to(device)
                     optimizer = hyperparameters.get_optimizer(architecture.parameters())

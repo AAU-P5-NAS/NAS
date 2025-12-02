@@ -15,7 +15,6 @@ console = Console()
 def main():
     importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
     dataloaders = importer.get_dataloaders(batch_size=32, shuffle=True)
-    number_of_classes = 26
     print("is cuda available:", torch.cuda.is_available())
     number_of_classes = 10
     evaluator = Evaluator(num_classes=number_of_classes, 
@@ -24,6 +23,29 @@ def main():
                           device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), 
                           loss_function=CrossEntropyLoss())
 
+    model = nn.Sequential(
+        nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.MaxPool2d(kernel_size=3),
+        nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.MaxPool2d(kernel_size=3),
+        nn.Flatten(),
+        nn.Dropout(0.5),
+        nn.Linear(512, 128),
+        nn.ReLU(),
+        nn.Linear(128,number_of_classes)
+
+    )
+    """
     model = nn.Sequential(
         # Block 1
         nn.Conv2d(3, 64, kernel_size=3, padding=1),
@@ -59,7 +81,7 @@ def main():
         nn.Dropout(0.5),
         nn.Linear(512, number_of_classes),
     )
-
+    """
     for layer in model:
         if isinstance(layer, torch.nn.Conv2d) or isinstance(layer, torch.nn.Linear):
             torch.nn.init.xavier_uniform_(layer.weight)  # Xavier/Glorot uniform initialization

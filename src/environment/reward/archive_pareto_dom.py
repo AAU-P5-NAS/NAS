@@ -5,7 +5,7 @@ from src.environment.reward.reward import Baselines, RewardStrategy, Weights
 from src.utils.network_config import NetworkConfig
 from src.utils.architecture import flatten_cnn_config
 
-MAX_LAYERS = 10
+MAX_LAYERS = 7
 
 
 class ProxyBaselines(BaseModel):

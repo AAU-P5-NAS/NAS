@@ -36,20 +36,18 @@ class Architecture(nn.Module):
         self.input_dimensions = input_dimensions
         self.apply_batch = (
             sum(1 for layer in self.net_config.layers if layer.layer_type == LayerType.CONV) >= 4
-        ) 
+        )
         self.flattened = False
         self.model = self.build()
 
     def build(self) -> nn.Sequential:
         layers = []
         in_channels, h, w = self.input_dimensions
-    
+
         for layer_config in self.net_config.layers:
             if layer_config.layer_type is LayerType.NONE:
                 continue
-            module, in_channels, h, w = self.build_single_layer(
-                layer_config, in_channels, h, w
-            )
+            module, in_channels, h, w = self.build_single_layer(layer_config, in_channels, h, w)
             layers.extend(module)
 
         if not self.flattened:
@@ -61,19 +59,17 @@ class Architecture(nn.Module):
             layers.append(nn.Linear(in_channels, self.num_classes))
 
         return nn.Sequential(*layers)
-    
+
     def forward(self, x: Tensor) -> Tensor:
         return self.model(x)
 
-    def build_single_layer(
-        self, layer_config: LayerConfig, in_channels: int, h: int, w: int
-    ):
+    def build_single_layer(self, layer_config: LayerConfig, in_channels: int, h: int, w: int):
         """Builds one layer from LayerConfig and returns:
         - pytorch sequential (nn.sequential)
         - updated (in_channels, h, w)
         """
         module = []
-        
+
         if layer_config.layer_type == LayerType.CONV:
             stride = layer_config.stride.to_stride()
             kernel = layer_config.kernel_size.to_kernel()
@@ -104,9 +100,12 @@ class Architecture(nn.Module):
         elif layer_config.layer_type == LayerType.POOL:
             kernel = layer_config.kernel_size.to_kernel()
             stride = layer_config.stride.to_stride()
+            padding = 0
 
             if layer_config.pool_mode is PoolMode.MAX:
-                pool = nn.MaxPool2d(kernel, stride)
+                if w < kernel:
+                    padding = kernel // 2
+                pool = nn.MaxPool2d(kernel, stride, padding)
             else:
                 # pool = nn.AvgPool2d(kernel, stride)
                 raise ValueError("avg pool mode cannot be added anymore")
@@ -116,9 +115,9 @@ class Architecture(nn.Module):
             if layer_config.activation is not None:
                 module.append(layer_config.activation.to_module())
 
-            h, w = update_spatial_dims(h, w, kernel, stride)
+            h, w = update_spatial_dims(h, w, kernel, stride, padding)
             return module, in_channels, h, w
-        
+
         elif layer_config.layer_type == LayerType.LINEAR:
             if not self.flattened:
                 module.append(nn.Flatten())
@@ -181,7 +180,6 @@ def unflatten_cnn_config(flat_config: list[int], max_layers: int) -> NetworkConf
         pool_mode = PoolMode(layer_data[4])
         activation = ActivationFunction(layer_data[5])
         linear_units = LinearUnits(layer_data[6])
-        skip_connection = layer_data[7] if layer_data[7] != max_layers - 1 else None
 
         layer_config = LayerConfig(
             layer_type=layer_type,
@@ -191,7 +189,6 @@ def unflatten_cnn_config(flat_config: list[int], max_layers: int) -> NetworkConf
             pool_mode=pool_mode,
             activation=activation,
             linear_units=linear_units,
-            skip_connection=skip_connection,
         )
         layers.append(layer_config)
 

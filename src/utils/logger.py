@@ -10,6 +10,7 @@ from src.environment.metrics import Metrics, TrainingFreeMetrics
 from src.utils.network_config import  NetworkConfig
 from src.utils.layer_config import LayerConfig
 
+
 @dataclass
 class ArchitectureCacheEntry:
     architecture: list[LayerConfig]
@@ -21,7 +22,13 @@ class BestFiftyArchitecturesCache:
     # Sorted list of best fifty architectures based on accuracy
     cache: list[ArchitectureCacheEntry] = []
 
-    def add_entry_if_needed(self, architecture: list[LayerConfig], metrics: Metrics, reward: float, tensorboard_logger: TensorboardLogger):
+    def add_entry_if_needed(
+        self,
+        architecture: list[LayerConfig],
+        metrics: Metrics,
+        reward: float,
+        tensorboard_logger: TensorboardLogger,
+    ):
         entry = ArchitectureCacheEntry(architecture=architecture, metrics=metrics, reward=reward)
 
         # If cache has less than 50 entries, add directly
@@ -47,6 +54,7 @@ class BestFiftyArchitecturesCache:
                     tensorboard_logger.get_layers_as_str(entry.architecture, is_for_console=False)
                 )
                 f.write("\n" + "=" * 80 + "\n\n")
+
 
 class TensorboardLogger:
     best_fifty_cache = BestFiftyArchitecturesCache()
@@ -242,25 +250,26 @@ class TensorboardLogger:
             for i, layer in enumerate(layers):
                 if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
                     layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
-                    
+
                 elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
                     layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
-                    
+
                 elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
                     layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
-                    
+
         else:
             for i, layer in enumerate(layers):
                 if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
                     layers_str += f"\nLayer {i}: {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
-                    
+
                 elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
                     layers_str += f"\nLayer {i}: {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}\n"
-                    
+
                 elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
                     layers_str += f"\nLayer {i}: {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
 
         return layers_str
+
 
 class NoOpLogger:
     evaluation_count: int = 0
@@ -276,6 +285,3 @@ class NoOpLogger:
 
     def print_layers(self, *args, **kwargs):
         pass
-
-        
-    

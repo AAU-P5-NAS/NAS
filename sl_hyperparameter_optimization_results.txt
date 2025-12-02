@@ -1,0 +1,7 @@
+Best SL parameters:
+arch_lr: 0.0013260331922696556
+batch_size: 32
+optimizer_type: Adam
+dropout_rate_linear_layer: 0.5545641645055122
+
+Best value: 0.7551

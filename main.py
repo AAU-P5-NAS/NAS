@@ -13,14 +13,14 @@ from src.utils.arguments import ParseArguments
 
 console = Console()
 
-def get_agent(args: argparse.Namespace) -> RLAgent:
 
+def get_agent(args: argparse.Namespace) -> RLAgent:
     # Initialize the RL agent
     agent = RLAgent(
         policy_algorithm_class=PPO,
         policy=CustomMaskablePolicy,
         policy_seed=args.policy_seed,
-        reward_weights=Weights(accuracy=0.90, flops=0.10),
+        reward_weights=Weights(accuracy=0.8, flops=0.2),
     )
 
     if args.load_model is not None:
@@ -30,11 +30,11 @@ def get_agent(args: argparse.Namespace) -> RLAgent:
 
     return agent
 
-def main():
 
+def main():
     args = ParseArguments()
 
-    try:   
+    try:
         if args.torch_seed is not None:
             torch.manual_seed(args.torch_seed)
             console.print(f"[yellow]Set torch seed to '{args.torch_seed}'[/yellow]")
@@ -82,7 +82,7 @@ def main():
 
         # Train the agent
         console.print("[bold green]Starting training...[/bold green]")
-        agent.train(total_timesteps=50000)
+        agent.train(total_timesteps=1000000)
 
         # Save the trained model
         agent.save_model()
@@ -90,7 +90,7 @@ def main():
         # Evaluate the trained agent
         console.print("[bold yellow]Evaluating trained agent...[/bold yellow]")
         agent.evaluate(num_episodes=5)
-        
+
     except Exception as e:
         print("An error occurred during training or evaluation:", e)
         if args.report_exception:
@@ -101,8 +101,6 @@ def main():
         console.print("[bold red]Training interrupted by user.[/bold red]")
         agent.save_model()
 
-
-        
 
 if __name__ == "__main__":
     main()

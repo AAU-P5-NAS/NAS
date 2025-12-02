@@ -127,9 +127,7 @@ def mask_kernel_size_sequential(ctx: MaskContext):
         new_logits[ctx.slices.kernel_size.all] = -np.inf
         new_logits[ctx.slices.kernel_size[KernelSize.NONE]] = 1
         return new_logits
-    latest_output_dims = get_output_dimensions(
-        ctx.observation, ctx.input_dimensions[1:], ctx.max_layers
-    )
+    latest_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
 
     if ctx.decisions.layer_type_choice == LayerType.POOL:
         valid_kernels = get_valid_kernel_sizes(latest_output_dims, padding=0)
@@ -141,6 +139,9 @@ def mask_kernel_size_sequential(ctx: MaskContext):
         invalid_kernel_index = ctx.slices.kernel_size[kernel.value]
         new_logits[invalid_kernel_index] = -np.inf
 
+    new_logits[ctx.slices.kernel_size[KernelSize.KS_3]] = (
+        1  # now that KS_1 is removed KS_3 should always be allowed (if w,h < kernel, padding is added to the layer in architecture.py)
+    )
     new_logits[ctx.slices.kernel_size[KernelSize.NONE]] = -np.inf
     return new_logits
 
@@ -157,9 +158,7 @@ def mask_stride_sequential(ctx: MaskContext):
         new_logits[ctx.slices.stride[Stride.NONE]] = 1
         return new_logits
 
-    latest_output_dims = get_output_dimensions(
-        ctx.observation, ctx.input_dimensions[1:], ctx.max_layers
-    )
+    latest_output_dims = get_output_dimensions(ctx.observation, ctx.input_dimensions[1:])
     if ctx.decisions.layer_type_choice == LayerType.POOL:
         valid_strides = get_valid_strides(latest_output_dims, kernel_size_chosen, padding=0)
     else:
@@ -197,4 +196,3 @@ def mask_pool_mode_sequential(ctx: MaskContext):
 
     new_logits[ctx.slices.pool_mode[PoolMode.NONE]] = -np.inf
     return new_logits
-
