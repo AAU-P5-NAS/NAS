@@ -79,6 +79,7 @@ class CustomEnv(gym.Env):
         self.console = Console()
         self.current_network_config = NetworkConfig(layers=[])
         self.actions_taken = 0  # Track steps in episode
+        self.episodes_completed = 0  # Track completed episodes
         self.trainer = Trainer(
             dataloaders=self.loader_tuple,
             loss_function=CrossEntropyLoss(),
@@ -163,6 +164,7 @@ class CustomEnv(gym.Env):
             terminated = True
             truncated = False
             self.actions_taken = 0  # Reset for next episode
+            self.episodes_completed += 1
         else:
             self.current_network_config += LayerConfig.from_decisions(decisions)
             reward = 0.00
@@ -193,10 +195,12 @@ class CustomEnv(gym.Env):
             num_classes=self.data_importer.get_num_classes()[0],
             input_dimensions=self.dimensions,
         )
+        proxy_metrics = None
+        evaluated_metrics = None
         if isinstance(self.reward_strategy, DominanceNoveltyRS):
-            evaluated_metrics = self.evaluator.evaluate_by_proxy(architecture)
+            proxy_metrics = self.evaluator.evaluate_by_proxy(architecture)
             reward = self.reward_strategy.compute_reward(
-                metrics=evaluated_metrics, arch=new_architecture
+                metrics=proxy_metrics, arch=new_architecture
             )
         else:
             trained_model, training_time = self.train_classifier(model=architecture)
@@ -208,8 +212,12 @@ class CustomEnv(gym.Env):
             architecture=architecture,
             current_config=self.current_network_config,
             actions_taken=self.actions_taken,
-            metrics=evaluated_metrics,
+            metrics=evaluated_metrics ,
+            proxy_metrics=proxy_metrics
         )
+
+        if isinstance(self.reward_strategy, DominanceNoveltyRS) and self.episodes_completed % 50 == 0: 
+            self.console.print(f"Episode {self.episodes_completed} completed. Size of Archive: {self.reward_strategy.get_archive_size()}")
 
         return reward
 

@@ -1,25 +1,56 @@
+from __future__ import annotations
+from dataclasses import dataclass
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
 from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
 import torch
 from rich.console import Console
 
 from src.environment.metrics import Metrics, TrainingFreeMetrics
-from src.utils.network_config import NetworkConfig
+from src.utils.network_config import  NetworkConfig
 from src.utils.layer_config import LayerConfig
 
+@dataclass
+class ArchitectureCacheEntry:
+    architecture: list[LayerConfig]
+    metrics: Metrics
+    reward: float
 
-class LogData(BaseModel):
-    reward: Optional[float] = None
-    actions_taken: Optional[int] = None
-    metrics: Optional[Metrics] = None
-    architecture: Optional[torch.nn.Module] = None
-    step: int
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
+class BestFiftyArchitecturesCache:
+    # Sorted list of best fifty architectures based on accuracy
+    cache: list[ArchitectureCacheEntry] = []
+
+    def add_entry_if_needed(self, architecture: list[LayerConfig], metrics: Metrics, reward: float, tensorboard_logger: TensorboardLogger):
+        entry = ArchitectureCacheEntry(architecture=architecture, metrics=metrics, reward=reward)
+
+        # If cache has less than 50 entries, add directly
+        if len(self.cache) < 50:
+            self.cache.append(entry)
+            self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
+
+        else:
+            # Check if new entry is better than the worst in cache
+            worst_entry = self.cache[-1]
+            if (metrics.accuracy or 0) > (worst_entry.metrics.accuracy or 0):
+                self.cache[-1] = entry
+                self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
+
+        self._write_to_file(tensorboard_logger)
+
+    def _write_to_file(self, tensorboard_logger: TensorboardLogger):
+        with open("best_fifty_architectures.txt", "w") as f:
+            for i, entry in enumerate(self.cache):
+                f.write(f"Architecture Rank {i + 1}:\n")
+                f.write(f"Metrics: {entry.metrics}\n")
+                f.write(
+                    tensorboard_logger.get_layers_as_str(entry.architecture, is_for_console=False)
+                )
+                f.write("\n" + "=" * 80 + "\n\n")
 
 class TensorboardLogger:
+    best_fifty_cache = BestFiftyArchitecturesCache()
+
     def __init__(
         self,
         logger: Logger,
@@ -45,7 +76,7 @@ class TensorboardLogger:
 
         self.newest_reward: Optional[float] = None
         self.newest_actions_taken: Optional[int] = None
-        self.newest_metrics: Optional[Metrics | TrainingFreeMetrics] = None
+        self.newest_metrics: Optional[Metrics] = None
         self.newest_architecture: Optional[torch.nn.Module] = None
         self.current_config: Optional[NetworkConfig] = None
 
@@ -57,7 +88,8 @@ class TensorboardLogger:
         self,
         reward: Optional[float] = None,
         actions_taken: Optional[int] = None,
-        metrics: Optional[Metrics | TrainingFreeMetrics] = None,
+        metrics: Optional[Metrics] = None,
+        proxy_metrics: Optional[TrainingFreeMetrics] = None,
         architecture: torch.nn.Module | None = None,
         current_config: NetworkConfig | None = None,
     ):
@@ -75,9 +107,9 @@ class TensorboardLogger:
             self.current_config = current_config
 
         if self.evaluation_count % self.log_interval == 0:
-            self.log_to_tensorboard()
+            self.log_to_tensorboard(proxy_metrics=proxy_metrics)
 
-    def log_to_tensorboard(self):
+    def log_to_tensorboard(self, proxy_metrics: Optional[TrainingFreeMetrics] = None):
         """Write current stored metrics to TensorBoard."""
         if self.logger is None or self.writer is None:
             raise RuntimeError("Logger not attached")
@@ -89,20 +121,20 @@ class TensorboardLogger:
         record_optional("Custom/Reward", self.newest_reward)
         record_optional("Custom/Actions Taken", self.newest_actions_taken)
         if self.newest_metrics is not None:
-            if isinstance(self.newest_metrics, Metrics):
-                record_optional("Custom/Test Loss", self.newest_metrics.test_loss)
-                record_optional("Custom/Accuracy", self.newest_metrics.accuracy)
-                record_optional("Custom/Precision", self.newest_metrics.precision)
-                record_optional("Custom/Recall", self.newest_metrics.recall)
-                record_optional("Custom/F1 Score", self.newest_metrics.f1_score)
-                record_optional("Custom/FLOPs", self.newest_metrics.flops)
-                record_optional("Custom/Runtime", self.newest_metrics.runtime)
-                record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
-            elif isinstance(self.newest_metrics, TrainingFreeMetrics):
-                record_optional("Custom/SynFlow", self.newest_metrics.synflow)
-                record_optional("Custom/Jacov", self.newest_metrics.jacov)
-                record_optional("Custom/SNIP", self.newest_metrics.snip)
-                record_optional("Custom/Complexity", self.newest_metrics.complexity)
+            record_optional("Custom/Test Loss", self.newest_metrics.test_loss)
+            record_optional("Custom/Accuracy", self.newest_metrics.accuracy)
+            record_optional("Custom/Precision", self.newest_metrics.precision)
+            record_optional("Custom/Recall", self.newest_metrics.recall)
+            record_optional("Custom/F1 Score", self.newest_metrics.f1_score)
+            record_optional("Custom/FLOPs", self.newest_metrics.flops)
+            record_optional("Custom/Runtime", self.newest_metrics.runtime)
+            record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
+        
+        if proxy_metrics is not None:
+            record_optional("Custom Proxy/Synflow", proxy_metrics.synflow)
+            record_optional("Custom Proxy/Jacov", proxy_metrics.jacov)
+            record_optional("Custom Proxy/Snip", proxy_metrics.snip)
+            record_optional("Custom Proxy/Complexity", proxy_metrics.complexity)
 
         self.logger.dump(step=self.evaluation_count)
 
@@ -115,11 +147,13 @@ class TensorboardLogger:
 
     def log_evaluation(
         self,
-        metrics: Metrics | TrainingFreeMetrics,
-        reward: float | dict[str, float],
+        reward: float | dict[str, float],        
         architecture: torch.nn.Module | None,
         current_config: NetworkConfig | None,
-        actions_taken: Optional[int] = None,
+        actions_taken: Optional[int] = None,      
+        metrics: Optional[Metrics] = None,  
+        proxy_metrics: Optional[TrainingFreeMetrics] = None,
+
     ):
         """Update state, print to console, and log to TensorBoard."""
 
@@ -141,11 +175,17 @@ class TensorboardLogger:
         self.update(
             reward=reward_to_store,
             metrics=metrics,
+            proxy_metrics=proxy_metrics,
             architecture=architecture,
             current_config=current_config,
             actions_taken=actions_taken,
         )
+        if proxy_metrics is not None:
+            return
 
+        if metrics is None:
+            return
+        
         avg_accuracy = -1
         if metrics.accuracy is not None:
             self.sum_accuracy += metrics.accuracy
@@ -161,17 +201,24 @@ class TensorboardLogger:
                 f"[bold blue]Accuracy: {metrics.accuracy}, Avg: {avg_accuracy:.4f}[/bold blue]"
             )
 
-        # self.print_layers(current_config.layers if current_config else [])
+        self.print_layers(current_config.layers if current_config else [])
+
+        if current_config and self.newest_reward:
+            self.best_fifty_cache.add_entry_if_needed(
+                architecture=current_config.layers,
+                metrics=metrics,
+                reward=self.newest_reward,
+                tensorboard_logger=self,
+            )
 
         PRINT_EVERY_N = 50
         if self.evaluation_count % PRINT_EVERY_N == 0:
             self.console.print(
                 f"[bold cyan]Average reward over last {PRINT_EVERY_N} evals: {avg_reward}[/bold cyan]"
             )
-            if isinstance(metrics, Metrics) and metrics.accuracy is not None:
-                self.console.print(
-                    f"[bold cyan]Average accuracy over last {PRINT_EVERY_N} evals: {avg_accuracy:.4f}[/bold cyan]"
-                )
+            self.console.print(
+                f"[bold cyan]Average accuracy over last {PRINT_EVERY_N} evals: {avg_accuracy:.4f}[/bold cyan]"
+            )
             self.sum_reward_float = 0.0
             self.sum_reward_dict = {}
             self.sum_accuracy = 0.0
@@ -183,22 +230,37 @@ class TensorboardLogger:
             layers (list): List of layer objects.
         """
 
-        self.console.print("[bold yellow]Architecture:[/bold yellow]")
-        indent = "    "
-        for i, layer in enumerate(layers):
-            if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
-                self.console.print(
-                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
-                )
-            elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
-                self.console.print(
-                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
-                )
-            elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
-                self.console.print(
-                    f"{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
-                )
+        self.console.print(self.get_layers_as_str(layers, is_for_console=True))
 
+    def get_layers_as_str(self, layers: list[LayerConfig], is_for_console: bool) -> str:
+        layers_str = ""
+        indent = "    "
+
+        if is_for_console:
+            layers_str += "[bold yellow]Architecture:[/bold yellow]"
+
+            for i, layer in enumerate(layers):
+                if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
+                    layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
+                    
+                elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
+                    layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
+                    
+                elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
+                    layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
+                    
+        else:
+            for i, layer in enumerate(layers):
+                if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
+                    layers_str += f"\nLayer {i}: {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
+                    
+                elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
+                    layers_str += f"\nLayer {i}: {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}\n"
+                    
+                elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
+                    layers_str += f"\nLayer {i}: {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
+
+        return layers_str
 
 class NoOpLogger:
     evaluation_count: int = 0
@@ -214,3 +276,6 @@ class NoOpLogger:
 
     def print_layers(self, *args, **kwargs):
         pass
+
+        
+    

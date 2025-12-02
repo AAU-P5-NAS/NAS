@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from src.environment.metrics import TrainingFreeMetrics
 from src.environment.reward.reward import Baselines, RewardStrategy, Weights
 from src.utils.network_config import NetworkConfig
-from src.utils.architecture import flatten_cnn_config, unflatten_cnn_config
+from src.utils.architecture import flatten_cnn_config
 
 MAX_LAYERS = 10
 
@@ -19,33 +19,47 @@ class ArchiveEntry(BaseModel):
     arch: list[int]
     metrics: TrainingFreeMetrics
 
-    def dominates(self, other: "ArchiveEntry") -> bool:
-        """Check if self dominates other based on proxy metrics."""
-        for proxy, self_value in self.metrics.model_dump().items():
-            other_value = other.metrics.model_dump().get(proxy)
-            if other_value is None:
-                continue
-            if self_value < other_value:
-                return False  # other is better in this proxy
-        return True  # self dominates other
-
-    def eucl_distance(self, other_metrics: TrainingFreeMetrics) -> float:
-        """Calculate Euclidean distance between self and other based on proxy metrics."""
-        sum_sq = 0.0
-
-        for proxy, self_value in self.metrics.model_dump().items():
-            other_value = other_metrics.model_dump().get(proxy)
-            if other_value is None:
-                continue
-            sum_sq += (self_value - other_value) ** 2
-        return sum_sq**0.5
-
-
 class ElitistArchive:
     def __init__(self):
         self.elites: List[ArchiveEntry] = []
         self.proxy_baselines = ProxyBaselines()
         self.epsilon = 1e-12  # small number to avoid division by zero
+
+    def _eucl_distance(self, metrics1: TrainingFreeMetrics, metrics2: TrainingFreeMetrics) -> float:
+        """Compute Euclidean distance between two metrics, skipping missing entries."""
+        sum_sq = 0.0
+        for proxy in ["synflow", "jacov", "snip", "complexity"]:
+            val1 = getattr(metrics1, proxy, None)
+            val2 = getattr(metrics2, proxy, None)
+            if val1 is None or val2 is None:
+                continue
+            sum_sq += (val1 - val2) ** 2
+        return sum_sq ** 0.5
+
+    def _dominates(self, metrics_1: TrainingFreeMetrics, metrics_2: TrainingFreeMetrics) -> bool:
+        """Check if new_arch dominates elite archs based on proxy metrics."""
+        for proxy in ["synflow", "jacov", "snip", "complexity"]:
+            val1 = getattr(metrics_1, proxy, None)
+            val2 = getattr(metrics_2, proxy, None)
+            if val1 is None or val2 is None:
+                continue
+            if proxy == "complexity":  # minimize
+                if val1 > val2:
+                    return False
+            else:  # maximize
+                if val1 < val2:
+                    return False
+        return True
+
+    def add(self, new_arch: ArchiveEntry):
+        self.update_baselines(new_arch.metrics)
+        self.elites.append(new_arch)
+
+    def remove(self, arch: ArchiveEntry):
+        self.elites.remove(arch)
+
+    def size(self) -> int:
+        return len(self.elites)
 
     def update_baselines(self, metrics: TrainingFreeMetrics):
         for proxy_name in ["synflow", "jacov", "snip", "complexity"]:
@@ -69,50 +83,18 @@ class ElitistArchive:
             setattr(normalized, proxy_name, normalized_value)
         return normalized
 
-    def add(self, new_arch: ArchiveEntry):
-        self.update_baselines(new_arch.metrics)
-        print("BASELINES: ", self.proxy_baselines)
-        self.elites.append(new_arch)
-
-    def remove(self, arch: ArchiveEntry):
-        self.elites.remove(arch)
-
-    def size(self) -> int:
-        return len(self.elites)
-
-    def check_domination(self, new_arch: ArchiveEntry) -> tuple[bool, int, List[ArchiveEntry]]:
+    def check_domination(self, new_entry: ArchiveEntry) -> tuple[bool, int, List[ArchiveEntry]]:
         num_dominations = 0
-        elite_archs_dominated: List[ArchiveEntry] = []
+        dominated_elites: List[ArchiveEntry] = []
 
-        for elite_arch in self.elites:
-            if elite_arch.dominates(new_arch):
+        for elite in self.elites:
+            if self._dominates(elite.metrics, new_entry.metrics):
                 num_dominations += 1
-            elif new_arch.dominates(elite_arch):
-                elite_archs_dominated.append(elite_arch)
+            elif self._dominates(new_entry.metrics, elite.metrics):
+                dominated_elites.append(elite)
 
-        return num_dominations > 0, num_dominations, elite_archs_dominated
-
-    def calculate_novelty(self, arch: ArchiveEntry):
-        if self.size() == 0:
-            return 0.0
-
-        arch_normalized = arch.model_copy()
-        arch_normalized.metrics = self.normalize_metrics(arch.metrics)
-
-        if arch in self.elites:
-            return (
-                1
-                / self.size()
-                * sum(
-                    arch_normalized.eucl_distance(self.normalize_metrics(elite.metrics))
-                    for elite in self.elites
-                )
-            )
-        else:
-            return -(1 / self.size()) * sum(
-                arch_normalized.eucl_distance(self.normalize_metrics(elite.metrics))
-                for elite in self.elites
-            )
+        return num_dominations > 0, num_dominations, dominated_elites
+    
 
 
 class DominanceNoveltyRS(RewardStrategy):
@@ -129,7 +111,19 @@ class DominanceNoveltyRS(RewardStrategy):
         self.elite_archive = ElitistArchive()
         self.dn_weights = Weights().domnovWeights()
 
-    def compute_dominance(self, proxy_metrics: TrainingFreeMetrics, arch: NetworkConfig) -> float:
+    def compute_reward(
+        self, metrics: TrainingFreeMetrics, arch: NetworkConfig
+    ):
+        dominance_score = self.compute_dominance(proxy_metrics=metrics, arch=arch)
+        novelty_score = self.compute_novelty(proxy_metrics=metrics, arch=arch)
+
+        total_reward = (
+            self.dn_weights.dominance * dominance_score + self.dn_weights.novelty * novelty_score
+        )
+
+        return total_reward
+
+    def compute_dominance(self, proxy_metrics: TrainingFreeMetrics, arch: NetworkConfig):
         flattened_arch = flatten_cnn_config(arch, max_layers=MAX_LAYERS)  # less storage
         new_entry = ArchiveEntry(arch=flattened_arch, metrics=proxy_metrics)
         is_dominated, num_dominations, elite_archs_dominated = self.elite_archive.check_domination(
@@ -145,36 +139,22 @@ class DominanceNoveltyRS(RewardStrategy):
         dominance_score = 1.0 / (1 + num_dominations)
         return dominance_score
 
-    def compute_novelty(self, proxy_metrics: TrainingFreeMetrics, arch: NetworkConfig) -> float:
-        new_entry = ArchiveEntry(
-            arch=flatten_cnn_config(arch, max_layers=MAX_LAYERS), metrics=proxy_metrics
-        )
-        novelty = self.elite_archive.calculate_novelty(new_entry)
-        novelty /= 4**0.5
-        return novelty
+    def compute_novelty(self, proxy_metrics: TrainingFreeMetrics, arch: NetworkConfig):
+        if not self.elite_archive.elites:
+            return 0.0
+        
+        normalized_metrics = self.elite_archive.normalize_metrics(proxy_metrics)
+        distances = [
+            self.elite_archive._eucl_distance(normalized_metrics, self.elite_archive.normalize_metrics(elite.metrics))
+            for elite in self.elite_archive.elites
+        ]
+        
+        factor = 1 if arch in self.elite_archive.elites else -1
+        novelty = factor * sum(distances) / len(self.elite_archive.elites)
 
-    def compute_reward(
-        self, metrics: TrainingFreeMetrics, arch: NetworkConfig
-    ) -> float | dict[str, float]:
-        dominance_score = self.compute_dominance(proxy_metrics=metrics, arch=arch)
-        novelty_score = self.compute_novelty(proxy_metrics=metrics, arch=arch)
+        novelty_normalized = novelty / 4**0.5 # 4 proxy metrics
+        return novelty_normalized
+    
 
-        """ print("Dominance Score:", dominance_score)
-        print("Novelty Score:", novelty_score)
-        print("self.elite_archive size:", self.elite_archive.size()) """
-
-        total_reward = (
-            self.dn_weights.dominance * dominance_score + self.dn_weights.novelty * novelty_score
-        )
-
-        return total_reward
-
-    def get_size_of_archive(self) -> int:
+    def get_archive_size(self) -> int:
         return self.elite_archive.size()
-
-"""     def get_highest_value_arch(self) -> NetworkConfig:
-        self.elite_archive.rank_aggregate_sort()
-        best = self.elite_archive.elites[0]
-        arch = unflatten_cnn_config(best.arch, max_layers=10)
-        return arch
- """

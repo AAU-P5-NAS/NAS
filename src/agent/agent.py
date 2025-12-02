@@ -39,13 +39,7 @@ class EpisodeLimitCallback(BaseCallback):
         infos = self.locals.get("infos", [])
 
         if self.episode_count % 25 == 0 and self.episode_count > 0:
-            allocated = torch.cuda.memory_allocated() / 1024**2
-            reserved = torch.cuda.memory_reserved() / 1024**2
-
-            print(f"Allocated: {allocated:.2f} MB")
-            print(f"Reserved: {reserved:.2f} MB")
             torch.cuda.empty_cache()
-            print("Cleared CUDA cache")
 
         for info in infos:
             # SB3 injects 'episode' key into infos at the end of each episode
@@ -130,9 +124,10 @@ class RLAgent:
         self.check_directories()
 
     def train(self, total_timesteps: int = 30000):
-        self.model.learn(
-            total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=2000)
-        )
+        with console.status("[bold green]Training RL Agent... [/bold green]"):
+            self.model.learn(
+                total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=5000)
+            )
 
     def save_model(self):
         """Save the trained model"""

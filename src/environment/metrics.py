@@ -104,7 +104,6 @@ class Evaluator:
         model: nn.Module,
     ) -> TrainingFreeMetrics:
         model.to(self.device)
-        print("complexity: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
         return TrainingFreeMetrics(
             jacov=self.compute_jacov_proxy(model),
             synflow=self.compute_synflow_proxy(model),
@@ -239,99 +238,78 @@ class Evaluator:
         return self.f1_score(predictions, targets).item()
 
     def compute_jacov_proxy(self, model: nn.Module, input_shape=(128, 3, 32, 32)):
+        """Compute the JaCov proxy metric for a given model. It measures the
+        sensitivity of the model's outputs to input perturbations."""
         model.eval()
         device = next(model.parameters()).device
-
+        
+        # Step 1: random input batch
         x = torch.randn(input_shape, device=device)
 
+        # Step 2: forward pass without gradients
         with torch.no_grad():
             output = model(x)
 
-        output_flat = output.view(output.size(0), -1)
-        mean = output_flat.mean(dim=0, keepdim=True)
-        centered = output_flat - mean
-        cov = (centered.T @ centered) / (output_flat.size(0) - 1)
+        # Step 3: flatten outputs
+        flat = output.view(output.size(0), -1)
+        
+        # Step 4: compute covariance of outputs
+        centered = flat - flat.mean(dim=0, keepdim=True)
+        cov = (centered.T @ centered) / (flat.size(0) - 1)
 
-        # Normalize by output dimension for comparability
-        score = torch.norm(cov, p="fro") / output_flat.size(1)
-
-        # print(f"Jacov Score: {score.item():.6f}")
-        return score.item()
+        # Step 5: compute Frobenius norm of covariance matrix and return
+        return (torch.norm(cov, p='fro') / flat.size(1)).item()
 
     def compute_synflow_proxy(self, model: nn.Module, input_shape=(1, 3, 32, 32)):
+        """Compute the SynFlow proxy metric for a given model. It measures the flow of
+        gradients through the network when all weights are positive and inputs are ones."""
+
         model.eval()
         device = next(model.parameters()).device
 
-        # Save original weights on CPU to avoid doubling GPU memory
-        original_weights = {name: param.data.cpu().clone() for name, param in model.named_parameters()}
-
-        # Make weights positive in-place (on GPU)
+        # Step 1: make weights positive (SynFlow requirement)
         with torch.no_grad():
-            for param in model.parameters():
-                param.data.abs_()
+            for p in model.parameters():
+                p.data.abs_()
 
+        # Step 2: forward with ones
         x = torch.ones(input_shape, device=device)
-        model.zero_grad()  # clear any existing grads
+        model.zero_grad()
+        out = model(x)
 
-        # Need grads for synflow
-        output = model(x)
-        score = output.sum()
-        score.backward()
+        # Step 3: backward from scalar output
+        out.sum().backward()
 
+        # Step 4: accumulate |w * grad|
         total = torch.tensor(0.0, device=device)
-        for param in model.parameters():
-            if param.grad is not None:
-                total += torch.sum(torch.abs(param.data * param.grad))
+        for p in model.parameters():
+            if p.grad is not None:
+                total = total + (p.data * p.grad).abs().sum()
 
-        # Restore original weights from CPU copies
-        for name, param in model.named_parameters():
-            param.data.copy_(original_weights[name].to(device))
-
-        # Clear grads (important!)
-        _clear_grads(model)
-
-        # Delete the CPU backup and free cache
-        del original_weights
-        if device.type == "cuda":
-            torch.cuda.empty_cache()
-
-        num_params = sum(p.numel() for p in model.parameters())
-        total = total / num_params
-        return total.item()
+        # You can leave the model modified.
+        return (total / sum(p.numel() for p in model.parameters())).item()
     
     def compute_snip_proxy(self, model: nn.Module, input_shape=(64, 3, 32, 32)):
         model.eval()
         device = next(model.parameters()).device
-
+    
+        # Step 1: random input batch
         x = torch.randn(input_shape, device=device)
-        criterion = nn.CrossEntropyLoss()
+        y = torch.randint(0, 10, (x.size(0),), device=device)
 
-        num_classes = 10
-        y = torch.randint(0, num_classes, (x.size(0),), device=device)
-
+        # Step 2: forward and loss
         model.zero_grad()
         output = model(x)
-        loss = criterion(output, y)
+        loss = nn.CrossEntropyLoss()(output, y)
+
+        # Step 3: backward to get gradients
         loss.backward()
 
-        score = torch.tensor(0.0, device=device)
-        for param in model.parameters():
-            if param.grad is not None:
-                score += torch.sum(torch.abs(param.grad * param.data))
+        # Step 4: accumulate |w * grad|
+        total = torch.tensor(0.0, device=device)
+        for p in model.parameters():
+            if p.grad is not None:
+                total = total + (p.data * p.grad).abs().sum()
 
-        # Normalize
-        num_params = sum(p.numel() for p in model.parameters())
-        score = score / num_params
-
-        # Clear grads (release GPU memory)
-        _clear_grads(model)
-        if device.type == "cuda":
-            torch.cuda.empty_cache()
-
-        return score.item()
-
-
-def _clear_grads(model: nn.Module):
-    # Prefer p.grad = None because it frees the storage instead of filling with zeros.
-    for p in model.parameters():
-        p.grad = None
+        # Step 5: normalize by total number of parameters and return
+        return (total / sum(p.numel() for p in model.parameters())).item()
