@@ -1,6 +1,35 @@
 import pytest
-from src.environment.reward import WeightedSumRS, TchebycheffReward, Weights
-from src.environment.metrics import Metrics
+import torch
+from src.environment.reward.tchebycheff import TchebycheffRS
+from src.environment.reward.weighted_sum import WeightedSumRS
+from src.environment.reward.reward import Weights
+from src.environment.metrics import Evaluator, Metrics
+from src.utils.layer_config import (
+    ActivationFunction,
+    KernelSize,
+    LayerConfig,
+    LayerType,
+    LinearUnits,
+    OutChannels,
+    Stride,
+)
+from src.utils.architecture import Architecture
+from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
+from src.utils.network_config import NetworkConfig
+
+
+@pytest.fixture
+def evaluator():
+    dl = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(torch.randn(10, 3, 28, 28), torch.randint(0, 10, (10,)))
+    )
+    return Evaluator(
+        num_classes=10,
+        loss_function=torch.nn.CrossEntropyLoss(),
+        dataloaders=(dl, dl),
+        dimensions=(3, 28, 28),
+        device=torch.device("cpu"),
+    )
 
 
 @pytest.fixture
@@ -46,7 +75,7 @@ def test_reward_ignores_none_values(default_metrics: Metrics):
     assert reward is not None and reward == reward  # Check for NaN
 
     w = Weights.dynamicWeightsSampler()
-    calc = TchebycheffReward(w)
+    calc = TchebycheffRS(w)
     reward = calc.compute_reward(metrics)
     assert isinstance(reward, float)
     assert reward is not None and reward == reward  # Check for NaN
@@ -132,7 +161,185 @@ def test_dynamic_weights_randomness():
 def test_TchebycheffReward_compute(default_metrics: Metrics):
     """Test that weights are normalized to sum to 1."""
     w = Weights.dynamicWeightsSampler()
-    calc = TchebycheffReward(w)
+    calc = TchebycheffRS(w)
     reward = calc.compute_reward(default_metrics)
 
     assert 0.0 <= reward <= 1.0
+
+
+def test_dominance_novelty_reward(evaluator):
+    reward_strategy = DominanceNoveltyRS(
+        weights=Weights.staticWeights(), domnov_weights=Weights.domnovWeights()
+    )
+
+    config = NetworkConfig(
+        layers=[
+            LayerConfig(
+                layer_type=LayerType.CONV,
+                out_channels=OutChannels.CH_16,
+                kernel_size=KernelSize.KS_3,
+                stride=Stride.S_1,
+                activation=ActivationFunction.RELU,
+            ),
+            LayerConfig(
+                layer_type=LayerType.LINEAR,
+                linear_units=LinearUnits.LU_64,
+                activation=ActivationFunction.RELU,
+            ),
+        ]
+    )
+
+    architecture = Architecture(
+        net_config=config,
+        num_classes=10,
+        input_dimensions=(3, 32, 32),
+    )
+
+    proxy_metrics = evaluator.evaluate_by_proxy(architecture)
+
+    print("Proxy Metrics:", proxy_metrics)
+
+    reward = reward_strategy.compute_reward(proxy_metrics, config)
+    print("Dominance-Novelty Reward:", reward)
+
+    assert isinstance(reward, float)
+    assert 0.0 <= reward <= 1.0
+    assert reward == 0.7  # novelty should be 0, dominance 1, weights 0.3 and 0.7
+
+
+def test_dominance_novelty_reward_large_network(evaluator):
+    reward_strategy = DominanceNoveltyRS(
+        weights=Weights.staticWeights(), domnov_weights=Weights.domnovWeights()
+    )
+
+    # Create a large network configuration
+    config = NetworkConfig(
+        layers=[
+            LayerConfig(
+                layer_type=LayerType.CONV,
+                out_channels=OutChannels.CH_64,
+                kernel_size=KernelSize.KS_3,
+                stride=Stride.S_1,
+                activation=ActivationFunction.RELU,
+            ),
+            LayerConfig(
+                layer_type=LayerType.CONV,
+                out_channels=OutChannels.CH_128,
+                kernel_size=KernelSize.KS_3,
+                stride=Stride.S_1,
+                activation=ActivationFunction.RELU,
+            ),
+            LayerConfig(
+                layer_type=LayerType.CONV,
+                out_channels=OutChannels.CH_128,
+                kernel_size=KernelSize.KS_3,
+                stride=Stride.S_1,
+                activation=ActivationFunction.RELU,
+            ),
+            LayerConfig(
+                layer_type=LayerType.LINEAR,
+                linear_units=LinearUnits.LU_128,
+                activation=ActivationFunction.RELU,
+            ),
+            LayerConfig(
+                layer_type=LayerType.LINEAR,
+                linear_units=LinearUnits.LU_128,
+                activation=ActivationFunction.RELU,
+            ),
+            LayerConfig(
+                layer_type=LayerType.LINEAR,
+                linear_units=LinearUnits.LU_128,
+                activation=ActivationFunction.RELU,
+            ),
+        ]
+    )
+
+    architecture = Architecture(
+        net_config=config,
+        num_classes=10,
+        input_dimensions=(3, 32, 32),
+    )
+
+    proxy_metrics = evaluator.evaluate_by_proxy(architecture)
+
+    print("Proxy Metrics for Large Network:", proxy_metrics)
+
+    reward = reward_strategy.compute_reward(proxy_metrics, config)
+    print("Dominance-Novelty Reward for Large Network:", reward)
+
+    assert isinstance(reward, float)
+
+
+def test_dominance_novelty_reward_multiple_networks(evaluator):
+    reward_strategy = DominanceNoveltyRS(
+        weights=Weights.staticWeights(), domnov_weights=Weights.domnovWeights()
+    )
+
+    # Define multiple network configurations
+    configs = [
+        NetworkConfig(
+            layers=[
+                LayerConfig(
+                    layer_type=LayerType.CONV,
+                    out_channels=OutChannels.CH_16,
+                    kernel_size=KernelSize.KS_3,
+                    stride=Stride.S_1,
+                    activation=ActivationFunction.RELU,
+                ),
+                LayerConfig(
+                    layer_type=LayerType.LINEAR,
+                    linear_units=LinearUnits.LU_64,
+                    activation=ActivationFunction.RELU,
+                ),
+            ]
+        ),
+        NetworkConfig(
+            layers=[
+                LayerConfig(
+                    layer_type=LayerType.CONV,
+                    out_channels=OutChannels.CH_32,
+                    kernel_size=KernelSize.KS_3,
+                    stride=Stride.S_1,
+                    activation=ActivationFunction.RELU,
+                ),
+                LayerConfig(
+                    layer_type=LayerType.LINEAR,
+                    linear_units=LinearUnits.LU_128,
+                    activation=ActivationFunction.RELU,
+                ),
+            ]
+        ),
+        NetworkConfig(
+            layers=[
+                LayerConfig(
+                    layer_type=LayerType.CONV,
+                    out_channels=OutChannels.CH_64,
+                    kernel_size=KernelSize.KS_3,
+                    stride=Stride.S_1,
+                    activation=ActivationFunction.RELU,
+                ),
+                LayerConfig(
+                    layer_type=LayerType.LINEAR,
+                    linear_units=LinearUnits.LU_128,
+                    activation=ActivationFunction.RELU,
+                ),
+            ]
+        ),
+    ]
+
+    for i, config in enumerate(configs):
+        architecture = Architecture(
+            net_config=config,
+            num_classes=10,
+            input_dimensions=(3, 32, 32),
+        )
+
+        proxy_metrics = evaluator.evaluate_by_proxy(architecture)
+
+        print(f"Proxy Metrics for Network {i + 1}:", proxy_metrics)
+
+        reward = reward_strategy.compute_reward(proxy_metrics, config)
+        print(f"Dominance-Novelty Reward for Network {i + 1}:", reward)
+
+        assert isinstance(reward, float)
+

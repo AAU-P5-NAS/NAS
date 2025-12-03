@@ -6,10 +6,11 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
+from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
 from src.environment.metrics import Evaluator
 from src.utils.hyperparameters import SLHyperParameters
 from src.utils.logger import NoOpLogger, TensorboardLogger
-from src.environment.reward import RewardStrategy
+from src.environment.reward.reward import RewardStrategy
 from src.environment.train import Trainer
 from src.utils.data_importer.importer import DataImporter, DatasetOption
 from src.utils.architecture import Architecture, flatten_cnn_config
@@ -48,6 +49,7 @@ class CustomEnv(gym.Env):
     actions_taken: int = 0  # Track steps in episode
     device: str
     tb_logger: TensorboardLogger | NoOpLogger
+    trainer: Trainer
 
     def __init__(
         self,
@@ -77,6 +79,7 @@ class CustomEnv(gym.Env):
         self.console = Console()
         self.current_network_config = NetworkConfig(layers=[])
         self.actions_taken = 0  # Track steps in episode
+        self.episodes_completed = 0  # Track completed episodes
         self.trainer = Trainer(
             dataloaders=self.loader_tuple,
             loss_function=CrossEntropyLoss(),
@@ -157,6 +160,7 @@ class CustomEnv(gym.Env):
             terminated = True
             truncated = False
             self.actions_taken = 0  # Reset for next episode
+            self.episodes_completed += 1
         else:
             self.current_network_config += LayerConfig.from_decisions(decisions)
             reward = 0.00
@@ -187,20 +191,29 @@ class CustomEnv(gym.Env):
             num_classes=self.data_importer.get_num_classes()[0],
             input_dimensions=self.dimensions,
         )
-
-        trained_model, training_time = self.train_classifier(model=architecture)
-
-        evaluated_metrics = self.evaluator.evaluate(trained_model, training_time=training_time)
-
-        reward = self.reward_strategy.compute_reward(evaluated_metrics)
+        proxy_metrics = None
+        evaluated_metrics = None
+        if isinstance(self.reward_strategy, DominanceNoveltyRS):
+            proxy_metrics = self.evaluator.evaluate_by_proxy(architecture)
+            reward = self.reward_strategy.compute_reward(
+                metrics=proxy_metrics, arch=new_architecture
+            )
+        else:
+            trained_model, training_time = self.train_classifier(model=architecture)
+            evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
+            reward = self.reward_strategy.compute_reward(evaluated_metrics)
 
         self.tb_logger.log_evaluation(
             reward=reward,
             architecture=architecture,
             current_config=self.current_network_config,
             actions_taken=self.actions_taken,
-            metrics=evaluated_metrics,
+            metrics=evaluated_metrics ,
+            proxy_metrics=proxy_metrics
         )
+
+        if isinstance(self.reward_strategy, DominanceNoveltyRS) and self.episodes_completed % 50 == 0: 
+            self.console.print(f"Episode {self.episodes_completed} completed. Size of Archive: {self.reward_strategy.get_archive_size()}")
 
         return reward
 

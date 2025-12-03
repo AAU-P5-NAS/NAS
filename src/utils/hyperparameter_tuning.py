@@ -1,20 +1,19 @@
-"""Hyperparameter optimization with separated RL and SL tuning"""
-
 from __future__ import annotations
 import traceback
 import optuna
+import torch
 from typing import Dict, Any, Optional
 from rich.console import Console
-import torch
+
+from src.environment.reward.reward import Weights
+from src.environment.reward.weighted_sum import WeightedSumRS
+from src.environment.train import Trainer
 
 from torch import nn
 from src.environment.metrics import Evaluator
 from src.utils.data_importer.dataset import DatasetOption
 from src.utils.hyperparameters import HyperparameterSearchSpace
-from src.environment.reward import Weights, WeightedSumRS
-from src.environment.train import Trainer
 from src.utils.data_importer.importer import DataImporter
-from torch.nn import CrossEntropyLoss
 
 console = Console()
 
@@ -193,12 +192,12 @@ class SLHyperparameterOptimizer:
                         num_classes=train_num_classes,
                         dataloaders=(train_loader, test_loader),
                         dimensions=data_importer.get_dimensions(),
-                        loss_function=CrossEntropyLoss(),
+                        loss_function=torch.nn.CrossEntropyLoss(),
                         device=device,
                     )
                     trainer = Trainer(
                         dataloaders=(train_loader, test_loader),
-                        loss_function=CrossEntropyLoss().to(device),
+                        loss_function=torch.nn.CrossEntropyLoss().to(device),
                     )
 
                 for epoch in range(self.TRAINING_EPOCHS):

@@ -5,7 +5,7 @@ import shutil
 from stable_baselines3 import PPO
 import torch
 
-from src.environment.reward import Weights
+from src.environment.reward.reward import Weights
 from src.agent.agent import RLAgent
 from src.agent.action_masking.action_masking_policy import CustomMaskablePolicy
 from src.utils import email
@@ -82,7 +82,7 @@ def main():
 
         # Train the agent
         console.print("[bold green]Starting training...[/bold green]")
-        agent.train(total_timesteps=50000)
+        agent.train(total_timesteps=1000000)
 
         # Save the trained model
         agent.save_model()
@@ -92,6 +92,7 @@ def main():
         agent.evaluate(num_episodes=5)
 
     except Exception as e:
+        print("An error occurred during training or evaluation:", e)
         if args.report_exception:
             email.ReportException(exception=e)
         agent.save_model()
@@ -102,4 +103,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main() 

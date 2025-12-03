@@ -6,8 +6,8 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 from rich.console import Console
 
-from src.environment.metrics import Metrics
-from src.utils.network_config import NetworkConfig
+from src.environment.metrics import Metrics, TrainingFreeMetrics
+from src.utils.network_config import  NetworkConfig
 from src.utils.layer_config import LayerConfig
 
 
@@ -97,6 +97,7 @@ class TensorboardLogger:
         reward: Optional[float] = None,
         actions_taken: Optional[int] = None,
         metrics: Optional[Metrics] = None,
+        proxy_metrics: Optional[TrainingFreeMetrics] = None,
         architecture: torch.nn.Module | None = None,
         current_config: NetworkConfig | None = None,
     ):
@@ -114,9 +115,9 @@ class TensorboardLogger:
             self.current_config = current_config
 
         if self.evaluation_count % self.log_interval == 0:
-            self.log_to_tensorboard()
+            self.log_to_tensorboard(proxy_metrics=proxy_metrics)
 
-    def log_to_tensorboard(self):
+    def log_to_tensorboard(self, proxy_metrics: Optional[TrainingFreeMetrics] = None):
         """Write current stored metrics to TensorBoard."""
         if self.logger is None or self.writer is None:
             raise RuntimeError("Logger not attached")
@@ -136,24 +137,31 @@ class TensorboardLogger:
             record_optional("Custom/FLOPs", self.newest_metrics.flops)
             record_optional("Custom/Runtime", self.newest_metrics.runtime)
             record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
+        
+        if proxy_metrics is not None:
+            record_optional("Custom Proxy/Synflow", proxy_metrics.synflow)
+            record_optional("Custom Proxy/Jacov", proxy_metrics.jacov)
+            record_optional("Custom Proxy/Snip", proxy_metrics.snip)
+            record_optional("Custom Proxy/Complexity", proxy_metrics.complexity)
 
         self.logger.dump(step=self.evaluation_count)
 
-        """if self.newest_architecture is not None:
+        """ if self.newest_architecture is not None:
             channels, h, w = self.dimensions
             self.writer.add_graph(
                 self.newest_architecture,
                 torch.zeros(1, channels, h, w).to(device=self.device),
-            )
-        """
+            ) """
 
     def log_evaluation(
         self,
-        metrics: Metrics,
-        reward: float | dict[str, float],
+        reward: float | dict[str, float],        
         architecture: torch.nn.Module | None,
         current_config: NetworkConfig | None,
-        actions_taken: Optional[int] = None,
+        actions_taken: Optional[int] = None,      
+        metrics: Optional[Metrics] = None,  
+        proxy_metrics: Optional[TrainingFreeMetrics] = None,
+
     ):
         """Update state, print to console, and log to TensorBoard."""
 
@@ -175,11 +183,17 @@ class TensorboardLogger:
         self.update(
             reward=reward_to_store,
             metrics=metrics,
+            proxy_metrics=proxy_metrics,
             architecture=architecture,
             current_config=current_config,
             actions_taken=actions_taken,
         )
+        if proxy_metrics is not None:
+            return
 
+        if metrics is None:
+            return
+        
         avg_accuracy = -1
         if metrics.accuracy is not None:
             self.sum_accuracy += metrics.accuracy

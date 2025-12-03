@@ -24,6 +24,31 @@ class Metrics(BaseModel):
     training_time: Optional[float] = None
 
 
+class TrainingFreeMetrics(Metrics):
+    synflow: Optional[float] = None
+    jacov: Optional[float] = None
+    snip: Optional[float] = None
+    complexity: Optional[float] = None
+
+    def normalized(self):
+        normalized_metrics = TrainingFreeMetrics()
+        for field_name, value in self.model_dump().items():
+            if value is not None:
+                normalized_value = (value - proxy_baselines[field_name][0]) / (
+                    proxy_baselines[field_name][1] - proxy_baselines[field_name][0]
+                )
+                normalized_metrics.__setattr__(field_name, normalized_value)
+        return normalized_metrics
+
+
+proxy_baselines = {
+    "synflow": (1.0, 1e6),
+    "jacov": (0.0, 1.0),
+    "snip": (0.0, 500.0),
+    "complexity": (1e3, 1e7),
+}
+
+
 Metric_literal = Literal[
     "accuracy",
     "precision",
@@ -50,9 +75,9 @@ class Evaluator:
     def __init__(
         self,
         num_classes: int,
-        dataloaders: Tuple[DataLoader, DataLoader],       
+        dataloaders: Tuple[DataLoader, DataLoader],
         dimensions: tuple[int, int, int],
-        loss_function:Callable[[Tensor, Tensor], Tensor],
+        loss_function: Callable[[Tensor, Tensor], Tensor],
         device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         average: Optional[Literal["micro", "macro", "weighted", "none"]] = "macro",
     ):
@@ -73,7 +98,19 @@ class Evaluator:
         self.f1_score: F1Score = cast(
             F1Score, F1Score(task=task, average=average, num_classes=num_classes).to(device)
         )
-    
+
+    def evaluate_by_proxy(
+        self,
+        model: nn.Module,
+    ) -> TrainingFreeMetrics:
+        model.to(self.device)
+        return TrainingFreeMetrics(
+            jacov=self.compute_jacov_proxy(model),
+            synflow=self.compute_synflow_proxy(model),
+            snip=self.compute_snip_proxy(model),
+            complexity=sum(p.numel() for p in model.parameters() if p.requires_grad),
+        )
+
     def evaluate(
         self,
         model: nn.Module,
@@ -199,3 +236,80 @@ class Evaluator:
 
     def compute_f1_score(self, predictions: Tensor, targets: Tensor) -> float:
         return self.f1_score(predictions, targets).item()
+
+    def compute_jacov_proxy(self, model: nn.Module, input_shape=(128, 3, 32, 32)):
+        """Compute the JaCov proxy metric for a given model. It measures the
+        sensitivity of the model's outputs to input perturbations."""
+        model.eval()
+        device = next(model.parameters()).device
+        
+        # Step 1: random input batch
+        x = torch.randn(input_shape, device=device)
+
+        # Step 2: forward pass without gradients
+        with torch.no_grad():
+            output = model(x)
+
+        # Step 3: flatten outputs
+        flat = output.view(output.size(0), -1)
+        
+        # Step 4: compute covariance of outputs
+        centered = flat - flat.mean(dim=0, keepdim=True)
+        cov = (centered.T @ centered) / (flat.size(0) - 1)
+
+        # Step 5: compute Frobenius norm of covariance matrix and return
+        return (torch.norm(cov, p='fro') / flat.size(1)).item()
+
+    def compute_synflow_proxy(self, model: nn.Module, input_shape=(1, 3, 32, 32)):
+        """Compute the SynFlow proxy metric for a given model. It measures the flow of
+        gradients through the network when all weights are positive and inputs are ones."""
+
+        model.eval()
+        device = next(model.parameters()).device
+
+        # Step 1: make weights positive (SynFlow requirement)
+        with torch.no_grad():
+            for p in model.parameters():
+                p.data.abs_()
+
+        # Step 2: forward with ones
+        x = torch.ones(input_shape, device=device)
+        model.zero_grad()
+        out = model(x)
+
+        # Step 3: backward from scalar output
+        out.sum().backward()
+
+        # Step 4: accumulate |w * grad|
+        total = torch.tensor(0.0, device=device)
+        for p in model.parameters():
+            if p.grad is not None:
+                total = total + (p.data * p.grad).abs().sum()
+
+        # You can leave the model modified.
+        return (total / sum(p.numel() for p in model.parameters())).item()
+    
+    def compute_snip_proxy(self, model: nn.Module, input_shape=(64, 3, 32, 32)):
+        model.eval()
+        device = next(model.parameters()).device
+    
+        # Step 1: random input batch
+        x = torch.randn(input_shape, device=device)
+        y = torch.randint(0, 10, (x.size(0),), device=device)
+
+        # Step 2: forward and loss
+        model.zero_grad()
+        output = model(x)
+        loss = nn.CrossEntropyLoss()(output, y)
+
+        # Step 3: backward to get gradients
+        loss.backward()
+
+        # Step 4: accumulate |w * grad|
+        total = torch.tensor(0.0, device=device)
+        for p in model.parameters():
+            if p.grad is not None:
+                total = total + (p.data * p.grad).abs().sum()
+
+        # Step 5: normalize by total number of parameters and return
+        return (total / sum(p.numel() for p in model.parameters())).item()

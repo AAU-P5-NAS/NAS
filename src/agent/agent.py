@@ -1,21 +1,31 @@
+import time
 from typing import Optional
+import os
 import numpy as np
 import torch
+
+from torch.utils.tensorboard import SummaryWriter
+from src.environment.metrics import Evaluator
+from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
 from src.utils.logger import TensorboardLogger
 from src.utils.hyperparameters import SLHyperParameters
 from src.environment.environment import CustomEnv, MAX_LAYERS
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy
-
-
-from src.environment.reward import WeightedSumRS, Weights
-import os
-
 from stable_baselines3.common.logger import Logger
-from torch.utils.tensorboard import SummaryWriter
 from stable_baselines3.common.logger import TensorBoardOutputFormat
-
 from stable_baselines3.common.callbacks import BaseCallback
+
+from src.environment.reward.reward import Weights
+from src.utils.architecture import Architecture, unflatten_cnn_config
+
+from rich.console import Console
+
+from src.utils.data_importer.dataset import DatasetOption
+from src.utils.data_importer.importer import DataImporter
+
+
+console = Console()
 
 
 class EpisodeLimitCallback(BaseCallback):
@@ -25,14 +35,16 @@ class EpisodeLimitCallback(BaseCallback):
         self.episode_count = 0
 
     def _on_step(self) -> bool:
-        print("number of steps:", self.num_timesteps)
-        print("number of episodes:", self.episode_count)
         infos = self.locals.get("infos", [])
+
+        if self.episode_count % 25 == 0 and self.episode_count > 0:
+            torch.cuda.empty_cache()
+
         for info in infos:
             # SB3 injects 'episode' key into infos at the end of each episode
             if "episode" in info:
                 self.episode_count += 1
-                print(f"Episode {self.episode_count} completed")
+                # print(f"Episode {self.episode_count} completed")
                 if self.episode_count >= self.max_episodes:
                     print(f"Reached maximum of {self.max_episodes} episodes. Stopping training.")
                     return False  # stops learning
@@ -76,6 +88,7 @@ class RLAgent:
     TB_LOG_DIRECTORY: str = "tensorboard_logs/"
     MODEL_SAVE_DIRECTORY: str = "saved_models/"
     model_save_path: str
+    use_proxy: bool = True
 
     def __init__(
         self,
@@ -90,9 +103,9 @@ class RLAgent:
             device=device,
             hyperparameters=hyperparameters,
             tb_logger=tb_logger,
-            reward_strategy=WeightedSumRS(weights=reward_weights)
+            reward_strategy=DominanceNoveltyRS(weights=reward_weights)
             if reward_weights
-            else WeightedSumRS(Weights(accuracy=0.5, flops=0.5)),
+            else DominanceNoveltyRS(Weights(accuracy=0.5, flops=0.5)),
         )
         self.model = policy_algorithm_class(
             policy=policy,
@@ -109,10 +122,11 @@ class RLAgent:
         self.model_save_path = f"{self.MODEL_SAVE_DIRECTORY}{self.model.__class__.__name__}"
         self.check_directories()
 
-    def train(self, total_timesteps: int = 30000):
-        self.model.learn(
-            total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=5000)
-        )
+    def train(self, total_timesteps: int = 1000000):
+        with console.status("[bold green]Training RL Agent... [/bold green]"):
+            self.model.learn(
+                total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=10000)
+            )
 
     def save_model(self):
         """Save the trained model"""
@@ -131,6 +145,43 @@ class RLAgent:
 
     def evaluate(self, num_episodes: int = 10):
         """Evaluate the trained agent"""
+        trainer = self.env.trainer
+        importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
+        evaluator = Evaluator(
+            num_classes=10,
+            dataloaders=importer.get_dataloaders(batch_size=64, shuffle=False),
+            dimensions=importer.get_dimensions(),
+            device=torch.device(device),
+            loss_function=torch.nn.CrossEntropyLoss(),
+        )
+        if self.use_proxy:
+            if isinstance(self.env.reward_strategy, DominanceNoveltyRS):
+                for entry in self.env.reward_strategy.elite_archive.elites:
+                    print(f"Elite architecture in archive: {entry.arch}")
+                    network_config = unflatten_cnn_config(entry.arch, max_layers=MAX_LAYERS)
+                    architecture = Architecture(network_config, 10, (3, 32, 32))
+                    architecture.to(device)
+                    optimizer = hyperparameters.get_optimizer(architecture.parameters())
+                    num_epochs = hyperparameters.training_epochs
+
+                    start_time = time.time()
+                    for epoch in range(num_epochs):
+                        progress = (epoch + 1) / num_epochs * 100
+                        with console.status(
+                            f"[bold blue]Training model - Progress {int(progress)}%[/bold blue]"
+                        ):
+                            trainer.train(architecture, optimizer)
+
+                    end_time = time.time()
+                    training_time = end_time - start_time
+                    print(f"Training time for elite architecture: {training_time:.2f} seconds")
+                    metrics = evaluator.evaluate(architecture)
+                    console.print(
+                        f"[bold green]Metrics: Accuracy: {metrics.accuracy:.4f}, FLOPS: {metrics.flops:.2f}[/bold green]"
+                    )
+                    self.env.tb_logger.print_layers(network_config.layers)
+
+
         total_rewards = []
 
         for episode in range(num_episodes):
