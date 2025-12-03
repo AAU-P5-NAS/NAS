@@ -20,19 +20,19 @@
             "module": "src.utils.typst.master",
             "args": [
                 // positional arguments:
-                // output                Name of output file
+                // output                                           Name of output file
 
                 // options:
-                // -h, --help            show this help message and exit
-                // --experiments EXPERIMENTS [EXPERIMENTS ...] Name of experiments to include
-                // --y Y                 Name of metric to plot on y-axis
-                // --resolution RESOLUTION
-                //                         Downsample factor
-                // --smooth SMOOTH       Smoothing factor
-                // --xmin XMIN           X minimum
-                // --xmax XMAX           X maximum
-                // --ymin YMIN           Y minimum
-                // --ymax YMAX           Y maximum
+                // -h, --help                                       show this help message and exit
+                // --experiments EXPERIMENTS [EXPERIMENTS ...]      Name of experiments to include
+                // --metric METRIC                                  Name of metric to plot on y-axis
+                // --resolution RESOLUTION                          Downsample factor
+                // --smooth SMOOTH                                  Smoothing factor
+                // --every EVERY                                    Place a marker every n steps on the x-axis
+                // --xmin XMIN                                      X minimum
+                // --xmax XMAX                                      X maximum
+                // --ymin YMIN                                      Y minimum
+                // --ymax YMAX                                      Y maximum
                 "output",
                 "--experiments", "exp1",
                 "--y", "accuracy",
