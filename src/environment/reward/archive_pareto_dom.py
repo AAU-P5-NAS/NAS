@@ -1,3 +1,6 @@
+import pickle
+import os
+
 from typing import List, Optional, Tuple
 from pydantic import BaseModel
 from src.environment.metrics import TrainingFreeMetrics
@@ -6,6 +9,8 @@ from src.utils.network_config import NetworkConfig
 from src.utils.architecture import flatten_cnn_config
 
 MAX_LAYERS = 7
+
+ARCHIVE_DIR = "src/environment/reward/saved_archives"
 
 
 class ProxyBaselines(BaseModel):
@@ -18,6 +23,7 @@ class ProxyBaselines(BaseModel):
 class ArchiveEntry(BaseModel):
     arch: list[int]
     metrics: TrainingFreeMetrics
+
 
 class ElitistArchive:
     def __init__(self):
@@ -34,7 +40,7 @@ class ElitistArchive:
             if val1 is None or val2 is None:
                 continue
             sum_sq += (val1 - val2) ** 2
-        return sum_sq ** 0.5
+        return sum_sq**0.5
 
     def _dominates(self, metrics_1: TrainingFreeMetrics, metrics_2: TrainingFreeMetrics) -> bool:
         """Check if new_arch dominates elite archs based on proxy metrics."""
@@ -94,7 +100,43 @@ class ElitistArchive:
                 dominated_elites.append(elite)
 
         return num_dominations > 0, num_dominations, dominated_elites
-    
+
+    def save_archive(self):
+        os.makedirs(ARCHIVE_DIR, exist_ok=True)
+        existing_files = [
+            f
+            for f in os.listdir(ARCHIVE_DIR)
+            if f.startswith("elite_archive") and f.endswith(".pkl")
+        ]
+        file_count = len(existing_files)
+
+        filename = f"elite_archive_{file_count + 1}.pkl"
+        with open(os.path.join(ARCHIVE_DIR, filename), "wb") as f:
+            pickle.dump(self.elites, f)
+
+        print(f"Archive saved to {filename}")
+
+    def load_archive(self, archive_number: Optional[int] = None):
+        if archive_number is None:
+            # Load the latest archive
+            existing_files = [
+                f
+                for f in os.listdir(ARCHIVE_DIR)
+                if f.startswith("elite_archive") and f.endswith(".pkl")
+            ]
+            if not existing_files:
+                raise FileNotFoundError("No archive files found in the directory.")
+            latest_file = max(existing_files, key=lambda f: int(f.split("_")[2].split(".")[0]))
+        else:
+            # Load the specified archive
+            latest_file = f"elite_archive_{archive_number}.pkl"
+            if not os.path.exists(os.path.join(ARCHIVE_DIR, latest_file)):
+                raise FileNotFoundError(f"Archive file {latest_file} not found.")
+
+        with open(os.path.join(ARCHIVE_DIR, latest_file), "rb") as f:
+            self.elites = pickle.load(f)
+        print(f"Archive loaded from {latest_file}")
+        return self.elites
 
 
 class DominanceNoveltyRS(RewardStrategy):
@@ -111,9 +153,7 @@ class DominanceNoveltyRS(RewardStrategy):
         self.elite_archive = ElitistArchive()
         self.dn_weights = Weights().domnovWeights()
 
-    def compute_reward(
-        self, metrics: TrainingFreeMetrics, arch: NetworkConfig
-    ):
+    def compute_reward(self, metrics: TrainingFreeMetrics, arch: NetworkConfig):
         dominance_score = self.compute_dominance(proxy_metrics=metrics, arch=arch)
         novelty_score = self.compute_novelty(proxy_metrics=metrics, arch=arch)
 
@@ -142,19 +182,20 @@ class DominanceNoveltyRS(RewardStrategy):
     def compute_novelty(self, proxy_metrics: TrainingFreeMetrics, arch: NetworkConfig):
         if not self.elite_archive.elites:
             return 0.0
-        
+
         normalized_metrics = self.elite_archive.normalize_metrics(proxy_metrics)
         distances = [
-            self.elite_archive._eucl_distance(normalized_metrics, self.elite_archive.normalize_metrics(elite.metrics))
+            self.elite_archive._eucl_distance(
+                normalized_metrics, self.elite_archive.normalize_metrics(elite.metrics)
+            )
             for elite in self.elite_archive.elites
         ]
-        
+
         factor = 1 if arch in self.elite_archive.elites else -1
         novelty = factor * sum(distances) / len(self.elite_archive.elites)
 
-        novelty_normalized = novelty / 4**0.5 # 4 proxy metrics
+        novelty_normalized = novelty / 4**0.5  # 4 proxy metrics
         return novelty_normalized
-    
 
     def get_archive_size(self) -> int:
         return self.elite_archive.size()

@@ -5,6 +5,7 @@ import shutil
 from stable_baselines3 import PPO
 import torch
 
+from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
 from src.environment.reward.reward import Weights
 from src.agent.agent import RLAgent
 from src.agent.action_masking.action_masking_policy import CustomMaskablePolicy
@@ -80,6 +81,18 @@ def main():
         # Initialize agent with PPO algorithm
         agent = get_agent(args)
 
+        if args.evaluate_archive:
+            if isinstance(agent.env.reward_strategy, DominanceNoveltyRS):
+                console.print("[bold green]Loading archive from[/bold green]")
+                archive = agent.env.reward_strategy.elite_archive.load_archive()
+                if archive is None:
+                    console.print("[bold red]No archive found.[/bold red]")
+                    return
+                for entry in archive:
+                    console.print(f"[cyan]{entry}[/cyan]")
+            console.print("[bold yellow]Evaluating archive...[/bold yellow]")
+            return
+
         # Train the agent
         console.print("[bold green]Starting training...[/bold green]")
         agent.train(total_timesteps=1000000)
@@ -96,10 +109,14 @@ def main():
         if args.report_exception:
             email.ReportException(exception=e)
         agent.save_model()
+        if isinstance(agent.env.reward_strategy, DominanceNoveltyRS):
+            agent.env.reward_strategy.elite_archive.save_archive()
 
     except KeyboardInterrupt:
         console.print("[bold red]Training interrupted by user.[/bold red]")
         agent.save_model()
+        if isinstance(agent.env.reward_strategy, DominanceNoveltyRS):
+            agent.env.reward_strategy.elite_archive.save_archive()
 
 
 if __name__ == "__main__":
