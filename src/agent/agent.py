@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from torch.utils.tensorboard import SummaryWriter
+from src.environment.reward.weighted_sum import WeightedSumRS
 from src.environment.metrics import Evaluator
 from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
 from src.utils.logger import TensorboardLogger
@@ -16,7 +17,7 @@ from stable_baselines3.common.logger import Logger
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 from stable_baselines3.common.callbacks import BaseCallback
 
-from src.environment.reward.reward import Weights
+from src.environment.reward.reward import RewardStrategy, Weights
 from src.utils.architecture import Architecture, unflatten_cnn_config
 
 from rich.console import Console
@@ -88,7 +89,7 @@ class RLAgent:
     TB_LOG_DIRECTORY: str = "tensorboard_logs/"
     MODEL_SAVE_DIRECTORY: str = "saved_models/"
     model_save_path: str
-    use_proxy: bool = True
+    use_proxy: bool = False
 
     def __init__(
         self,
@@ -97,15 +98,13 @@ class RLAgent:
         policy_seed: Optional[int] = None,
         rl_learning_rate: float = 0.001,
         hyperparameters: SLHyperParameters = hyperparameters,
-        reward_weights: Weights | None = None,
+        reward_strategy: RewardStrategy = WeightedSumRS(Weights(accuracy=0.8, flops=0.2)),
     ):
         self.env = CustomEnv(
             device=device,
             hyperparameters=hyperparameters,
             tb_logger=tb_logger,
-            reward_strategy=DominanceNoveltyRS(weights=reward_weights)
-            if reward_weights
-            else DominanceNoveltyRS(Weights(accuracy=0.5, flops=0.5)),
+            reward_strategy=reward_strategy,
         )
         self.model = policy_algorithm_class(
             policy=policy,
@@ -180,7 +179,6 @@ class RLAgent:
                         f"[bold green]Metrics: Accuracy: {metrics.accuracy:.4f}, FLOPS: {metrics.flops:.2f}[/bold green]"
                     )
                     self.env.tb_logger.print_layers(network_config.layers)
-
 
         total_rewards = []
 
