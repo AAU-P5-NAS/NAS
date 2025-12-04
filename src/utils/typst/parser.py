@@ -93,12 +93,11 @@ class LilaqPlot:
 
         return "\n".join(lines)
 
-    def to_str(self, indent_level: int, multiple: bool) -> str:
+    def to_str(self, indent_level: int) -> str:
         points_str = self._points_to_lilaq_str(indent_level=indent_level + 1)
 
         lines = [
             f'{indent(indent_level)}lq.plot(',
-            f'{indent(indent_level + 1)}{"" if multiple else "//"}legend: (position: bottom + center),',
             f'{indent(indent_level + 1)}label: [{self.label}],',
             f'{indent(indent_level + 1)}every: {self.every if self.every else "none"},',
             f'{points_str},',
@@ -136,13 +135,14 @@ class LilaqDiagram:
     series: list[LilaqPlot]
 
     def _series_to_lilaq_str(self, indent_level: int) -> str:
-        return f",\n{indent(indent_level)}".join(s.to_str(indent_level=indent_level, multiple=self.has_multiple()) for s in self.series)
+        return f",\n{indent(indent_level)}".join(s.to_str(indent_level=indent_level) for s in self.series)
 
     def to_str(self, indent_level: int) -> str:
         lines = [            
             f'{indent(indent_level)}#import "@preview/lilaq:0.5.0" as lq',
             f'{indent(indent_level)}#figure(',
             f'{indent(indent_level + 1)}lq.diagram(',
+            f'{indent(indent_level + 2)}legend: (position: bottom + center),',
             f'{indent(indent_level + 2)}xlim: {self.xlim.to_str()},',
             f'{indent(indent_level + 2)}xlabel: [{self.xlabel}],',
             '',
