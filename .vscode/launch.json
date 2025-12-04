@@ -34,14 +34,8 @@
                 // --ymin YMIN                                      Y minimum
                 // --ymax YMAX                                      Y maximum
                 "output",
-                "--experiments", "exp1",
-                "--y", "accuracy",
-                "--resolution", "1",
-                "--smooth", "5",
-                "--xmin", "0",
-                "--xmax", "100",
-                "--ymin", "0",
-                "--ymax", "1"
+                "--experiments", "exp1", "exp2",
+                "--metric", "accuracy",
             ]
         }
     ]

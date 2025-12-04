@@ -1,6 +1,5 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from enum import StrEnum
 import json
 import os
 from typing import Optional
@@ -135,12 +134,13 @@ class LilaqDiagram:
     series: list[LilaqPlot]
 
     def _series_to_lilaq_str(self, indent_level: int) -> str:
-        return f",\n{indent(indent_level)}".join(s.to_str(indent_level=indent_level) for s in self.series)
+        return ",\n\n".join(s.to_str(indent_level=indent_level) for s in self.series)
 
     def to_str(self, indent_level: int) -> str:
         lines = [            
             f'{indent(indent_level)}#import "@preview/lilaq:0.5.0" as lq',
             f'{indent(indent_level)}#figure(',
+            f'{indent(indent_level + 1)}caption: [GIVE ME A CAPTION],',
             f'{indent(indent_level + 1)}lq.diagram(',
             f'{indent(indent_level + 2)}legend: (position: bottom + center),',
             f'{indent(indent_level + 2)}xlim: {self.xlim.to_str()},',
@@ -150,7 +150,7 @@ class LilaqDiagram:
             f'{indent(indent_level + 2)}ylabel: [{self.ylabel}],',
             '',
             f'{self._series_to_lilaq_str(indent_level + 2)}',
-            f'{indent(indent_level + 1)})',
+            f'{indent(indent_level + 1)})',            
             f'{indent(indent_level)})',
         ]
 
@@ -173,10 +173,10 @@ class LilaqDiagram:
     def has_multiple(self) -> bool:
         return len(self.series) > 1
 
-def load_series(
+def load_json_into_plots(
     directory: str, experiments: list[str], metric: str, every: Optional[int]
 ) -> list[LilaqPlot]:
-    data: list[LilaqPlot] = []
+    plots: list[LilaqPlot] = []
 
     for exp in experiments:
         filename: str = f"{exp}.{metric}.json"
@@ -185,15 +185,15 @@ def load_series(
         if not os.path.isfile(path):
             continue
 
-        time_series = LilaqPlot(label=exp.capitalize(), points=[], every=every)
+        plot = LilaqPlot(label=exp.capitalize(), points=[], every=every)
         with open(path, "r", encoding="utf-8") as f:
             raw: list[list[float]] = json.load(f)
-            time_series.points.extend(
+            plot.points.extend(
                 DataPoint(entry[0], entry[1], entry[2]) for entry in raw
             )
-            data.append(time_series)
+            plots.append(plot)
 
-    return data
+    return plots
 
 def generate_lilaq_string(
     directory: str,
@@ -213,7 +213,7 @@ def generate_lilaq_string(
         xlabel="Episodes",
         ylim=LilaqLimit(min=y_min, max=y_max),
         ylabel=metric.capitalize(),
-        series=load_series(directory, experiments, metric, every),
+        series=load_json_into_plots(directory, experiments, metric, every),
     ).downsample(resolution).smooth(smooth_window)
 
     return diagram.to_str(indent_level=0)
