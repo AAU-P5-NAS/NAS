@@ -122,10 +122,10 @@ class RLAgent:
         self.check_directories()
 
     def train(self, total_timesteps: int = 1000000):
-        with console.status("[bold green]Training RL Agent... [/bold green]"):
-            self.model.learn(
-                total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=10000)
-            )
+        console.print("[bold green]Training RL Agent... [/bold green]")
+        self.model.learn(
+            total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=10000)
+        )
 
     def save_model(self):
         """Save the trained model"""

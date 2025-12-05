@@ -6,6 +6,7 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
+from src.environment.reward.tchebycheff import TchebycheffRS
 from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
 from src.environment.metrics import Evaluator
 from src.utils.hyperparameters import SLHyperParameters
@@ -200,6 +201,10 @@ class CustomEnv(gym.Env):
             reward = self.reward_strategy.compute_reward(
                 metrics=proxy_metrics, arch=new_architecture
             )
+        elif isinstance(self.reward_strategy, TchebycheffRS):
+            proxy_metrics = self.evaluator.evaluate_by_proxy(architecture)
+            reward = self.reward_strategy.compute_reward(metrics=proxy_metrics)
+            print("Reward from TchebycheffRS:", reward)
         else:
             trained_model, training_time = self.train_classifier(model=architecture)
             evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
@@ -214,7 +219,11 @@ class CustomEnv(gym.Env):
             proxy_metrics=proxy_metrics,
         )
 
-        if log_arch and not isinstance(self.reward_strategy, DominanceNoveltyRS):
+        if (
+            log_arch
+            and not isinstance(self.reward_strategy, DominanceNoveltyRS)
+            and not isinstance(self.reward_strategy, TchebycheffRS)
+        ):
             self.tb_logger.print_layers(new_architecture.layers)
 
         if (

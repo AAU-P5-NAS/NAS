@@ -23,6 +23,11 @@ class Weights(BaseModel):
     runtime: float = 0.0
     architecture_size: float = 0.0
 
+    synflow: float = 0.0
+    jacov: float = 0.0
+    snip: float = 0.0
+    complexity: float = 0.0
+
     dominance: float = 0.0
     novelty: float = 0.0
 
@@ -39,6 +44,21 @@ class Weights(BaseModel):
             dominance=0.7,
             novelty=0.3,
         )
+
+    @classmethod
+    def tchebycheffWeights(cls):
+        weights = {
+            "synflow": 0.25,
+            "jacov": 0.25,
+            "snip": 0.25,
+            "complexity": 0.25,
+        }
+
+        total = sum(weights.values())
+
+        for i in weights:
+            weights[i] /= total
+        return cls(**weights)
 
     @classmethod
     def dynamicWeightsSampler(cls):

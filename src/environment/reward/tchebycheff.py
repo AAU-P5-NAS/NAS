@@ -1,4 +1,5 @@
-from src.environment.metrics import Metrics
+from src.environment.reward.archive_pareto_dom import ProxyBaselines
+from src.environment.metrics import TrainingFreeMetrics
 from src.environment.reward.reward import Baselines, RewardStrategy, Weights
 
 
@@ -10,38 +11,48 @@ class TchebycheffRS(RewardStrategy):
 
     def __init__(self, weights: Weights, baselines: Baselines = Baselines()):
         super().__init__(weights, baselines)
+        self.proxy_baselines = ProxyBaselines()
+        self.epsilon = 1e-12  # small number to avoid division by zero
 
-        # Compute ideal reference point z* from baselines
-        self.z_star = {
-            "accuracy": 1.0,
-            "precision": 1.0,
-            "recall": 1.0,
-            "f1_score": 1.0,
-            "test_loss": 0.0,
-            "flops": 0.0,
-            "runtime": 0.0,
-            "architecture_size": 0.0,
-        }
-
-    def compute_reward(self, metrics: Metrics) -> float:
-
-        # Normalize weights to sum to 1
-        normalized_weights = self.weights.normalize()
-
-        weighted_diffs = []
-        for metric_name, weight in normalized_weights.model_dump().items():
-            if weight == 0:
-                continue
-            value = getattr(metrics, metric_name, None)
+    def update_baselines(self, metrics: TrainingFreeMetrics):
+        for proxy_name in ["synflow", "jacov", "snip", "complexity"]:
+            value = getattr(metrics, proxy_name, None)
             if value is None:
                 continue
+            current_min, current_max = getattr(self.proxy_baselines, proxy_name) or (value, value)
+            new_min = min(current_min, value)
+            new_max = max(current_max, value)
+            setattr(self.proxy_baselines, proxy_name, (new_min, new_max))
 
-            normalized_value = self._normalize_metric(metric_name, value)
+    def normalize_metrics(self, metrics: TrainingFreeMetrics) -> TrainingFreeMetrics:
+        normalized = metrics.model_copy()
+        for proxy_name in ["synflow", "jacov", "snip", "complexity"]:
+            value = getattr(metrics, proxy_name, None)
+            baseline = getattr(self.proxy_baselines, proxy_name)
+            if value is None or baseline is None:
+                continue
+            min_val, max_val = baseline
+            normalized_value = (value - min_val) / (max_val - min_val + self.epsilon)
+            setattr(normalized, proxy_name, normalized_value)
+        return normalized
 
-            z_i_star = self.z_star.get(metric_name, 0.0)
+    def compute_reward(self, metrics: TrainingFreeMetrics) -> float:
+        self.update_baselines(metrics)
+        weights = Weights.tchebycheffWeights().model_dump()
+        proxy_baselines = self.proxy_baselines.model_dump()
 
-            diff = weight * abs(normalized_value - z_i_star)
-            weighted_diffs.append(diff)
+        weighted_diffs = []
+        for metric_name, weight in weights.items():
+            if weight == 0:
+                continue
+            range_width = proxy_baselines[metric_name][1] - proxy_baselines[metric_name][0]
+            diff = abs(
+                getattr(metrics, metric_name, 0)
+                - proxy_baselines[metric_name][0 if metric_name in ["complexity"] else 1]
+            )
+            normalized_diff = diff / (range_width + self.epsilon)
+            weighted_diff = weight * normalized_diff
+            weighted_diffs.append(weighted_diff)
 
-        deviation = max(weighted_diffs) if weighted_diffs else 0.0
+        deviation = max(weighted_diffs, default=0.0)
         return 1 - deviation

@@ -26,6 +26,21 @@ def ParseArguments() -> argparse.Namespace:
         action="store_true",
         help="If set, evaluates the given archive instead of training a new model.",
     )
+    parser.add_argument(
+        "--use-tchebycheff",
+        action="store_true",
+        help="If set, evaluates using Tchebycheff reward strategy.",
+    )
+    parser.add_argument(
+        "--use-dominance-novelty",
+        action="store_true",
+        help="If set, evaluates using Dominance Novelty reward strategy.",
+    )
+    parser.add_argument(
+        "--use-weighted-sum",
+        action="store_true",
+        help="If set, evaluates using Weighted Sum reward strategy.",
+    )
 
     args = parser.parse_args()
     return args

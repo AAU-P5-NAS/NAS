@@ -7,7 +7,7 @@ import torch
 from rich.console import Console
 
 from src.environment.metrics import Metrics, TrainingFreeMetrics
-from src.utils.network_config import  NetworkConfig
+from src.utils.network_config import NetworkConfig
 from src.utils.layer_config import LayerConfig
 
 
@@ -67,6 +67,7 @@ class TensorboardLogger:
         log_folder: str = "tensorboard_logs/",
     ):
         self.writer = writer
+        print("logger:", logger)
         self.logger = (
             logger
             if logger is not None
@@ -113,7 +114,8 @@ class TensorboardLogger:
             self.newest_architecture = architecture
         if current_config is not None:
             self.current_config = current_config
-
+        print("Evaluation count:", self.evaluation_count)
+        print("Log interval:", self.log_interval)
         if self.evaluation_count % self.log_interval == 0:
             self.log_to_tensorboard(proxy_metrics=proxy_metrics)
 
@@ -137,8 +139,10 @@ class TensorboardLogger:
             record_optional("Custom/FLOPs", self.newest_metrics.flops)
             record_optional("Custom/Runtime", self.newest_metrics.runtime)
             record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
-        
+        print("Logging to TensorBoard at evaluation count:", self.evaluation_count)
+        print("proxy_metrics:", proxy_metrics)
         if proxy_metrics is not None:
+            print("Logging proxy metrics to TensorBoard")
             record_optional("Custom Proxy/Synflow", proxy_metrics.synflow)
             record_optional("Custom Proxy/Jacov", proxy_metrics.jacov)
             record_optional("Custom Proxy/Snip", proxy_metrics.snip)
@@ -155,13 +159,12 @@ class TensorboardLogger:
 
     def log_evaluation(
         self,
-        reward: float | dict[str, float],        
+        reward: float | dict[str, float],
         architecture: torch.nn.Module | None,
         current_config: NetworkConfig | None,
-        actions_taken: Optional[int] = None,      
-        metrics: Optional[Metrics] = None,  
+        actions_taken: Optional[int] = None,
+        metrics: Optional[Metrics] = None,
         proxy_metrics: Optional[TrainingFreeMetrics] = None,
-
     ):
         """Update state, print to console, and log to TensorBoard."""
 
@@ -193,7 +196,7 @@ class TensorboardLogger:
 
         if metrics is None:
             return
-        
+
         avg_accuracy = -1
         if metrics.accuracy is not None:
             self.sum_accuracy += metrics.accuracy
