@@ -1,4 +1,12 @@
 from torch import Tensor
+from src.utils.layer_config import (
+    ActivationFunction,
+    KernelSize,
+    LayerConfig,
+    LinearUnits,
+    OutChannels,
+    Stride,
+)
 import torch.nn as nn
 from src.utils.network_config import (
     SINGLE_LAYER_OBSERVATION_SIZE,
@@ -6,7 +14,6 @@ from src.utils.network_config import (
     update_spatial_dims,
 )
 from src.utils.layer_config import (
-    LayerConfig,
     LayerType,
     PoolMode,
 )
@@ -157,3 +164,32 @@ def flatten_cnn_config(
         flat_config.extend((max_layers * SINGLE_LAYER_OBSERVATION_SIZE - len(flat_config)) * [0])
 
     return flat_config
+
+
+def unflatten_cnn_config(flat_config: list[int], max_layers: int) -> NetworkConfig:
+    layers = []
+    for layer_idx in range(max_layers):
+        start_idx = layer_idx * SINGLE_LAYER_OBSERVATION_SIZE
+        end_idx = start_idx + SINGLE_LAYER_OBSERVATION_SIZE
+        layer_data = flat_config[start_idx:end_idx]
+
+        layer_type = LayerType(layer_data[0])
+        out_channels = OutChannels(layer_data[1])
+        kernel_size = KernelSize(layer_data[2])
+        stride = Stride(layer_data[3])
+        pool_mode = PoolMode(layer_data[4])
+        activation = ActivationFunction(layer_data[5])
+        linear_units = LinearUnits(layer_data[6])
+
+        layer_config = LayerConfig(
+            layer_type=layer_type,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            pool_mode=pool_mode,
+            activation=activation,
+            linear_units=linear_units,
+        )
+        layers.append(layer_config)
+
+    return NetworkConfig(layers=layers)
