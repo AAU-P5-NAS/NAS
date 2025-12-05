@@ -30,3 +30,7 @@ Clone the repo, then:
 
     To run a program, run 'uv run python name_of_script.py'.
     To run 
+
+### Typst Utility
+
+[Read about using the typst utility here](src/utils/typst/typst_util.md)
