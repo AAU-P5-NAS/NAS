@@ -177,7 +177,9 @@ class CustomEnv(gym.Env):
 
         return obs, reward, terminated, truncated, self.info
 
-    def evaluate_architecture(self, new_architecture: NetworkConfig) -> float | dict[str, float]:
+    def evaluate_architecture(
+        self, new_architecture: NetworkConfig, log_arch: Optional[bool] = False
+    ) -> float | dict[str, float]:
         """Evaluate the given architecture by training and testing it, returning the computed reward.
 
         :Args:
@@ -208,12 +210,20 @@ class CustomEnv(gym.Env):
             architecture=architecture,
             current_config=self.current_network_config,
             actions_taken=self.actions_taken,
-            metrics=evaluated_metrics ,
-            proxy_metrics=proxy_metrics
+            metrics=evaluated_metrics,
+            proxy_metrics=proxy_metrics,
         )
 
-        if isinstance(self.reward_strategy, DominanceNoveltyRS) and self.episodes_completed % 50 == 0: 
-            self.console.print(f"Episode {self.episodes_completed} completed. Size of Archive: {self.reward_strategy.get_archive_size()}")
+        if log_arch and not isinstance(self.reward_strategy, DominanceNoveltyRS):
+            self.tb_logger.print_layers(new_architecture.layers)
+
+        if (
+            isinstance(self.reward_strategy, DominanceNoveltyRS)
+            and self.episodes_completed % 50 == 0
+        ):
+            self.console.print(
+                f"Episode {self.episodes_completed} completed. Size of Archive: {self.reward_strategy.get_archive_size()}"
+            )
 
         return reward
 

@@ -5,22 +5,30 @@ import shutil
 from stable_baselines3 import PPO
 import torch
 
+from src.environment.reward.weighted_sum import WeightedSumRS
+from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
 from src.environment.reward.reward import Weights
 from src.agent.agent import RLAgent
 from src.agent.action_masking.action_masking_policy import CustomMaskablePolicy
 from src.utils import email
 from src.utils.arguments import ParseArguments
+from src.utils.architecture import unflatten_cnn_config
 
 console = Console()
 
 
 def get_agent(args: argparse.Namespace) -> RLAgent:
+    weights = Weights(accuracy=0.8, flops=0.2)
+    if args.evaluate_archive:
+        reward_strategy = WeightedSumRS(weights)
+    else:
+        reward_strategy = DominanceNoveltyRS(weights)
     # Initialize the RL agent
     agent = RLAgent(
         policy_algorithm_class=PPO,
         policy=CustomMaskablePolicy,
         policy_seed=args.policy_seed,
-        reward_weights=Weights(accuracy=0.8, flops=0.2),
+        reward_strategy=reward_strategy,
     )
 
     if args.load_model is not None:
@@ -80,6 +88,20 @@ def main():
         # Initialize agent with PPO algorithm
         agent = get_agent(args)
 
+        if args.evaluate_archive:
+            console.print("[bold green]Loading archive from[/bold green]")
+            loader = DominanceNoveltyRS(Weights(accuracy=0.8, flops=0.2))
+            archive = loader.elite_archive.load_archive()
+            if archive is None:
+                console.print("[bold red]No archive found.[/bold red]")
+                return
+            console.print("[bold yellow]Evaluating archive...[/bold yellow]")
+            for entry in archive:
+                agent.env.evaluate_architecture(
+                    unflatten_cnn_config(entry.arch, max_layers=7), log_arch=True
+                )
+            return
+
         # Train the agent
         console.print("[bold green]Starting training...[/bold green]")
         agent.train(total_timesteps=1000000)
@@ -96,10 +118,14 @@ def main():
         if args.report_exception:
             email.ReportException(exception=e)
         agent.save_model()
+        if isinstance(agent.env.reward_strategy, DominanceNoveltyRS):
+            agent.env.reward_strategy.elite_archive.save_archive()
 
     except KeyboardInterrupt:
         console.print("[bold red]Training interrupted by user.[/bold red]")
         agent.save_model()
+        if isinstance(agent.env.reward_strategy, DominanceNoveltyRS):
+            agent.env.reward_strategy.elite_archive.save_archive()
 
 
 if __name__ == "__main__":

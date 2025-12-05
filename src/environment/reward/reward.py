@@ -132,9 +132,7 @@ class RewardStrategy(abc.ABC):
 
     # use overload for method overloading (cannot use abstract method for this)
     @overload
-    def compute_reward(
-        self, metrics: "Metrics", arch_config: None = None
-    ) -> float | dict[str, float]: ...
+    def compute_reward(self, metrics: "Metrics") -> float | dict[str, float]: ...
     @overload
     def compute_reward(
         self, metrics: "TrainingFreeMetrics", arch_config: NetworkConfig
