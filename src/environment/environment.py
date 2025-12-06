@@ -157,7 +157,7 @@ class CustomEnv(gym.Env):
 
         decisions = transform_action_indices_to_decisions(decision_logits)
         if decisions.action_choice == StandardAction.NONE:  # Stop and evaluate
-            reward = self.evaluate_architecture(self.current_network_config)
+            reward = self.evaluate_architecture(self.current_network_config, log_arch=True)
             terminated = True
             truncated = False
             self.actions_taken = 0  # Reset for next episode
@@ -204,7 +204,6 @@ class CustomEnv(gym.Env):
         elif isinstance(self.reward_strategy, TchebycheffRS):
             proxy_metrics = self.evaluator.evaluate_by_proxy(architecture)
             reward = self.reward_strategy.compute_reward(metrics=proxy_metrics)
-            print("Reward from TchebycheffRS:", reward)
         else:
             trained_model, training_time = self.train_classifier(model=architecture)
             evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)

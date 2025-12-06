@@ -124,7 +124,7 @@ class RLAgent:
     def train(self, total_timesteps: int = 1000000):
         console.print("[bold green]Training RL Agent... [/bold green]")
         self.model.learn(
-            total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=10000)
+            total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=100000)
         )
 
     def save_model(self):

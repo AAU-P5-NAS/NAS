@@ -67,7 +67,6 @@ class TensorboardLogger:
         log_folder: str = "tensorboard_logs/",
     ):
         self.writer = writer
-        print("logger:", logger)
         self.logger = (
             logger
             if logger is not None
@@ -114,8 +113,6 @@ class TensorboardLogger:
             self.newest_architecture = architecture
         if current_config is not None:
             self.current_config = current_config
-        print("Evaluation count:", self.evaluation_count)
-        print("Log interval:", self.log_interval)
         if self.evaluation_count % self.log_interval == 0:
             self.log_to_tensorboard(proxy_metrics=proxy_metrics)
 
@@ -139,10 +136,7 @@ class TensorboardLogger:
             record_optional("Custom/FLOPs", self.newest_metrics.flops)
             record_optional("Custom/Runtime", self.newest_metrics.runtime)
             record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
-        print("Logging to TensorBoard at evaluation count:", self.evaluation_count)
-        print("proxy_metrics:", proxy_metrics)
         if proxy_metrics is not None:
-            print("Logging proxy metrics to TensorBoard")
             record_optional("Custom Proxy/Synflow", proxy_metrics.synflow)
             record_optional("Custom Proxy/Jacov", proxy_metrics.jacov)
             record_optional("Custom Proxy/Snip", proxy_metrics.snip)
@@ -167,7 +161,6 @@ class TensorboardLogger:
         proxy_metrics: Optional[TrainingFreeMetrics] = None,
     ):
         """Update state, print to console, and log to TensorBoard."""
-
         self.evaluation_count += 1
 
         # Track averages first
