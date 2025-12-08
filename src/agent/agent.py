@@ -114,7 +114,7 @@ class RLAgent:
             device="cpu",
             learning_rate=rl_learning_rate,
             seed=policy_seed,
-            n_steps=(MAX_LAYERS + 1) * 16,  # type: ignore
+            n_steps=(MAX_LAYERS + 1) * 128,  # type: ignore
             normalize_advantage=True,  # type: ignore
         )
         self.model.set_logger(tb_logger.logger)
@@ -124,7 +124,8 @@ class RLAgent:
     def train(self, total_timesteps: int = 1000000):
         with console.status("[bold green]Training RL Agent... [/bold green]"):
             self.model.learn(
-                total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=10000)
+                total_timesteps=total_timesteps,
+                callback=EpisodeLimitCallback(max_episodes=total_timesteps // (MAX_LAYERS + 1)),
             )
 
     def save_model(self):
