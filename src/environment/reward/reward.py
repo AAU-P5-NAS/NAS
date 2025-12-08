@@ -48,10 +48,10 @@ class Weights(BaseModel):
     @classmethod
     def tchebycheffWeights(cls):
         weights = {
-            "synflow": 0.3,
-            "jacov": 0.3,
-            "snip": 0.3,
-            "complexity": 0.1,
+            "synflow": 0.2,
+            "jacov": 0.2,
+            "snip": 0.2,
+            "complexity": 0.2,
         }
 
         total = sum(weights.values())
