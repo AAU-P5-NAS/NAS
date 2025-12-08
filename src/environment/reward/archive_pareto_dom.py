@@ -14,10 +14,10 @@ ARCHIVE_DIR = "src/environment/reward/saved_archives"
 
 
 class ProxyBaselines(BaseModel):
-    synflow: Optional[Tuple[float, float]] = None
-    jacov: Optional[Tuple[float, float]] = None
-    snip: Optional[Tuple[float, float]] = None
-    complexity: Optional[Tuple[float, float]] = None
+    synflow: Optional[Tuple[float, float]] =  (0, 7.76e6)
+    jacov: Optional[Tuple[float, float]] = (1.03e-7, 2.75e-4)
+    snip: Optional[Tuple[float, float]] = (0,2500)
+    complexity: Optional[Tuple[float, float]] = (2.99e4, 1.75e7)
 
 
 class ArchiveEntry(BaseModel):
