@@ -7,7 +7,7 @@ import torch
 from rich.console import Console
 
 from src.environment.metrics import Metrics, TrainingFreeMetrics
-from src.utils.network_config import  NetworkConfig
+from src.utils.network_config import NetworkConfig
 from src.utils.layer_config import LayerConfig
 
 
@@ -17,6 +17,12 @@ class ArchitectureCacheEntry:
     metrics: Metrics
     reward: float
 
+    
+@dataclass
+class ProxyArchitectureCacheEntry:
+    architecture: list[LayerConfig]
+    metrics: TrainingFreeMetrics
+    reward: float
 
 class BestFiftyArchitecturesCache:
     # Sorted list of best fifty architectures based on accuracy
@@ -39,7 +45,7 @@ class BestFiftyArchitecturesCache:
         else:
             # Check if new entry is better than the worst in cache
             worst_entry = self.cache[-1]
-            if (metrics.accuracy or 0) > (worst_entry.metrics.accuracy or 0):
+            if (reward or 0) > (worst_entry.reward or 0):
                 self.cache[-1] = entry
                 self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
 
@@ -56,8 +62,47 @@ class BestFiftyArchitecturesCache:
                 f.write("\n" + "=" * 80 + "\n\n")
 
 
+class BestFiftyProxyArchitecturesCache:
+    # Sorted list of best fifty architectures based on accuracy
+    cache: list[ProxyArchitectureCacheEntry] = []
+
+    def add_entry_if_needed(
+        self,
+        architecture: list[LayerConfig],
+        metrics: TrainingFreeMetrics,
+        reward: float,
+        tensorboard_logger: TensorboardLogger,
+    ):
+        entry = ProxyArchitectureCacheEntry(architecture=architecture, metrics=metrics, reward=reward)
+        # If cache has less than 50 entries, add directly
+        if len(self.cache) < 50:
+            self.cache.append(entry)
+            self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
+
+        else:
+            # Check if new entry is better than the worst in cache
+            worst_entry = self.cache[-1]
+            if (reward or 0) > (worst_entry.reward or 0):
+                self.cache[-1] = entry
+                self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
+
+        self._write_to_file(tensorboard_logger)
+
+    def _write_to_file(self, tensorboard_logger: TensorboardLogger):
+        with open("best_fifty_proxy_architectures.txt", "w") as f:
+            for i, entry in enumerate(self.cache):
+                f.write(f"Architecture Rank {i + 1}:\n")
+                f.write(f"Metrics: {entry.metrics}\n")
+                f.write(
+                    tensorboard_logger.get_layers_as_str(entry.architecture, is_for_console=False)
+                )
+                f.write("\n" + "=" * 80 + "\n\n")
+
+
+
 class TensorboardLogger:
     best_fifty_cache = BestFiftyArchitecturesCache()
+    best_fifty_proxy_cache = BestFiftyProxyArchitecturesCache()
 
     def __init__(
         self,
@@ -113,7 +158,6 @@ class TensorboardLogger:
             self.newest_architecture = architecture
         if current_config is not None:
             self.current_config = current_config
-
         if self.evaluation_count % self.log_interval == 0:
             self.log_to_tensorboard(proxy_metrics=proxy_metrics)
 
@@ -137,7 +181,6 @@ class TensorboardLogger:
             record_optional("Custom/FLOPs", self.newest_metrics.flops)
             record_optional("Custom/Runtime", self.newest_metrics.runtime)
             record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
-        
         if proxy_metrics is not None:
             record_optional("Custom Proxy/Synflow", proxy_metrics.synflow)
             record_optional("Custom Proxy/Jacov", proxy_metrics.jacov)
@@ -155,16 +198,14 @@ class TensorboardLogger:
 
     def log_evaluation(
         self,
-        reward: float | dict[str, float],        
+        reward: float | dict[str, float],
         architecture: torch.nn.Module | None,
         current_config: NetworkConfig | None,
-        actions_taken: Optional[int] = None,      
-        metrics: Optional[Metrics] = None,  
+        actions_taken: Optional[int] = None,
+        metrics: Optional[Metrics] = None,
         proxy_metrics: Optional[TrainingFreeMetrics] = None,
-
     ):
         """Update state, print to console, and log to TensorBoard."""
-
         self.evaluation_count += 1
 
         # Track averages first
@@ -189,11 +230,18 @@ class TensorboardLogger:
             actions_taken=actions_taken,
         )
         if proxy_metrics is not None:
+            if current_config and self.newest_reward:
+                self.best_fifty_proxy_cache.add_entry_if_needed(
+                    architecture=current_config.layers,
+                    metrics=proxy_metrics,
+                    reward=self.newest_reward,
+                    tensorboard_logger=self,
+                )
             return
 
         if metrics is None:
             return
-        
+
         avg_accuracy = -1
         if metrics.accuracy is not None:
             self.sum_accuracy += metrics.accuracy
