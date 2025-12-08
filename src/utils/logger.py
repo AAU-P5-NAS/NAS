@@ -243,7 +243,7 @@ class TensorboardLogger:
         if proxy_metrics is not None:
             if current_config and self.newest_reward:
                 self.best_fifty_proxy_cache.add_entry_if_needed(
-                    architecture=current_config.layers,
+                    architecture=current_config,
                     metrics=proxy_metrics,
                     reward=self.newest_reward,
                     tensorboard_logger=self,
