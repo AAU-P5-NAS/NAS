@@ -62,17 +62,14 @@ class BestFiftyArchitecturesCache:
                 )
                 f.write("\n" + "=" * 80 + "\n\n")
 
-    def save_architectures_json(self, filepath: str):
+    def save_architectures_pickle(self, filepath: str):
 
-        archs = [entry.architecture for entry in self.cache]
         with open(filepath, "wb") as f:
-            pickle.dump(archs, f)
+            pickle.dump(self.cache, f)
 
-    def load_architectures_json(self, filepath: str) -> list[NetworkConfig]:
+    def load_architectures_pickle(self, filepath: str):
         with open(filepath, "rb") as f:
-            architectures = pickle.load(f)
-
-        return architectures
+            self.cache = pickle.load(f)
         
 
 

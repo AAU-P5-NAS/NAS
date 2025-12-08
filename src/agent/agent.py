@@ -131,8 +131,8 @@ class RLAgent:
         """Save the trained model"""
         os.makedirs(os.path.dirname(self.model_save_path), exist_ok=True)
         self.model.save(self.model_save_path)
-        tb_logger.best_fifty_cache.save_architectures_json(
-            f"{self.model_save_path}_best_fifty_architectures.json"
+        tb_logger.best_fifty_cache.save_architectures_pickle(
+            f"{self.model_save_path}_best_fifty_architectures.pickle"
         )
 
         print(f"Model saved to '{self.model_save_path}'")
@@ -142,6 +142,9 @@ class RLAgent:
         self.model_save_path = f"{self.MODEL_SAVE_DIRECTORY}{model_name}"
         if os.path.exists(f"{self.model_save_path}.zip"):
             self.model = self.model.load(self.model_save_path, env=self.env)
+            tb_logger.best_fifty_cache.load_architectures_pickle(
+                f"{self.model_save_path}_best_fifty_architectures.pickle"
+            )
             print(f"Model loaded from '{self.model_save_path}'")
         else:
             print(f"No model found at '{self.model_save_path}'")
