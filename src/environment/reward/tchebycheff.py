@@ -12,7 +12,6 @@ class TchebycheffRS(RewardStrategy):
     def __init__(self, weights: Weights, baselines: Baselines = Baselines()):
         super().__init__(weights, baselines)
         self.proxy_baselines = ProxyBaselines()
-        self.epsilon = 1e-12  # small number to avoid division by zero
 
     def update_baselines(self, metrics: TrainingFreeMetrics):
         for proxy_name in ["synflow", "jacov", "snip", "complexity"]:
@@ -32,12 +31,12 @@ class TchebycheffRS(RewardStrategy):
             if value is None or baseline is None:
                 continue
             min_val, max_val = baseline
-            normalized_value = (value - min_val) / (max_val - min_val + self.epsilon)
+            normalized_value = (value - min_val) / (max_val - min_val)
             setattr(normalized, proxy_name, normalized_value)
         return normalized
 
     def compute_reward(self, metrics: TrainingFreeMetrics) -> float:
-        self.update_baselines(metrics)
+        # self.update_baselines(metrics) # No need now, since baselines are initialized with fixed values
         weights = Weights.tchebycheffWeights().model_dump()
         proxy_baselines = self.proxy_baselines.model_dump()
 
@@ -50,7 +49,7 @@ class TchebycheffRS(RewardStrategy):
                 getattr(metrics, metric_name, 0)
                 - proxy_baselines[metric_name][0 if metric_name in ["complexity"] else 1]
             )
-            normalized_diff = diff / (range_width + self.epsilon)
+            normalized_diff = diff / range_width
             weighted_diff = weight * normalized_diff
             weighted_diffs.append(weighted_diff)
 
