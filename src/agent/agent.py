@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from src.environment.reward.weighted_sum import WeightedSumRS
 from src.environment.metrics import Evaluator
 from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
-from src.utils.logger import TensorboardLogger
+from src.utils.logger import TensorboardLogger, BestFiftyArchitecturesCache
 from src.utils.hyperparameters import SLHyperParameters
 from src.environment.environment import CustomEnv, MAX_LAYERS
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -131,6 +131,10 @@ class RLAgent:
         """Save the trained model"""
         os.makedirs(os.path.dirname(self.model_save_path), exist_ok=True)
         self.model.save(self.model_save_path)
+        tb_logger.best_fifty_cache.save_architectures_json(
+            f"{self.model_save_path}_best_fifty_architectures.json"
+        )
+
         print(f"Model saved to '{self.model_save_path}'")
 
     def load_model(self, model_name: str):

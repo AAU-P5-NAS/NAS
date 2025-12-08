@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
 import torch
@@ -13,7 +13,7 @@ from src.utils.layer_config import LayerConfig
 
 @dataclass
 class ArchitectureCacheEntry:
-    architecture: list[LayerConfig]
+    architecture: NetworkConfig
     metrics: Metrics
     reward: float
 
@@ -24,7 +24,7 @@ class BestFiftyArchitecturesCache:
 
     def add_entry_if_needed(
         self,
-        architecture: list[LayerConfig],
+        architecture: NetworkConfig,
         metrics: Metrics,
         reward: float,
         tensorboard_logger: TensorboardLogger,
@@ -51,9 +51,34 @@ class BestFiftyArchitecturesCache:
                 f.write(f"Architecture Rank {i + 1}:\n")
                 f.write(f"Metrics: {entry.metrics}\n")
                 f.write(
-                    tensorboard_logger.get_layers_as_str(entry.architecture, is_for_console=False)
+                    tensorboard_logger.get_layers_as_str(entry.architecture.layers, is_for_console=False)
                 )
                 f.write("\n" + "=" * 80 + "\n\n")
+
+    def save_architectures_json(self, filepath: str):
+        import json  
+
+        architecture_list: list[dict[str, Any]] = []
+        for entry in self.cache:
+            architecture_list.append(entry.architecture.__dict__)       
+
+        with open(filepath, "w") as f:
+            json.dump(architecture_list, f, indent=4)
+
+    def load_architectures_json(self, filepath: str) -> list[NetworkConfig]:
+        import json  
+
+        with open(filepath, "r") as f:
+            architecture_dicts = json.load(f)
+
+        architectures: list[NetworkConfig] = []
+        for arch_dict in architecture_dicts:
+            layers = [LayerConfig(**layer_dict) for layer_dict in arch_dict["layers"]]
+            architecture = NetworkConfig(layers=layers)
+            architectures.append(architecture)
+
+        return architectures
+        
 
 
 class TensorboardLogger:
@@ -213,7 +238,7 @@ class TensorboardLogger:
 
         if current_config and self.newest_reward:
             self.best_fifty_cache.add_entry_if_needed(
-                architecture=current_config.layers,
+                architecture=current_config,
                 metrics=metrics,
                 reward=self.newest_reward,
                 tensorboard_logger=self,
