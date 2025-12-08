@@ -66,10 +66,10 @@ class BestFiftyArchitecturesCache:
 
         architecture_list: list[dict[str, Any]] = []
         for entry in self.cache:
-            architecture_list.append(entry.architecture.__dict__)       
+            architecture_list.append(dict(entry.architecture))       
 
         with open(filepath, "w") as f:
-            json.dump(architecture_list, f, indent=4, default=lambda o: o.__dict__)
+            json.dump(architecture_list, f, indent=4, default=lambda o: dict(o))
 
     def load_architectures_json(self, filepath: str) -> list[NetworkConfig]:
         import json  
