@@ -9,6 +9,7 @@ from rich.console import Console
 from src.environment.metrics import Metrics, TrainingFreeMetrics
 from src.utils.network_config import NetworkConfig
 from src.utils.layer_config import LayerConfig
+import pickle
 
 
 @dataclass
@@ -20,9 +21,15 @@ class ArchitectureCacheEntry:
     
 @dataclass
 class ProxyArchitectureCacheEntry:
-    architecture: list[LayerConfig]
+    architecture: NetworkConfig
     metrics: TrainingFreeMetrics
     reward: float
+
+def serialize(obj: Any) -> Any:
+    if isinstance(obj, Enum):
+        return obj.__dict__
+    if hasattr(obj, "__dict__"):
+        return {k: serialize(v) for k, v in obj.__dict__.items()}
 
 class BestFiftyArchitecturesCache:
     # Sorted list of best fifty architectures based on accuracy
@@ -62,26 +69,12 @@ class BestFiftyArchitecturesCache:
                 f.write("\n" + "=" * 80 + "\n\n")
 
     def save_architectures_json(self, filepath: str):
-        import json  
-
-        architecture_list: list[dict[str, Any]] = []
-        for entry in self.cache:
-            architecture_list.append(dict(entry.architecture))       
-
-        with open(filepath, "w") as f:
-            json.dump(architecture_list, f, indent=4, default=lambda o: dict(o))
+        with open(filepath, "wb") as f:
+            pickle.dump(map(lambda entry: entry.architecture, self.cache), f)
 
     def load_architectures_json(self, filepath: str) -> list[NetworkConfig]:
-        import json  
-
-        with open(filepath, "r") as f:
-            architecture_dicts = json.load(f)
-
-        architectures: list[NetworkConfig] = []
-        for arch_dict in architecture_dicts:
-            layers = [LayerConfig(**layer_dict) for layer_dict in arch_dict["layers"]]
-            architecture = NetworkConfig(layers=layers)
-            architectures.append(architecture)
+        with open(filepath, "rb") as f:
+            architectures = pickle.load(f)
 
         return architectures
         
@@ -93,7 +86,7 @@ class BestFiftyProxyArchitecturesCache:
 
     def add_entry_if_needed(
         self,
-        architecture: list[LayerConfig],
+        architecture: NetworkConfig,
         metrics: TrainingFreeMetrics,
         reward: float,
         tensorboard_logger: TensorboardLogger,
@@ -119,7 +112,7 @@ class BestFiftyProxyArchitecturesCache:
                 f.write(f"Architecture Rank {i + 1}:\n")
                 f.write(f"Metrics: {entry.metrics}\n")
                 f.write(
-                    tensorboard_logger.get_layers_as_str(entry.architecture, is_for_console=False)
+                    tensorboard_logger.get_layers_as_str(entry.architecture.layers, is_for_console=False)
                 )
                 f.write("\n" + "=" * 80 + "\n\n")
 
