@@ -25,12 +25,6 @@ class ProxyArchitectureCacheEntry:
     metrics: TrainingFreeMetrics
     reward: float
 
-def serialize(obj: Any) -> Any:
-    if isinstance(obj, Enum):
-        return obj.__dict__
-    if hasattr(obj, "__dict__"):
-        return {k: serialize(v) for k, v in obj.__dict__.items()}
-
 class BestFiftyArchitecturesCache:
     # Sorted list of best fifty architectures based on accuracy
     cache: list[ArchitectureCacheEntry] = []
@@ -69,8 +63,10 @@ class BestFiftyArchitecturesCache:
                 f.write("\n" + "=" * 80 + "\n\n")
 
     def save_architectures_json(self, filepath: str):
+
+        archs = [entry.architecture for entry in self.cache]
         with open(filepath, "wb") as f:
-            pickle.dump(map(lambda entry: entry.architecture, self.cache), f)
+            pickle.dump(archs, f)
 
     def load_architectures_json(self, filepath: str) -> list[NetworkConfig]:
         with open(filepath, "rb") as f:
