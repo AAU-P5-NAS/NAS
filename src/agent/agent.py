@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from src.environment.reward.weighted_sum import WeightedSumRS
 from src.environment.metrics import Evaluator
 from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
-from src.utils.logger import TensorboardLogger, BestFiftyArchitecturesCache
+from src.utils.logger import TensorboardLogger
 from src.utils.hyperparameters import SLHyperParameters
 from src.environment.environment import CustomEnv, MAX_LAYERS
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -124,7 +124,8 @@ class RLAgent:
     def train(self, total_timesteps: int = 1000000):
         console.print("[bold green]Training RL Agent... [/bold green]")
         self.model.learn(
-            total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=100000)
+            total_timesteps=total_timesteps,
+            callback=EpisodeLimitCallback(max_episodes=total_timesteps // (MAX_LAYERS + 1)),
         )
 
     def save_model(self):
