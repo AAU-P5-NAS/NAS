@@ -6,6 +6,7 @@ from src.environment.reward.reward import Weights
 from src.environment.reward.weighted_sum import WeightedSumRS
 from src.utils.architecture import Architecture
 import src.agent.agent as agent
+from src.utils.logger import get_layers_as_str
 import time
 from rich.console import Console
 
@@ -29,6 +30,7 @@ console = Console()
 
 rank: int = 1
 for entry in cache:    
+    print(get_layers_as_str(entry.architecture.layers, is_for_console=True))
     architecture = Architecture(entry.architecture, num_classes=num_classes_train, input_dimensions=dimensions)
     start_time = time.time()
     for epoch in range(EPOCHS):

@@ -297,38 +297,38 @@ class TensorboardLogger:
             layers (list): List of layer objects.
         """
 
-        self.console.print(self.get_layers_as_str(layers, is_for_console=True))
+        self.console.print(get_layers_as_str(layers, is_for_console=True))
 
-    def get_layers_as_str(self, layers: list[LayerConfig], is_for_console: bool) -> str:
-        layers_str = ""
-        indent = "    "
 
-        if is_for_console:
-            layers_str += "[bold yellow]Architecture:[/bold yellow]"
+def get_layers_as_str(layers: list[LayerConfig], is_for_console: bool) -> str:
+    layers_str = ""
+    indent = "    "
 
-            for i, layer in enumerate(layers):
-                if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
-                    layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
+    if is_for_console:
+        layers_str += "[bold yellow]Architecture:[/bold yellow]"
 
-                elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
-                    layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
+        for i, layer in enumerate(layers):
+            if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
+                layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
 
-                elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
-                    layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
+                layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
 
-        else:
-            for i, layer in enumerate(layers):
-                if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
-                    layers_str += f"\nLayer {i}: {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
+                layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
 
-                elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
-                    layers_str += f"\nLayer {i}: {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}\n"
+    else:
+        for i, layer in enumerate(layers):
+            if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
+                layers_str += f"\nLayer {i}: {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
 
-                elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
-                    layers_str += f"\nLayer {i}: {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
+                layers_str += f"\nLayer {i}: {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}\n"
 
-        return layers_str
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
+                layers_str += f"\nLayer {i}: {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
 
+    return layers_str
 
 class NoOpLogger:
     evaluation_count: int = 0
