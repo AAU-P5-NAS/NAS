@@ -58,7 +58,7 @@ class BestFiftyArchitecturesCache:
                 f.write(f"Architecture Rank {i + 1}:\n")
                 f.write(f"Metrics: {entry.metrics}\n")
                 f.write(
-                    tensorboard_logger.get_layers_as_str(entry.architecture.layers, is_for_console=False)
+                    get_layers_as_str(entry.architecture.layers, is_for_console=False)
                 )
                 f.write("\n" + "=" * 80 + "\n\n")
 
@@ -105,7 +105,7 @@ class BestFiftyProxyArchitecturesCache:
                 f.write(f"Architecture Rank {i + 1}:\n")
                 f.write(f"Metrics: {entry.metrics}\n")
                 f.write(
-                    tensorboard_logger.get_layers_as_str(entry.architecture.layers, is_for_console=False)
+                    get_layers_as_str(entry.architecture.layers, is_for_console=False)
                 )
                 f.write("\n" + "=" * 80 + "\n\n")
 
