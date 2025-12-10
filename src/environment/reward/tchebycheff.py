@@ -52,8 +52,8 @@ class TchebycheffRS(RewardStrategy):
             normalized_diff = diff / range_width
             weighted_diff = weight * normalized_diff
             weighted_diffs.append(weighted_diff)
-            print("normalized_diff:", normalized_diff)
-            print("weighted_diff", weighted_diff)
+            # print("normalized_diff:", normalized_diff)
+            # print("weighted_diff", weighted_diff)
 
         deviation = max(weighted_diffs, default=0.0)
         return 1 - deviation
