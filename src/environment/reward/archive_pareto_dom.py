@@ -138,6 +138,75 @@ class ElitistArchive:
         print(f"Archive loaded from {latest_file}")
         return self.elites
 
+    def sort_archs(self):
+        elite_archs = ElitistArchive.load_archive(self)
+        snip = elite_archs.copy()
+        synflow = elite_archs.copy()
+        jacov = elite_archs.copy()
+        complexity = elite_archs.copy()
+        ws = elite_archs.copy()
+
+        snip.sort(reverse=True, key=lambda arch: arch.metrics.snip)  # type: ignore
+        synflow.sort(reverse=True, key=lambda arch: arch.metrics.synflow)  # type: ignore
+        jacov.sort(reverse=True, key=lambda arch: arch.metrics.jacov)  # type: ignore
+        complexity.sort(reverse=False, key=lambda arch: arch.metrics.snip)  # type: ignore
+
+        baselines = {
+            "synflow": (
+                float(
+                    synflow[-1].metrics.synflow if synflow[-1].metrics.synflow is not None else 0.0
+                ),
+                float(
+                    synflow[0].metrics.synflow if synflow[0].metrics.synflow is not None else 0.0
+                ),
+            ),
+            "jacov": (
+                float(jacov[-1].metrics.jacov if jacov[-1].metrics.jacov is not None else 0.0),
+                float(jacov[0].metrics.jacov if jacov[0].metrics.jacov is not None else 0.0),
+            ),
+            "snip": (
+                float(snip[-1].metrics.snip if snip[-1].metrics.snip is not None else 0.0),
+                float(snip[0].metrics.snip if snip[0].metrics.snip is not None else 0.0),
+            ),
+            "complexity": (
+                float(
+                    complexity[-1].metrics.complexity
+                    if complexity[-1].metrics.complexity is not None
+                    else 0.0
+                ),
+                float(
+                    complexity[0].metrics.complexity
+                    if complexity[0].metrics.complexity is not None
+                    else 0.0
+                ),
+            ),
+        }
+
+        normalized_weights = Weights.tchebycheffWeights().model_dump()
+        for arch in ws:
+            sum = 0.0
+            for metric_name, weight in normalized_weights.items():
+                if weight == 0:
+                    continue
+                range_width = baselines[metric_name][1] - baselines[metric_name][0]
+                diff = abs(getattr(arch.metrics, metric_name, 0) - baselines[metric_name][1])
+                normalized_value = diff / range_width
+                weighted_value = weight * normalized_value
+                sum += weighted_value
+
+            print("Weighted sum for arch:", sum)
+            setattr(arch.metrics, "accuracy", sum)
+
+        ws.sort(reverse=True, key=lambda arch: arch.metrics.accuracy)  # type: ignore
+        sorted_lists = SortedLists(
+            snip_sorted=snip,
+            synflow_sorted=synflow,
+            jacov_sorted=jacov,
+            complexity_sorted=complexity,
+            ws_sorted=ws,
+        )
+        return sorted_lists
+
 
 class DominanceNoveltyRS(RewardStrategy):
     """
@@ -199,3 +268,17 @@ class DominanceNoveltyRS(RewardStrategy):
 
     def get_archive_size(self) -> int:
         return self.elite_archive.size()
+
+
+class SortedLists(BaseModel):
+    snip_sorted: List[ArchiveEntry]
+    synflow_sorted: List[ArchiveEntry]
+    jacov_sorted: List[ArchiveEntry]
+    complexity_sorted: List[ArchiveEntry]
+    ws_sorted: List[ArchiveEntry]
+
+
+# ====================
+if __name__ == "__main__":
+    archive = ElitistArchive()
+    archive.sort_archs()

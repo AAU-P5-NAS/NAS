@@ -92,6 +92,18 @@ def main():
             console.print("[bold green]Loading archive from[/bold green]")
             loader = DominanceNoveltyRS(Weights(accuracy=0.8, flops=0.2))
             archive = loader.elite_archive.load_archive()
+            sorted_lists = loader.elite_archive.sort_archs()
+            print("size of archive: ", loader.get_archive_size())
+            for arch in sorted_lists.synflow_sorted[:10]:
+                console.print(f"Synflow: {arch.metrics.synflow}")
+            for arch in sorted_lists.snip_sorted[:10]:
+                console.print(f"Snip: {arch.metrics.snip}")
+            for arch in sorted_lists.jacov_sorted[:10]:
+                console.print(f"Jacov: {arch.metrics.jacov}")
+            for arch in sorted_lists.complexity_sorted[:10]:
+                console.print(f"Complexity: {arch.metrics.complexity}")
+            for arch in sorted_lists.ws_sorted[:10]:
+                console.print(f"Weighted Sum: {arch.metrics.accuracy}")
             if archive is None:
                 console.print("[bold red]No archive found.[/bold red]")
                 return
@@ -127,6 +139,9 @@ def main():
         if isinstance(agent.env.reward_strategy, DominanceNoveltyRS):
             agent.env.reward_strategy.elite_archive.save_archive()
 
+    if isinstance(agent.env.reward_strategy, DominanceNoveltyRS):
+        agent.env.reward_strategy.elite_archive.save_archive()
+
 
 if __name__ == "__main__":
-    main() 
+    main()
