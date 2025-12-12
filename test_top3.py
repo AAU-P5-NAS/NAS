@@ -14,67 +14,107 @@ console = Console()
 
 
 def main():
-    model = [None, None, None]
-    model[0] = nn.Sequential(
-        nn.Conv2d(3, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=2),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 64, kernel_size=5, stride=1, padding=2),
-        nn.BatchNorm2d(64),
-        nn.AdaptiveAvgPool2d((1, 1)),
-        nn.Flatten(),
-        nn.Dropout(0.2),
-        nn.Linear(64, 10),
-    )
-    model[1] = nn.Sequential(
-        nn.Conv2d(3, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(64),
-        nn.AdaptiveAvgPool2d((1, 1)),
-        nn.Flatten(),
-        nn.Dropout(0.2),
-        nn.Linear(64, 10),
-    )
-    model[2] = nn.Sequential(
-        nn.Conv2d(3, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
-        nn.BatchNorm2d(128),
-        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(128),
-        nn.AdaptiveAvgPool2d((1, 1)),
-        nn.Flatten(),
-        nn.Dropout(0.2),
-        nn.Linear(128, 10),
-    )
+    model = [
+        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 4: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 64, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 64, kernel_size=5, stride=2, padding=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Dropout(0.2),
+            nn.Linear(64 * 8 * 8, 10),
+        ),
+        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 64, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Dropout(0.2),
+            nn.Linear(64 * 8 * 8, 10),
+        ),
+        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 4: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=5, stride=2, padding=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 64, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 64, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Dropout(0.2),
+            nn.Linear(64 * 8 * 8, 10),
+        ),
+    ]
     metrics = [None, None, None]
     importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
     trainer = Trainer(
