@@ -12,7 +12,7 @@
             "args": [
                 "--report-exception",
                 //"--load-model", "PPO"
-                "--use-tchebycheff"
+                //"--use-tchebycheff"
             ]
         },
         {
