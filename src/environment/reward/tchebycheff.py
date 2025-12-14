@@ -50,6 +50,7 @@ class TchebycheffRS(RewardStrategy):
                 - proxy_baselines[metric_name][0 if metric_name in ["complexity", "jacov"] else 1]
             )
             normalized_diff = diff / range_width
+            normalized_diff = min(normalized_diff, 1.0)  # Clamp to ensure reward >= 0.75
             weighted_diff = weight * normalized_diff
             weighted_diffs.append(weighted_diff)
             # print("normalized_diff:", normalized_diff)
