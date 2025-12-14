@@ -47,7 +47,7 @@ class TchebycheffRS(RewardStrategy):
             range_width = proxy_baselines[metric_name][1] - proxy_baselines[metric_name][0]
             diff = abs(
                 getattr(metrics, metric_name, 0)
-                - proxy_baselines[metric_name][0 if metric_name in ["complexity"] else 1]
+                - proxy_baselines[metric_name][0 if metric_name in ["complexity", "jacov"] else 1]
             )
             normalized_diff = diff / range_width
             weighted_diff = weight * normalized_diff
