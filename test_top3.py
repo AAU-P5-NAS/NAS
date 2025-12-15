@@ -23,7 +23,7 @@ def main():
         # Layer 4: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
         # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
         # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        nn.Sequential(
+        """nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
@@ -48,7 +48,7 @@ def main():
             nn.Flatten(),
             nn.Dropout(0.2),
             nn.Linear(64 * 8 * 8, 10),
-        ),
+        ),"""
         # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
         # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
         # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
@@ -117,20 +117,20 @@ def main():
         ),
     ]
     metrics = [None, None, None]
-    importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
-    trainer = Trainer(
-        dataloaders=importer.get_dataloaders(batch_size=64),
-        loss_function=torch.nn.CrossEntropyLoss(),
-    )
-    evaluator = Evaluator(
-        num_classes=10,
-        dataloaders=importer.get_dataloaders(batch_size=64, shuffle=False),
-        dimensions=importer.get_dimensions(),
-        device=torch.device("cuda"),
-        loss_function=torch.nn.CrossEntropyLoss(),
-    )
-    optimizer = Adam(model[0].parameters(), 0.00132)
     for i in range(3):
+        importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
+        trainer = Trainer(
+            dataloaders=importer.get_dataloaders(batch_size=64),
+            loss_function=torch.nn.CrossEntropyLoss(),
+        )
+        evaluator = Evaluator(
+            num_classes=10,
+            dataloaders=importer.get_dataloaders(batch_size=64, shuffle=False),
+            dimensions=importer.get_dimensions(),
+            device=torch.device("cuda"),
+            loss_function=torch.nn.CrossEntropyLoss(),
+        )
+        optimizer = Adam(model[0].parameters(), 0.00132)
         print(f"training arch {i + 1}")
         for epoch in range(75):
             print("Epoch:", epoch + 1)
