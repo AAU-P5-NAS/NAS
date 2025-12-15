@@ -12,7 +12,7 @@ from torch.optim import Adam
 
 console = Console()
 
-def get_dominance_models():
+def get_1():
     return nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
@@ -39,26 +39,8 @@ def get_dominance_models():
             nn.Dropout(0.2),
             nn.Linear(64 * 8 * 8, 10),
         )
-
-def main():
-    torch.manual_seed(42)
-    model = [
-        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 4: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        
-        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        nn.Sequential(
+def get_2():
+    return nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
@@ -83,7 +65,27 @@ def main():
             nn.Flatten(),
             nn.Dropout(0.2),
             nn.Linear(64 * 8 * 8, 10),
-        ),
+        )
+
+def main():
+    torch.manual_seed(42)
+    model = [
+        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 4: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        
+        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        
         # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
         # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
         # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
