@@ -49,7 +49,7 @@ class ElitistArchive:
             val2 = getattr(metrics_2, proxy, None)
             if val1 is None or val2 is None:
                 continue
-            if proxy == "complexity":  # minimize
+            if proxy in ["complexity", "jacov"] :  # minimize
                 if val1 > val2:
                     return False
             else:  # maximize
