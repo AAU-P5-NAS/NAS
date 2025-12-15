@@ -134,10 +134,10 @@ def main():
         for epoch in range(75):
             print("Epoch:", epoch + 1)
             trainer.train(model[i], optimizer)
-        metrics[i] = evaluator.evaluate(model[i])
-        console.print(
-            f"[bold green]Metrics for arch {i + 1}: Accuracy: {metrics[i].accuracy:.4f}, FLOPS: {metrics[i].flops:.2f}[/bold green]"
-        )
+            metrics[i] = evaluator.evaluate(model[i])
+            console.print(
+                f"[bold green]Metrics for arch {i + 1}: Accuracy: {metrics[i].accuracy:.4f}, FLOPS: {metrics[i].flops:.2f}[/bold green]"
+            )
 
 
 if __name__ == "__main__":
