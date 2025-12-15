@@ -38,24 +38,22 @@ def main():
                  (best_we_arch, "best_we_arch")]
 
 
-    metrics = [None, None, None]
-    importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
-    
-    trainer = Trainer(
-        dataloaders=importer.get_dataloaders(batch_size=64),
-        loss_function=torch.nn.CrossEntropyLoss(),
-    )
-    
-    evaluator = Evaluator(
-        num_classes=10,
-        dataloaders=importer.get_dataloaders(batch_size=64, shuffle=False),
-        dimensions=importer.get_dimensions(),
-        device=torch.device("cuda"),
-        loss_function=torch.nn.CrossEntropyLoss(),
-    )
-
-
     for model, name in best_arch:
+        metrics = [None, None, None]
+        importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
+        
+        trainer = Trainer(
+            dataloaders=importer.get_dataloaders(batch_size=64),
+            loss_function=torch.nn.CrossEntropyLoss(),
+        )
+        
+        evaluator = Evaluator(
+            num_classes=10,
+            dataloaders=importer.get_dataloaders(batch_size=64, shuffle=False),
+            dimensions=importer.get_dimensions(),
+            device=torch.device("cuda"),
+            loss_function=torch.nn.CrossEntropyLoss(),
+        )
         optimizer = Adam(model.parameters(), 0.00132)
         print(f"Training ${name}")
     
