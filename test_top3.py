@@ -162,7 +162,7 @@ def main():
     for epoch in range(75):
         print("Epoch:", epoch + 1)
         trainer.train(model, optimizer)
-        metrics = evaluator.evaluate(model[i])
+        metrics = evaluator.evaluate(model)
         console.print(
             f"[bold green]Metrics: Accuracy: {metrics.accuracy:.4f}, FLOPS: {metrics.flops:.2f}[/bold green]"
         )
