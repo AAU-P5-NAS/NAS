@@ -117,7 +117,7 @@ def main():
             nn.BatchNorm2d(128),
             nn.Flatten(),
             nn.Dropout(0.2),
-            nn.Linear(128 * 8 * 8, 10),
+            nn.Linear(128 * 32 * 32, 10),
         )
     #[
         # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
