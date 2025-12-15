@@ -157,14 +157,14 @@ def main():
         device=torch.device("cuda"),
         loss_function=torch.nn.CrossEntropyLoss(),
     )
-    optimizer = Adam(model[0].parameters(), 0.00132)
+    optimizer = Adam(model.parameters(), 0.00132)
     print(f"training tchebycheff rank #1")
     for epoch in range(75):
         print("Epoch:", epoch + 1)
-        trainer.train(model[i], optimizer)
-        metrics[i] = evaluator.evaluate(model[i])
+        trainer.train(model, optimizer)
+        metrics = evaluator.evaluate(model[i])
         console.print(
-            f"[bold green]Metrics: Accuracy: {metrics[i].accuracy:.4f}, FLOPS: {metrics[i].flops:.2f}[/bold green]"
+            f"[bold green]Metrics: Accuracy: {metrics.accuracy:.4f}, FLOPS: {metrics.flops:.2f}[/bold green]"
         )
 
 
