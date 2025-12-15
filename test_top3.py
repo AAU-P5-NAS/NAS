@@ -8,7 +8,7 @@ from src.environment.metrics import Evaluator
 from src.utils.data_importer.dataset import DatasetOption
 from src.utils.data_importer.importer import DataImporter
 
-from torch.optim import AdamW
+from torch.optim import Adam
 
 console = Console()
 
