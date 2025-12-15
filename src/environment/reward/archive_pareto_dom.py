@@ -194,7 +194,7 @@ class ElitistArchive:
                 weighted_value = weight * normalized_value
                 sum += weighted_value
 
-            print("Weighted sum for arch:", sum)
+            #print("Weighted sum for arch:", sum)
             setattr(arch.metrics, "accuracy", sum)
 
         ws.sort(reverse=True, key=lambda arch: arch.metrics.accuracy)  # type: ignore
@@ -206,6 +206,8 @@ class ElitistArchive:
             ws_sorted=ws,
         )
         return sorted_lists
+    
+
 
 
 class DominanceNoveltyRS(RewardStrategy):
@@ -276,9 +278,3 @@ class SortedLists(BaseModel):
     jacov_sorted: List[ArchiveEntry]
     complexity_sorted: List[ArchiveEntry]
     ws_sorted: List[ArchiveEntry]
-
-
-# ====================
-if __name__ == "__main__":
-    archive = ElitistArchive()
-    archive.sort_archs()
