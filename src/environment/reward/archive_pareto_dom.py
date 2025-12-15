@@ -148,7 +148,7 @@ class ElitistArchive:
 
         snip.sort(reverse=True, key=lambda arch: arch.metrics.snip)  # type: ignore
         synflow.sort(reverse=True, key=lambda arch: arch.metrics.synflow)  # type: ignore
-        jacov.sort(reverse=True, key=lambda arch: arch.metrics.jacov)  # type: ignore
+        jacov.sort(reverse=False, key=lambda arch: arch.metrics.jacov)  # type: ignore
         complexity.sort(reverse=False, key=lambda arch: arch.metrics.snip)  # type: ignore
 
         baselines = {

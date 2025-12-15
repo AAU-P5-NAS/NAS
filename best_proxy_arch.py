@@ -9,6 +9,7 @@ from src.utils.data_importer.importer import DataImporter
 from torch.optim import Adam
 from src.environment.reward.archive_pareto_dom import ElitistArchive
 from src.utils.architecture import unflatten_cnn_config, Architecture
+from src.utils.logger import get_layers_as_str
 
 
 console = Console()
@@ -19,10 +20,16 @@ def main():
     torch.manual_seed(42)
     sortedArchs = ElitistArchive().sort_archs()
     best_complexy_arch = unflatten_cnn_config(sortedArchs.complexity_sorted[0].arch, 7)
+    console.print("complexity" + get_layers_as_str(best_complexy_arch.layers, True))
     best_snip_arch = unflatten_cnn_config(sortedArchs.snip_sorted[0].arch, 7)
+    console.print("snip" + get_layers_as_str(best_snip_arch.layers, True))
     best_synflow_arch = unflatten_cnn_config(sortedArchs.synflow_sorted[0].arch, 7)
+    console.print("synflow" + get_layers_as_str(best_synflow_arch.layers, True))
     best_jacov_arch = unflatten_cnn_config(sortedArchs.jacov_sorted[0].arch, 7)
+    console.print("jacov" + get_layers_as_str(best_jacov_arch.layers, True))
     best_we_arch = unflatten_cnn_config(sortedArchs.ws_sorted[0].arch, 7)
+    console.print("weighted" + get_layers_as_str(best_we_arch.layers, True))
+    
 
 
     best_complexy_arch = Architecture(best_complexy_arch, 10, (3, 32, 32))
@@ -30,12 +37,12 @@ def main():
     best_synflow_arch =  Architecture(best_synflow_arch, 10, (3, 32, 32))
     best_jacov_arch =  Architecture(best_jacov_arch, 10, (3, 32, 32))
     best_we_arch =  Architecture(best_we_arch, 10, (3, 32, 32))
-    best_arch = [(best_complexy_arch, "best_complexy_arch"), 
-                 (best_snip_arch, "best_snip_arch"),
-                 (best_synflow_arch, "best_synflow_arch"),
-                 (best_jacov_arch, "best_jacov_arch"),
+    best_arch = [#(best_complexy_arch, "best_complexy_arch"), 
+                 #(best_snip_arch, "best_snip_arch"),
+                 #(best_synflow_arch, "best_synflow_arch"),
+                 #(best_jacov_arch, "best_jacov_arch"),
                  (best_we_arch, "best_we_arch")]
-
+    
     validated_metrics: dict[str, list] = {}
     for model, name in best_arch:
         metrics = [None, None, None]
