@@ -14,6 +14,7 @@ console = Console()
 
 
 def main():
+    torch.manual_seed(42)
     model = [
         # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
         # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
@@ -128,7 +129,7 @@ def main():
         device=torch.device("cuda"),
         loss_function=torch.nn.CrossEntropyLoss(),
     )
-    optimizer = AdamW(model[0].parameters(), 0.00132)
+    optimizer = Adam(model[0].parameters(), 0.00132)
     for i in range(3):
         print(f"training arch {i + 1}")
         for epoch in range(75):
