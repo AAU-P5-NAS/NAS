@@ -12,7 +12,7 @@ from torch.optim import Adam
 
 console = Console()
 
-def get_1():
+def get_ws_1():
     return nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
@@ -39,7 +39,7 @@ def get_1():
             nn.Dropout(0.2),
             nn.Linear(64 * 8 * 8, 10),
         )
-def get_2():
+def get_ws_2():
     return nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
@@ -67,33 +67,8 @@ def get_2():
             nn.Linear(64 * 8 * 8, 10),
         )
 
-def main():
-    torch.manual_seed(42)
-    model = [
-        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 4: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        
-        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        
-        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 4: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
-        nn.Sequential(
+def get_ws_3():
+    return nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
@@ -118,31 +93,79 @@ def main():
             nn.Flatten(),
             nn.Dropout(0.2),
             nn.Linear(64 * 8 * 8, 10),
-        ),
-    ]
+        )
+
+def main():
+    torch.manual_seed(42)
+    model = nn.Sequential(
+            nn.Conv2d(3, 128, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(128),
+            nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(128),
+            nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(128),
+            nn.Flatten(),
+            nn.Dropout(0.2),
+            nn.Linear(64 * 8 * 8, 10),
+        )
+    #[
+        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 4: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        
+        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        
+        # Layer 0: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 1: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 2: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_2, Pool Mode: NONE, Activation: RELU
+        # Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 4: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+        # Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_3, Stride: S_2, Pool Mode: NONE, Activation: RELU   
+    #]
     metrics = [None, None, None]
-    for i in range(3):
-        importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
-        trainer = Trainer(
-            dataloaders=importer.get_dataloaders(batch_size=64),
-            loss_function=torch.nn.CrossEntropyLoss(),
+    importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
+    trainer = Trainer(
+        dataloaders=importer.get_dataloaders(batch_size=64),
+        loss_function=torch.nn.CrossEntropyLoss(),
+    )
+    evaluator = Evaluator(
+        num_classes=10,
+        dataloaders=importer.get_dataloaders(batch_size=64, shuffle=False),
+        dimensions=importer.get_dimensions(),
+        device=torch.device("cuda"),
+        loss_function=torch.nn.CrossEntropyLoss(),
+    )
+    optimizer = Adam(model[0].parameters(), 0.00132)
+    print(f"training tchebycheff rank #1")
+    for epoch in range(75):
+        print("Epoch:", epoch + 1)
+        trainer.train(model[i], optimizer)
+        metrics[i] = evaluator.evaluate(model[i])
+        console.print(
+            f"[bold green]Metrics: Accuracy: {metrics[i].accuracy:.4f}, FLOPS: {metrics[i].flops:.2f}[/bold green]"
         )
-        evaluator = Evaluator(
-            num_classes=10,
-            dataloaders=importer.get_dataloaders(batch_size=64, shuffle=False),
-            dimensions=importer.get_dimensions(),
-            device=torch.device("cuda"),
-            loss_function=torch.nn.CrossEntropyLoss(),
-        )
-        optimizer = Adam(model[0].parameters(), 0.00132)
-        print(f"training arch {i + 1}")
-        for epoch in range(75):
-            print("Epoch:", epoch + 1)
-            trainer.train(model[i], optimizer)
-            metrics[i] = evaluator.evaluate(model[i])
-            console.print(
-                f"[bold green]Metrics for arch {i + 1}: Accuracy: {metrics[i].accuracy:.4f}, FLOPS: {metrics[i].flops:.2f}[/bold green]"
-            )
 
 
 if __name__ == "__main__":
