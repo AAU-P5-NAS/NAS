@@ -25,19 +25,18 @@ def main():
     best_we_arch = unflatten_cnn_config(sortedArchs.ws_sorted[0].arch, 7)
 
 
-    best_complexy_arch = Architecture(best_complexy_arch, 10, (28, 28, 3))
-    best_snip_arch =  Architecture(best_snip_arch, 10, (28, 28, 3))
-    best_synflow_arch =  Architecture(best_synflow_arch, 10, (28, 28, 3))
-    best_jacov_arch =  Architecture(best_jacov_arch, 10, (28, 28, 3))
-    best_we_arch =  Architecture(best_we_arch, 10, (28, 28, 3))
-
+    best_complexy_arch = Architecture(best_complexy_arch, 10, (3, 32, 32))
+    best_snip_arch =  Architecture(best_snip_arch, 10, (3, 32, 32))
+    best_synflow_arch =  Architecture(best_synflow_arch, 10, (3, 32, 32))
+    best_jacov_arch =  Architecture(best_jacov_arch, 10, (3, 32, 32))
+    best_we_arch =  Architecture(best_we_arch, 10, (3, 32, 32))
     best_arch = [(best_complexy_arch, "best_complexy_arch"), 
                  (best_snip_arch, "best_snip_arch"),
                  (best_synflow_arch, "best_synflow_arch"),
                  (best_jacov_arch, "best_jacov_arch"),
                  (best_we_arch, "best_we_arch")]
 
-
+    validated_metrics: dict[str, list] = {}
     for model, name in best_arch:
         metrics = [None, None, None]
         importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
@@ -55,15 +54,23 @@ def main():
             loss_function=torch.nn.CrossEntropyLoss(),
         )
         optimizer = Adam(model.parameters(), 0.00132)
-        print(f"Training ${name}")
     
         for epoch in range(100):
             print("Epoch:", epoch + 1)
             trainer.train(model, optimizer)
             metrics = evaluator.evaluate(model)
             console.print(
-                f"[bold green]Metrics: Accuracy: {metrics.accuracy:.4f}, FLOPS: {metrics.flops:.2f}[/bold green]"
+                f"[bold green]{name}, Metrics: Accuracy: {metrics.accuracy:.4f}, FLOPS: {metrics.flops:.2f}[/bold green]"
             )
+            
+            if validated_metrics[name][0] < metrics.accuracy:
+                validated_metrics[name] = [metrics.accuracy, metrics.flops]
+                
+    console.print("\n[bold yellow]Final validated metrics:[/bold yellow]")
+    for name, metric in validated_metrics.items():
+        console.print(
+            f"[bold green]{name}, Metrics: Accuracy: {metric[0]:.4f}, FLOPS: {metric[1]:.2f}[/bold green]"
+        )
         
 
 if __name__ == "__main__":
