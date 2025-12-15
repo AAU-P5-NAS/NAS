@@ -62,10 +62,10 @@ def main():
             console.print(
                 f"[bold green]{name}, Metrics: Accuracy: {metrics.accuracy:.4f}, FLOPS: {metrics.flops:.2f}[/bold green]"
             )
-            
-            if validated_metrics[name][0] < metrics.accuracy:
+
+            if validated_metrics.get(name) is None or validated_metrics[name][0] < metrics.accuracy:
                 validated_metrics[name] = [metrics.accuracy, metrics.flops]
-                
+
     console.print("\n[bold yellow]Final validated metrics:[/bold yellow]")
     for name, metric in validated_metrics.items():
         console.print(
