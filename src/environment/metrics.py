@@ -238,27 +238,37 @@ class Evaluator:
         return self.f1_score(predictions, targets).item()
 
     def compute_jacov_proxy(self, model: nn.Module, input_shape=(128, 3, 32, 32)):
-        """Compute the JaCov proxy metric for a given model. It measures the
-        sensitivity of the model's outputs to input perturbations."""
         model.eval()
         device = next(model.parameters()).device
-        
-        # Step 1: random input batch
-        x = torch.randn(input_shape, device=device)
 
-        # Step 2: forward pass without gradients
-        with torch.no_grad():
-            output = model(x)
+        # 1. Random input batch with gradients
+        x = torch.randn(input_shape, device=device, requires_grad=True)
 
-        # Step 3: flatten outputs
-        flat = output.view(output.size(0), -1)
-        
-        # Step 4: compute covariance of outputs
-        centered = flat - flat.mean(dim=0, keepdim=True)
-        cov = (centered.T @ centered) / (flat.size(0) - 1)
+        # 2. Forward pass
+        out = model(x).view(x.size(0), -1)
 
-        # Step 5: compute Frobenius norm of covariance matrix and return
-        return (torch.norm(cov, p='fro') / flat.size(1)).item()
+        # 3. One scalar per sample
+        out = out.sum(dim=1)  # shape: (B,)
+
+        # 4. Per-sample Jacobians via grad_outputs
+        grads = torch.autograd.grad(
+            outputs=out,
+            inputs=x,
+            grad_outputs=torch.ones_like(out),
+            create_graph=False,
+            retain_graph=False
+        )[0]  # shape: (B, C, H, W)
+
+        # 5. Flatten Jacobians
+        J = grads.view(grads.size(0), -1)  # (B, input_dim)
+
+        # 6. Jacobian covariance (Gram matrix)
+        J_centered = J - J.mean(dim=0, keepdim=True)
+        cov = (J_centered @ J_centered.T) / (J.size(1) - 1)
+
+        # 7. JaCov score
+        return torch.norm(cov, p='fro').item()
+
 
     def compute_synflow_proxy(self, model: nn.Module, input_shape=(1, 3, 32, 32)):
         """Compute the SynFlow proxy metric for a given model. It measures the flow of
