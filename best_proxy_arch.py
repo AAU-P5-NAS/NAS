@@ -1,8 +1,6 @@
-
 import torch
 from rich.console import Console
 from src.environment.train import Trainer
-from torch import nn
 from src.environment.metrics import Evaluator
 from src.utils.data_importer.dataset import DatasetOption
 from src.utils.data_importer.importer import DataImporter
@@ -13,7 +11,6 @@ from src.utils.logger import get_layers_as_str
 
 
 console = Console()
-
 
 
 def main():
@@ -29,30 +26,29 @@ def main():
     console.print("jacov" + get_layers_as_str(best_jacov_arch.layers, True))
     best_we_arch = unflatten_cnn_config(sortedArchs.ws_sorted[0].arch, 7)
     console.print("weighted" + get_layers_as_str(best_we_arch.layers, True))
-    
-
 
     best_complexy_arch = Architecture(best_complexy_arch, 10, (3, 32, 32))
-    best_snip_arch =  Architecture(best_snip_arch, 10, (3, 32, 32))
-    best_synflow_arch =  Architecture(best_synflow_arch, 10, (3, 32, 32))
-    best_jacov_arch =  Architecture(best_jacov_arch, 10, (3, 32, 32))
-    best_we_arch =  Architecture(best_we_arch, 10, (3, 32, 32))
-    best_arch = [#(best_complexy_arch, "best_complexy_arch"), 
-                 #(best_snip_arch, "best_snip_arch"),
-                 #(best_synflow_arch, "best_synflow_arch"),
-                 #(best_jacov_arch, "best_jacov_arch"),
-                 (best_we_arch, "best_we_arch")]
-    
+    best_snip_arch = Architecture(best_snip_arch, 10, (3, 32, 32))
+    best_synflow_arch = Architecture(best_synflow_arch, 10, (3, 32, 32))
+    best_jacov_arch = Architecture(best_jacov_arch, 10, (3, 32, 32))
+    best_we_arch = Architecture(best_we_arch, 10, (3, 32, 32))
+    best_arch = [  # (best_complexy_arch, "best_complexy_arch")
+        # (best_snip_arch, "best_snip_arch"),
+        # (best_synflow_arch, "best_synflow_arch"),
+        # (best_jacov_arch, "best_jacov_arch"),
+        (best_we_arch, "best_we_arch")
+    ]
+
     validated_metrics: dict[str, list] = {}
     for model, name in best_arch:
         metrics = [None, None, None]
         importer = DataImporter(dataset_option=DatasetOption.CIFAR_10)
-        
+
         trainer = Trainer(
             dataloaders=importer.get_dataloaders(batch_size=64),
             loss_function=torch.nn.CrossEntropyLoss(),
         )
-        
+
         evaluator = Evaluator(
             num_classes=10,
             dataloaders=importer.get_dataloaders(batch_size=64, shuffle=False),
@@ -61,7 +57,7 @@ def main():
             loss_function=torch.nn.CrossEntropyLoss(),
         )
         optimizer = Adam(model.parameters(), 0.00132)
-    
+
         for epoch in range(100):
             print("Epoch:", epoch + 1)
             trainer.train(model, optimizer)
@@ -78,10 +74,7 @@ def main():
         console.print(
             f"[bold green]{name}, Metrics: Accuracy: {metric[0]:.4f}, FLOPS: {metric[1]:.2f}[/bold green]"
         )
-        
+
 
 if __name__ == "__main__":
     main()
-
-
-
