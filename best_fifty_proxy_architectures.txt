@@ -1,4 +1,118 @@
 Architecture Rank 1:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=7300077.5 jacov=7.136654858186375e-07 snip=2165.454345703125 complexity=2658122.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_64, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 2:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=7804747.0 jacov=3.8788422784818977e-07 snip=2993.680908203125 complexity=3518474.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 3:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=7784161.0 jacov=2.231248430462074e-07 snip=2948.956787109375 complexity=3518474.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 4:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=7724493.0 jacov=4.4661854303740256e-07 snip=2869.521728515625 complexity=3518474.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 5:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=7721883.5 jacov=5.5061370574094326e-08 snip=2797.281005859375 complexity=3518474.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 6:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=7779357.0 jacov=7.653791271877708e-07 snip=2687.518798828125 complexity=3518474.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 7:
 Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=7845690.5 jacov=2.5733302777553035e-07 snip=3307.55078125 complexity=3518474.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
@@ -17,7 +131,7 @@ Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: 
 
 ================================================================================
 
-Architecture Rank 2:
+Architecture Rank 8:
 Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5229431.0 jacov=1.2984160946416523e-07 snip=3187.1005859375 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
@@ -36,7 +150,444 @@ Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: 
 
 ================================================================================
 
-Architecture Rank 3:
+Architecture Rank 9:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5227251.0 jacov=3.747509538243321e-07 snip=1939.45263671875 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 10:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5216341.0 jacov=1.2443446451015916e-07 snip=3088.019775390625 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 11:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5213781.5 jacov=5.036057615370737e-08 snip=2396.275146484375 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 12:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5211028.5 jacov=2.395788385456399e-07 snip=2923.488525390625 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 13:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5206314.0 jacov=1.3313047020346858e-07 snip=3292.778564453125 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 14:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5205324.5 jacov=4.6194196556825773e-07 snip=2167.083984375 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 15:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5205284.0 jacov=6.554346043685655e-08 snip=3251.919921875 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 16:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5205178.0 jacov=1.3676859111910744e-07 snip=2882.468505859375 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 17:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5205024.5 jacov=2.1081358170249587e-07 snip=3028.793212890625 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 18:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5204317.0 jacov=1.1332805627262132e-07 snip=2716.393310546875 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 19:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5203230.5 jacov=1.1794271159715208e-07 snip=2939.59033203125 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 20:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=7808425.0 jacov=2.6329601610086684e-07 snip=3323.82470703125 complexity=3518474.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 21:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5201639.5 jacov=2.298627208574544e-07 snip=3120.517578125 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 22:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5199122.0 jacov=4.640181145987299e-07 snip=2768.554931640625 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 23:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5198864.5 jacov=2.3837195328724192e-07 snip=2932.698486328125 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 24:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5198473.0 jacov=1.3151387179277663e-07 snip=2972.796875 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 25:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5197436.5 jacov=5.2688676532852696e-08 snip=3320.865478515625 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 26:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5212725.0 jacov=4.6961696398284403e-07 snip=3325.86328125 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 27:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5196509.5 jacov=4.221574556595442e-07 snip=2720.906982421875 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 28:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5196433.0 jacov=2.427618426281697e-07 snip=3186.074462890625 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 29:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5194927.5 jacov=7.559315235994291e-07 snip=3231.17431640625 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 30:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5194661.5 jacov=2.637685270201473e-07 snip=3307.00146484375 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 31:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5194554.0 jacov=1.2814457761578524e-07 snip=2690.966796875 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 32:
 Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5193577.0 jacov=2.524809872284095e-07 snip=3096.16748046875 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
@@ -55,578 +606,27 @@ Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: 
 
 ================================================================================
 
-Architecture Rank 4:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5179531.5 jacov=5.3979210434818015e-08 snip=2968.4326171875 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
-Architecture Rank 5:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5177278.5 jacov=5.9136763042033635e-08 snip=3202.1357421875 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 6:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5172610.0 jacov=1.2132747428950097e-07 snip=3237.038818359375 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
-Architecture Rank 7:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5171925.0 jacov=2.414624020730116e-07 snip=2866.483642578125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 8:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5171141.0 jacov=2.3906895307845843e-07 snip=3298.984130859375 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 9:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5170399.0 jacov=1.1774318409152329e-07 snip=3272.092041015625 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 10:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5170163.5 jacov=4.4755250883099507e-07 snip=2925.778076171875 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 11:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5169656.0 jacov=1.160333482630449e-07 snip=3276.94189453125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 12:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5167958.0 jacov=1.0320297860744176e-07 snip=2463.062255859375 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 13:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5167163.0 jacov=5.361612664955828e-08 snip=2958.767578125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
-Architecture Rank 14:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5164938.0 jacov=9.216671514877817e-08 snip=3239.552734375 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
-Architecture Rank 15:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5164579.5 jacov=1.2864413179158873e-07 snip=2566.596435546875 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 16:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5163793.5 jacov=2.6577569656183186e-07 snip=3286.0517578125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 17:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5161422.5 jacov=3.0594787148174873e-08 snip=3045.319580078125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
-Architecture Rank 18:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5160548.5 jacov=7.780378155075596e-07 snip=2239.667236328125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 19:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5160411.5 jacov=1.0973597142083236e-07 snip=2351.875244140625 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
-Architecture Rank 20:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5160069.0 jacov=2.642845231548563e-07 snip=3136.514892578125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 21:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5159691.5 jacov=6.718573786201887e-08 snip=3103.641845703125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 22:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5159058.5 jacov=2.1103868164118467e-07 snip=3217.42919921875 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 23:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5158462.0 jacov=9.945500067942703e-08 snip=2687.37353515625 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
-Architecture Rank 24:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5157159.0 jacov=4.6191647129489866e-07 snip=3000.197509765625 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 25:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5155545.5 jacov=4.561360924526525e-07 snip=1900.574951171875 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 26:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5153755.0 jacov=2.379952945830155e-07 snip=3266.288818359375 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
-Architecture Rank 27:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5153602.5 jacov=2.0296272396080894e-07 snip=3206.667236328125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 28:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5153503.0 jacov=1.0745759482233552e-07 snip=2559.166015625 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 29:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5153025.5 jacov=5.2688648111143266e-08 snip=2070.21337890625 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 30:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5152108.5 jacov=2.8429033349652855e-08 snip=2546.692626953125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
-Architecture Rank 31:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5150766.5 jacov=3.014308447291114e-08 snip=3087.705810546875 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
-Architecture Rank 32:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5150159.5 jacov=1.3752821814705385e-07 snip=2626.692626953125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
 Architecture Rank 33:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5149902.5 jacov=2.2707885705131048e-07 snip=2410.139404296875 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5193314.5 jacov=1.5390688190564106e-07 snip=2408.92236328125 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 ================================================================================
 
 Architecture Rank 34:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5149734.5 jacov=2.2329531645937095e-07 snip=2722.758544921875 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5193021.0 jacov=1.509137774746705e-07 snip=2155.569091796875 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
@@ -638,58 +638,77 @@ Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: 
 
 Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 ================================================================================
 
 Architecture Rank 35:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5148554.5 jacov=7.050190475865747e-08 snip=3096.211669921875 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5192814.5 jacov=3.47177042669955e-08 snip=3193.3623046875 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 ================================================================================
 
 Architecture Rank 36:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5148265.0 jacov=2.3485878841711383e-07 snip=2982.618896484375 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5192562.0 jacov=4.1006342144100927e-07 snip=3159.89501953125 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 ================================================================================
 
 Architecture Rank 37:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5147427.5 jacov=4.2388657561787113e-07 snip=3115.208984375 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5192437.0 jacov=2.0599208028215799e-07 snip=2336.232177734375 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 38:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5192426.0 jacov=4.1472478073956154e-07 snip=2616.787841796875 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
@@ -697,96 +716,77 @@ Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: 
 
 Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 38:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5147409.5 jacov=4.465680945031636e-07 snip=1752.173828125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 ================================================================================
 
 Architecture Rank 39:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5147290.0 jacov=2.4176998181246745e-07 snip=2778.451904296875 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5191661.0 jacov=1.2715180730538123e-07 snip=3197.465087890625 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 40:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5191195.0 jacov=2.133403853576965e-07 snip=3304.575927734375 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 40:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5145016.5 jacov=1.0775006131780174e-07 snip=3258.18896484375 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 ================================================================================
 
 Architecture Rank 41:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5144070.5 jacov=1.0644122738767692e-07 snip=3203.95849609375 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5190514.0 jacov=2.01629745788523e-07 snip=3189.810302734375 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 ================================================================================
 
 Architecture Rank 42:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5143836.5 jacov=1.8558530712198262e-07 snip=2338.86083984375 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5189411.5 jacov=2.603363213893317e-07 snip=2573.8818359375 complexity=3256330.0
 
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
@@ -797,17 +797,17 @@ Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: 
 ================================================================================
 
 Architecture Rank 43:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5142329.5 jacov=9.683549251349177e-08 snip=2919.607666015625 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5188826.0 jacov=1.0947228190616443e-07 snip=3290.473876953125 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
@@ -816,7 +816,26 @@ Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: 
 ================================================================================
 
 Architecture Rank 44:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5141002.0 jacov=1.0251964965846128e-07 snip=2812.775390625 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5187737.5 jacov=2.569990442680137e-07 snip=2380.87744140625 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 45:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5187646.0 jacov=4.1615737700340105e-07 snip=3067.140380859375 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
@@ -824,7 +843,45 @@ Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: 
 
 Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+================================================================================
+
+Architecture Rank 46:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5185861.0 jacov=6.551476872118656e-08 snip=2970.1962890625 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+================================================================================
+
+Architecture Rank 47:
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5185298.0 jacov=4.364585208804783e-07 snip=2446.820068359375 complexity=3256330.0
+
+Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
@@ -834,75 +891,18 @@ Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: 
 
 ================================================================================
 
-Architecture Rank 45:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5140932.5 jacov=2.1093929092330654e-07 snip=3143.1494140625 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 46:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5140925.5 jacov=1.366182402762206e-07 snip=2585.848876953125 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-================================================================================
-
-Architecture Rank 47:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5140496.5 jacov=1.4153759764212737e-07 snip=3261.60693359375 complexity=3256330.0
-
-Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
-
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
-
-================================================================================
-
 Architecture Rank 48:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5139795.5 jacov=9.869057748801424e-08 snip=2981.37451171875 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5185012.0 jacov=1.3169524493150675e-07 snip=2424.563720703125 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
@@ -911,7 +911,7 @@ Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: 
 ================================================================================
 
 Architecture Rank 49:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5139519.0 jacov=6.84282071006237e-08 snip=2305.137451171875 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5184783.5 jacov=1.1998012894309795e-07 snip=2623.2177734375 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
@@ -921,28 +921,28 @@ Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: 
 
 Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
 ================================================================================
 
 Architecture Rank 50:
-Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5137621.0 jacov=2.496380773209239e-07 snip=2645.4150390625 complexity=3256330.0
+Metrics: accuracy=None precision=None recall=None f1_score=None flops=None runtime=None test_loss=None architecture_size=None training_time=None synflow=5184583.0 jacov=2.242155687781633e-07 snip=2879.74560546875 complexity=3256330.0
 
 Layer 0: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 1: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 2: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
+Layer 3: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
-Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 4: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
-Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_3, Stride: S_1, Pool Mode: NONE, Activation: NONE
+Layer 5: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: RELU
 
 Layer 6: CONV - OutChannels: CH_128, Kernel Size: KS_5, Stride: S_1, Pool Mode: NONE, Activation: NONE
 
