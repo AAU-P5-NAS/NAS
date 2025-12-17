@@ -14,9 +14,9 @@ ARCHIVE_DIR = "src/environment/reward/saved_archives"
 
 
 class ProxyBaselines(BaseModel):
-    synflow: Optional[Tuple[float, float]] =  (0, 7.76e6)
-    jacov: Optional[Tuple[float, float]] = (1.03e-7, 2.75e-4)
-    snip: Optional[Tuple[float, float]] = (0,2500)
+    synflow: Optional[Tuple[float, float]] = (0, 7.76e6)
+    jacov: Optional[Tuple[float, float]] = (1.64e-19, 1.49e-5)
+    snip: Optional[Tuple[float, float]] = (0, 2500)
     complexity: Optional[Tuple[float, float]] = (2.99e4, 1.75e7)
 
 
@@ -49,7 +49,7 @@ class ElitistArchive:
             val2 = getattr(metrics_2, proxy, None)
             if val1 is None or val2 is None:
                 continue
-            if proxy in ["complexity", "jacov"] :  # minimize
+            if proxy in ["complexity", "jacov"]:  # minimize
                 if val1 > val2:
                     return False
             else:  # maximize
