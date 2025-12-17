@@ -199,7 +199,7 @@ def main():
         )
         optimizer = Adam(model.parameters(), 0.00132)
 
-        for epoch in range(100):
+        for epoch in range(75):
             print("Epoch:", epoch + 1)
             trainer.train(model, optimizer)
             metrics = evaluator.evaluate(model)
