@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import time
 from pydantic import BaseModel
@@ -237,38 +238,71 @@ class Evaluator:
     def compute_f1_score(self, predictions: Tensor, targets: Tensor) -> float:
         return self.f1_score(predictions, targets).item()
 
-    def compute_jacov_proxy(self, model: nn.Module, input_shape=(128, 3, 32, 32)):
-        model.eval()
-        device = next(model.parameters()).device
+    def get_batch_jacobian(self, net, x, split_data=1):
+        """
+        Compute per-sample Jacobians in splits, like the Samsung implementation.
+        Args:
+            net: nn.Module, the model
+            x: torch.Tensor, input batch
+            split_data: int, number of splits to process batch in chunks
+        Returns:
+            jacob: torch.Tensor of shape (B, ...) containing gradients
+        """
+        x = x.clone().detach().requires_grad_(True)
+        B = x.shape[0]
 
-        # 1. Random input batch with gradients
-        x = torch.randn(input_shape, device=device, requires_grad=True)
+        for sp in range(split_data):
+            st = sp * B // split_data
+            en = (sp + 1) * B // split_data
+            y = net(x[st:en])
+            y.backward(torch.ones_like(y))
 
-        # 2. Forward pass
-        out = model(x).view(x.size(0), -1)
+        jacob = x.grad.detach()
+        x.requires_grad_(False)
+        return jacob
 
-        # 3. One scalar per sample
-        out = out.sum(dim=1)  # shape: (B,)
+    def eval_jacov_score(self, jacob):
+        """
+        Compute JaCov score as in Samsung code:
+        - correlation of Jacobians
+        - eigenvalues
+        - log-det + inverse penalty
+        """
+        # Flatten each sample's Jacobian
+        jacob_flat = jacob.view(jacob.size(0), -1).cpu().numpy()
 
-        # 4. Per-sample Jacobians via grad_outputs
-        grads = torch.autograd.grad(
-            outputs=out,
-            inputs=x,
-            grad_outputs=torch.ones_like(out),
-            create_graph=False,
-            retain_graph=False
-        )[0]  # shape: (B, C, H, W)
+        # Correlation matrix across samples
+        corrs = np.corrcoef(jacob_flat)
 
-        # 5. Flatten Jacobians
-        J = grads.view(grads.size(0), -1)  # (B, input_dim)
+        # Eigenvalues
+        vals, _ = np.linalg.eig(corrs)
 
-        # 6. Jacobian covariance (Gram matrix)
-        J_centered = J - J.mean(dim=0, keepdim=True)
-        cov = (J_centered @ J_centered.T) / (J.size(1) - 1)
+        # Stability constant
+        k = 1e-5
 
-        # 7. JaCov score
-        return torch.norm(cov, p='fro').item()
+        # Score: log + inverse
+        score = -np.sum(np.log(vals + k) + 1.0 / (vals + k))
+        return score
 
+    def compute_jacov_proxy(self, net, split_data=1):
+        """
+        Full Samsung-style JaCov calculation
+        Args:
+            net: nn.Module
+            inputs: torch.Tensor, input batch
+            split_data: int, split size for batch
+        Returns:
+            jc: float, JaCov score
+        """
+        net.zero_grad()
+        inputs = torch.randn(64, *self.image_dimensions).to(self.device)
+        jacobs = self.get_batch_jacobian(net, inputs, split_data=split_data)
+        try:
+            jc = self.eval_jacov_score(jacobs)
+        except Exception as e:
+            print("Error computing JaCov:", e)
+            jc = np.nan
+        return jc
 
     def compute_synflow_proxy(self, model: nn.Module, input_shape=(1, 3, 32, 32)):
         """Compute the SynFlow proxy metric for a given model. It measures the flow of
@@ -298,11 +332,11 @@ class Evaluator:
 
         # You can leave the model modified.
         return (total / sum(p.numel() for p in model.parameters())).item()
-    
+
     def compute_snip_proxy(self, model: nn.Module, input_shape=(64, 3, 32, 32)):
         model.eval()
         device = next(model.parameters()).device
-    
+
         # Step 1: random input batch
         x = torch.randn(input_shape, device=device)
         y = torch.randint(0, 10, (x.size(0),), device=device)
