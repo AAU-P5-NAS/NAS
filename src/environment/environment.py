@@ -208,6 +208,8 @@ class CustomEnv(gym.Env):
             trained_model, training_time = self.train_classifier(model=architecture)
             evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
             reward = self.reward_strategy.compute_reward(evaluated_metrics)
+        
+        console.print(f"Evaluated Metrics:\n{evaluated_metrics}\nProxy Metrics:\n{proxy_metrics}")
 
         self.tb_logger.log_evaluation(
             reward=reward,
