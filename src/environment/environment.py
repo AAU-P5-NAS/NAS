@@ -224,12 +224,7 @@ class CustomEnv(gym.Env):
             proxy_metrics=proxy_metrics,
         )
 
-        if (
-            log_arch
-            and not isinstance(self.reward_strategy, DominanceNoveltyRS)
-            and not isinstance(self.reward_strategy, TchebycheffRS)
-        ):
-            self.tb_logger.print_layers(new_architecture.layers)
+        self.tb_logger.print_layers(new_architecture.layers)
 
         if (
             isinstance(self.reward_strategy, DominanceNoveltyRS)
