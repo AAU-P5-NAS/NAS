@@ -206,14 +206,14 @@ class CustomEnv(gym.Env):
         elif isinstance(self.reward_strategy, TchebycheffRS):
             proxy_metrics = self.evaluator.evaluate_by_proxy(architecture)
             reward = self.reward_strategy.compute_reward(metrics=proxy_metrics)
-            # trained_model, training_time = self.train_classifier(model=architecture)
-            # evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
+            trained_model, training_time = self.train_classifier(model=architecture)
+            evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
         else:
             trained_model, training_time = self.train_classifier(model=architecture)
             evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
             reward = self.reward_strategy.compute_reward(evaluated_metrics)
         
-        # self.console.print(f"Evaluated Metrics:\n{evaluated_metrics}\nProxy Metrics:\n{proxy_metrics}")
+        self.console.print(f"Evaluated Metrics:\n{evaluated_metrics}\nProxy Metrics:\n{proxy_metrics}")
 
         self.tb_logger.log_evaluation(
             reward=reward,
@@ -224,7 +224,7 @@ class CustomEnv(gym.Env):
             proxy_metrics=proxy_metrics,
         )
 
-        # self.tb_logger.print_layers(new_architecture.layers)
+        self.tb_logger.print_layers(new_architecture.layers)
 
         if (
             isinstance(self.reward_strategy, DominanceNoveltyRS)
