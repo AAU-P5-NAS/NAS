@@ -224,7 +224,7 @@ class CustomEnv(gym.Env):
             proxy_metrics=proxy_metrics,
         )
 
-        self.tb_logger.print_layers(new_architecture.layers)
+        # self.tb_logger.print_layers(new_architecture.layers)
 
         if (
             isinstance(self.reward_strategy, DominanceNoveltyRS)
