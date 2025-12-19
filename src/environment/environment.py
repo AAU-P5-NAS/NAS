@@ -201,15 +201,13 @@ class CustomEnv(gym.Env):
             reward = self.reward_strategy.compute_reward(
                 metrics=proxy_metrics, arch=new_architecture
             )
-
+            trained_model, training_time = self.train_classifier(model=architecture)
             evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
-            reward = self.reward_strategy.compute_reward(evaluated_metrics)
         elif isinstance(self.reward_strategy, TchebycheffRS):
             proxy_metrics = self.evaluator.evaluate_by_proxy(architecture)
             reward = self.reward_strategy.compute_reward(metrics=proxy_metrics)
-            
+            trained_model, training_time = self.train_classifier(model=architecture)
             evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
-            reward = self.reward_strategy.compute_reward(evaluated_metrics)
         else:
             trained_model, training_time = self.train_classifier(model=architecture)
             evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
