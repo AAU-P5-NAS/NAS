@@ -60,7 +60,7 @@ def mask_fn(env):
 
 
 hyperparameters = SLHyperParameters(
-    training_epochs=10,
+    training_epochs=75,
     learning_rate=0.00132,
     momentum=0.9,
     batch_size=32,
@@ -114,7 +114,7 @@ class RLAgent:
             device="cpu",
             learning_rate=rl_learning_rate,
             seed=policy_seed,
-            n_steps=(MAX_LAYERS + 1) * 16,  # type: ignore
+            n_steps=(MAX_LAYERS + 1) * 128,  # type: ignore
             normalize_advantage=True,  # type: ignore
         )
         self.model.set_logger(tb_logger.logger)
@@ -122,15 +122,20 @@ class RLAgent:
         self.check_directories()
 
     def train(self, total_timesteps: int = 1000000):
-        with console.status("[bold green]Training RL Agent... [/bold green]"):
-            self.model.learn(
-                total_timesteps=total_timesteps, callback=EpisodeLimitCallback(max_episodes=10000)
-            )
+        console.print("[bold green]Training RL Agent... [/bold green]")
+        self.model.learn(
+            total_timesteps=total_timesteps,
+            callback=EpisodeLimitCallback(max_episodes=total_timesteps // (MAX_LAYERS + 1)),
+        )
 
     def save_model(self):
         """Save the trained model"""
         os.makedirs(os.path.dirname(self.model_save_path), exist_ok=True)
         self.model.save(self.model_save_path)
+        tb_logger.best_fifty_cache.save_architectures_pickle(
+            f"{self.model_save_path}_best_fifty_architectures.pickle"
+        )
+
         print(f"Model saved to '{self.model_save_path}'")
 
     def load_model(self, model_name: str):
@@ -138,6 +143,9 @@ class RLAgent:
         self.model_save_path = f"{self.MODEL_SAVE_DIRECTORY}{model_name}"
         if os.path.exists(f"{self.model_save_path}.zip"):
             self.model = self.model.load(self.model_save_path, env=self.env)
+            tb_logger.best_fifty_cache.load_architectures_pickle(
+                f"{self.model_save_path}_best_fifty_architectures.pickle"
+            )
             print(f"Model loaded from '{self.model_save_path}'")
         else:
             print(f"No model found at '{self.model_save_path}'")

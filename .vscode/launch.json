@@ -10,7 +10,9 @@
             "request": "launch",
             "module": "main",
             "args": [
-                "--report-exception"
+                "--report-exception",
+                //"--load-model", "PPO"
+                //"--use-tchebycheff"
             ]
         },
         {

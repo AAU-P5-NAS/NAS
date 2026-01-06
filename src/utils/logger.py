@@ -1,22 +1,29 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
 import torch
 from rich.console import Console
 
 from src.environment.metrics import Metrics, TrainingFreeMetrics
-from src.utils.network_config import  NetworkConfig
+from src.utils.network_config import NetworkConfig
 from src.utils.layer_config import LayerConfig
+import pickle
 
 
 @dataclass
 class ArchitectureCacheEntry:
-    architecture: list[LayerConfig]
+    architecture: NetworkConfig
     metrics: Metrics
     reward: float
 
+    
+@dataclass
+class ProxyArchitectureCacheEntry:
+    architecture: NetworkConfig
+    metrics: TrainingFreeMetrics
+    reward: float
 
 class BestFiftyArchitecturesCache:
     # Sorted list of best fifty architectures based on accuracy
@@ -24,7 +31,7 @@ class BestFiftyArchitecturesCache:
 
     def add_entry_if_needed(
         self,
-        architecture: list[LayerConfig],
+        architecture: NetworkConfig,
         metrics: Metrics,
         reward: float,
         tensorboard_logger: TensorboardLogger,
@@ -39,7 +46,7 @@ class BestFiftyArchitecturesCache:
         else:
             # Check if new entry is better than the worst in cache
             worst_entry = self.cache[-1]
-            if (metrics.accuracy or 0) > (worst_entry.metrics.accuracy or 0):
+            if (reward or 0) > (worst_entry.reward or 0):
                 self.cache[-1] = entry
                 self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
 
@@ -51,13 +58,62 @@ class BestFiftyArchitecturesCache:
                 f.write(f"Architecture Rank {i + 1}:\n")
                 f.write(f"Metrics: {entry.metrics}\n")
                 f.write(
-                    tensorboard_logger.get_layers_as_str(entry.architecture, is_for_console=False)
+                    get_layers_as_str(entry.architecture.layers, is_for_console=False)
+                )
+                f.write("\n" + "=" * 80 + "\n\n")
+
+    def save_architectures_pickle(self, filepath: str):
+
+        with open(filepath, "wb") as f:
+            pickle.dump(self.cache, f)
+
+    def load_architectures_pickle(self, filepath: str):
+        with open(filepath, "rb") as f:
+            self.cache = pickle.load(f)
+        
+
+
+class BestFiftyProxyArchitecturesCache:
+    # Sorted list of best fifty architectures based on accuracy
+    cache: list[ProxyArchitectureCacheEntry] = []
+
+    def add_entry_if_needed(
+        self,
+        architecture: NetworkConfig,
+        metrics: TrainingFreeMetrics,
+        reward: float,
+        tensorboard_logger: TensorboardLogger,
+    ):
+        entry = ProxyArchitectureCacheEntry(architecture=architecture, metrics=metrics, reward=reward)
+        # If cache has less than 50 entries, add directly
+        if len(self.cache) < 50:
+            self.cache.append(entry)
+            self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
+
+        else:
+            # Check if new entry is better than the worst in cache
+            worst_entry = self.cache[-1]
+            if (reward or 0) > (worst_entry.reward or 0):
+                self.cache[-1] = entry
+                self.cache.sort(key=lambda x: x.reward or 0, reverse=True)
+
+        self._write_to_file(tensorboard_logger)
+
+    def _write_to_file(self, tensorboard_logger: TensorboardLogger):
+        with open("best_fifty_proxy_architectures.txt", "w") as f:
+            for i, entry in enumerate(self.cache):
+                f.write(f"Architecture Rank {i + 1}:\n")
+                f.write(f"Metrics: {entry.metrics}\n")
+                f.write(
+                    get_layers_as_str(entry.architecture.layers, is_for_console=False)
                 )
                 f.write("\n" + "=" * 80 + "\n\n")
 
 
+
 class TensorboardLogger:
     best_fifty_cache = BestFiftyArchitecturesCache()
+    best_fifty_proxy_cache = BestFiftyProxyArchitecturesCache()
 
     def __init__(
         self,
@@ -113,7 +169,6 @@ class TensorboardLogger:
             self.newest_architecture = architecture
         if current_config is not None:
             self.current_config = current_config
-
         if self.evaluation_count % self.log_interval == 0:
             self.log_to_tensorboard(proxy_metrics=proxy_metrics)
 
@@ -137,7 +192,6 @@ class TensorboardLogger:
             record_optional("Custom/FLOPs", self.newest_metrics.flops)
             record_optional("Custom/Runtime", self.newest_metrics.runtime)
             record_optional("Custom/Architecture Size", self.newest_metrics.architecture_size)
-        
         if proxy_metrics is not None:
             record_optional("Custom Proxy/Synflow", proxy_metrics.synflow)
             record_optional("Custom Proxy/Jacov", proxy_metrics.jacov)
@@ -155,16 +209,14 @@ class TensorboardLogger:
 
     def log_evaluation(
         self,
-        reward: float | dict[str, float],        
+        reward: float | dict[str, float],
         architecture: torch.nn.Module | None,
         current_config: NetworkConfig | None,
-        actions_taken: Optional[int] = None,      
-        metrics: Optional[Metrics] = None,  
+        actions_taken: Optional[int] = None,
+        metrics: Optional[Metrics] = None,
         proxy_metrics: Optional[TrainingFreeMetrics] = None,
-
     ):
         """Update state, print to console, and log to TensorBoard."""
-
         self.evaluation_count += 1
 
         # Track averages first
@@ -189,11 +241,18 @@ class TensorboardLogger:
             actions_taken=actions_taken,
         )
         if proxy_metrics is not None:
+            if current_config and self.newest_reward:
+                self.best_fifty_proxy_cache.add_entry_if_needed(
+                    architecture=current_config,
+                    metrics=proxy_metrics,
+                    reward=self.newest_reward,
+                    tensorboard_logger=self,
+                )
             return
 
         if metrics is None:
             return
-        
+
         avg_accuracy = -1
         if metrics.accuracy is not None:
             self.sum_accuracy += metrics.accuracy
@@ -213,7 +272,7 @@ class TensorboardLogger:
 
         if current_config and self.newest_reward:
             self.best_fifty_cache.add_entry_if_needed(
-                architecture=current_config.layers,
+                architecture=current_config,
                 metrics=metrics,
                 reward=self.newest_reward,
                 tensorboard_logger=self,
@@ -238,38 +297,38 @@ class TensorboardLogger:
             layers (list): List of layer objects.
         """
 
-        self.console.print(self.get_layers_as_str(layers, is_for_console=True))
+        self.console.print(get_layers_as_str(layers, is_for_console=True))
 
-    def get_layers_as_str(self, layers: list[LayerConfig], is_for_console: bool) -> str:
-        layers_str = ""
-        indent = "    "
 
-        if is_for_console:
-            layers_str += "[bold yellow]Architecture:[/bold yellow]"
+def get_layers_as_str(layers: list[LayerConfig], is_for_console: bool) -> str:
+    layers_str = ""
+    indent = "    "
 
-            for i, layer in enumerate(layers):
-                if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
-                    layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
+    if is_for_console:
+        layers_str += "[bold yellow]Architecture:[/bold yellow]"
 
-                elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
-                    layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
+        for i, layer in enumerate(layers):
+            if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
+                layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
 
-                elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
-                    layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
+                layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}"
 
-        else:
-            for i, layer in enumerate(layers):
-                if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
-                    layers_str += f"\nLayer {i}: {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
+                layers_str += f"\n{indent}[bold yellow]Layer {i}:[/bold yellow] {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}"
 
-                elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
-                    layers_str += f"\nLayer {i}: {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}\n"
+    else:
+        for i, layer in enumerate(layers):
+            if hasattr(layer, "layer_type") and layer.layer_type.name == "CONV":
+                layers_str += f"\nLayer {i}: {layer.layer_type.name} - OutChannels: {layer.out_channels.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name}, Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
 
-                elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
-                    layers_str += f"\nLayer {i}: {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "LINEAR":
+                layers_str += f"\nLayer {i}: {layer.layer_type.name} - LinearUnits: {layer.linear_units.name}, Activation: {layer.activation.name}\n"
 
-        return layers_str
+            elif hasattr(layer, "layer_type") and layer.layer_type.name == "POOL":
+                layers_str += f"\nLayer {i}: {layer.layer_type.name} - Pool Mode: {layer.pool_mode.name}, Kernel Size: {layer.kernel_size.name}, Stride: {layer.stride.name} , Pool Mode: {layer.pool_mode.name}, Activation: {layer.activation.name}\n"
 
+    return layers_str
 
 class NoOpLogger:
     evaluation_count: int = 0

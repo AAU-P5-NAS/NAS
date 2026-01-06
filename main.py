@@ -5,6 +5,7 @@ import shutil
 from stable_baselines3 import PPO
 import torch
 
+from src.environment.reward.tchebycheff import TchebycheffRS
 from src.environment.reward.weighted_sum import WeightedSumRS
 from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
 from src.environment.reward.reward import Weights
@@ -21,8 +22,15 @@ def get_agent(args: argparse.Namespace) -> RLAgent:
     weights = Weights(accuracy=0.8, flops=0.2)
     if args.evaluate_archive:
         reward_strategy = WeightedSumRS(weights)
-    else:
+    elif args.use_tchebycheff:
+        reward_strategy = TchebycheffRS(weights)
+    elif args.use_dominance_novelty:
         reward_strategy = DominanceNoveltyRS(weights)
+    elif args.use_weighted_sum:
+        reward_strategy = WeightedSumRS(weights)
+    else:  # Default to Weighted Sum
+        reward_strategy = WeightedSumRS(weights)
+
     # Initialize the RL agent
     agent = RLAgent(
         policy_algorithm_class=PPO,
@@ -129,4 +137,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()
