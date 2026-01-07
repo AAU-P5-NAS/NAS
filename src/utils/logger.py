@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Optional
 from stable_baselines3.common.logger import Logger
 from torch.utils.tensorboard import SummaryWriter
 import torch

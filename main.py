@@ -132,7 +132,7 @@ def main():
         if args.report_exception:
             email.ReportException(exception=e)
         agent.save_model()
-        if isinstance(agent.env.reward_strategy, DominanceNoveltyRS):
+        if isinstance(agent.env.reward_strategy, DominanceNoveltyRS) or isinstance(agent.env.reward_strategy, DominanceNoveltyRealRS):
             agent.env.reward_strategy.elite_archive.save_archive()
 
     except KeyboardInterrupt:
