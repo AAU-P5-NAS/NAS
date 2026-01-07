@@ -138,7 +138,7 @@ def main():
     except KeyboardInterrupt:
         console.print("[bold red]Training interrupted by user.[/bold red]")
         agent.save_model()
-        if isinstance(agent.env.reward_strategy, DominanceNoveltyRS):
+        if isinstance(agent.env.reward_strategy, DominanceNoveltyRS) or isinstance(agent.env.reward_strategy, DominanceNoveltyRealRS):
             agent.env.reward_strategy.elite_archive.save_archive()
 
 
