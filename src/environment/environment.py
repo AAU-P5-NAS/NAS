@@ -6,6 +6,7 @@ import numpy as np
 from gymnasium import spaces
 from typing import Any, Dict, List, Tuple, Optional
 import torch
+from src.environment.reward.archive_pareto_dom_real import DominanceNoveltyRealRS
 from src.environment.reward.tchebycheff import TchebycheffRS
 from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
 from src.environment.metrics import Evaluator
@@ -208,6 +209,11 @@ class CustomEnv(gym.Env):
             reward = self.reward_strategy.compute_reward(metrics=proxy_metrics)
             trained_model, training_time = self.train_classifier(model=architecture)
             evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
+        elif isinstance(self.reward_strategy, DominanceNoveltyRealRS):
+            trained_model, training_time = self.train_classifier(model=architecture)
+            evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
+            reward = self.reward_strategy.compute_reward(evaluated_metrics, new_architecture)
+        
         else:
             trained_model, training_time = self.train_classifier(model=architecture)
             evaluated_metrics = self.evaluator.evaluate(trained_model, training_time)
@@ -224,7 +230,7 @@ class CustomEnv(gym.Env):
             proxy_metrics=proxy_metrics,
         )
 
-        self.tb_logger.print_layers(new_architecture.layers)
+        # self.tb_logger.print_layers(new_architecture.layers)
 
         if (
             isinstance(self.reward_strategy, DominanceNoveltyRS)

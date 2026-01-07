@@ -5,6 +5,8 @@ import shutil
 from stable_baselines3 import PPO
 import torch
 
+from src.environment.reward.archive_pareto_dom_real import DominanceNoveltyRealRS
+from src.environment.reward.tchebycheff_real import TchebycheffRealRS
 from src.environment.reward.tchebycheff import TchebycheffRS
 from src.environment.reward.weighted_sum import WeightedSumRS
 from src.environment.reward.archive_pareto_dom import DominanceNoveltyRS
@@ -26,6 +28,10 @@ def get_agent(args: argparse.Namespace) -> RLAgent:
         reward_strategy = TchebycheffRS(weights)
     elif args.use_dominance_novelty:
         reward_strategy = DominanceNoveltyRS(weights)
+    elif args.use_real_tchebycheff:
+        reward_strategy = TchebycheffRealRS(weights)
+    elif args.use_real_dominance_novelty:
+        reward_strategy = DominanceNoveltyRealRS(weights)
     elif args.use_weighted_sum:
         reward_strategy = WeightedSumRS(weights)
     else:  # Default to Weighted Sum

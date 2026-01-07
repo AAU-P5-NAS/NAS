@@ -149,7 +149,7 @@ class ElitistArchive:
         print(f"Archive loaded from {latest_file}")
         return self.elites
 
-class DominanceNoveltyRS(RewardStrategy):
+class DominanceNoveltyRealRS(RewardStrategy):
     """
     A reward strategy based on Pareto dominance and novelty.
 

@@ -41,6 +41,16 @@ def ParseArguments() -> argparse.Namespace:
         action="store_true",
         help="If set, evaluates using Weighted Sum reward strategy.",
     )
+    parser.add_argument(
+        "--use-real-tchebycheff",
+        action="store_true",
+        help="If set, evaluates using Real Tchebycheff reward strategy.",
+    )
+    parser.add_argument(
+        "--use-real-dominance-novelty",
+        action="store_true",
+        help="If set, evaluates using Real Dominance Novelty reward strategy.",
+    )
 
     args = parser.parse_args()
     return args
