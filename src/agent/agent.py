@@ -114,7 +114,7 @@ class RLAgent:
             device="cpu",
             learning_rate=rl_learning_rate,
             seed=policy_seed,
-            n_steps=(MAX_LAYERS + 1) * 128,  # type: ignore
+            n_steps=(MAX_LAYERS + 1) * 16,  # type: ignore
             normalize_advantage=True,  # type: ignore
         )
         self.model.set_logger(tb_logger.logger)
